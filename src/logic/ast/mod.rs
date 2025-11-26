@@ -1,8 +1,6 @@
 use super::bind::BoundTypingRule;
 use crate::logic::grammar::Grammar;
-use crate::logic::partial::ParsedNode;
 use crate::logic::tokenizer::Segment;
-use crate::logic::{PartialAST, partial};
 use std::collections::HashSet;
 use std::path::Path;
 use std::{fs, io};
@@ -108,6 +106,48 @@ impl NonTerminal {
 
     pub fn as_node(&self) -> ASTNode {
         ASTNode::Nonterminal(self.clone())
+    }
+
+    pub fn from_partial(nt: &crate::logic::partial::NonTerminal) -> Result<Self, String> {
+        if !nt.is_complete() {
+            return Err(format!("Nonterminal '{}' is not complete", nt.name));
+        }
+
+        let mut children: Vec<ASTNode> = Vec::new();
+        for child in &nt.children {
+            match child {
+                crate::logic::partial::Node::Terminal(t) => {
+                    match t {
+                        crate::logic::partial::Terminal::Complete { value, binding, .. } => {
+                            children.push(ASTNode::Terminal(crate::logic::ast::Terminal {
+                                value: value.clone(),
+                                span: None, // Span tracking removed in new structure
+                                binding: binding.clone(),
+                            }));
+                        }
+                        crate::logic::partial::Terminal::Partial { .. } => {
+                            return Err(format!(
+                                "Partial terminal in complete nonterminal '{}'",
+                                nt.name
+                            ));
+                        }
+                    }
+                }
+                crate::logic::partial::Node::NonTerminal(child_nt) => {
+                    children.push(ASTNode::Nonterminal(NonTerminal::from_partial(child_nt)?));
+                }
+            }
+        }
+
+        let full = NonTerminal {
+            value: nt.name.clone(),
+            span: None, // Span tracking removed in new structure
+            children,
+            binding: nt.binding.clone(),
+            bound_typing_rule: None,
+        };
+
+        Ok(full)
     }
 }
 

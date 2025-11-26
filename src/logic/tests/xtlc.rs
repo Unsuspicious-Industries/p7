@@ -1,7 +1,3 @@
-use crate::logic::Parser;
-use crate::logic::grammar::Grammar;
-use crate::{DebugLevel, debug_info, set_debug_input, set_debug_level};
-
 // Extended Typed Lambda Calculus
 pub fn xtlc_spec() -> String {
     use std::path::Path;
@@ -13,23 +9,24 @@ pub fn xtlc_spec() -> String {
 
 #[test]
 fn test_pass_xtlc() {
-    set_debug_level(DebugLevel::Debug);
+    crate::set_debug_level(crate::DebugLevel::Debug);
 
-    let grammar = Grammar::load(&xtlc_spec()).expect("Failed to load XTLC grammar");
-    debug_info!(
+    let grammar =
+        crate::logic::grammar::Grammar::load(&xtlc_spec()).expect("Failed to load XTLC grammar");
+    crate::debug_info!(
         "test",
         "Loaded grammar with {} rules",
         grammar.typing_rules.len()
     );
-    let mut parser = Parser::new(grammar.clone());
-    debug_info!("test", "Initialized parser");
+    let mut parser = crate::logic::Parser::new(grammar.clone());
+    crate::debug_info!("test", "Initialized parser");
 
     let exprs = ["λx:a->b.x"];
 
     for expr in exprs {
-        set_debug_input(Some(expr.to_string()));
+        crate::set_debug_input(Some(expr.to_string()));
 
         let past = parser.partial(expr).unwrap();
-        println!("Partial AST: {:#?}", past.root);
+        println!("Partial AST: {:#?}", past.roots);
     }
 }
