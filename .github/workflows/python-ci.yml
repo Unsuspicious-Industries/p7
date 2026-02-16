@@ -1,0 +1,61 @@
+name: Python + Rust CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  python-tests:
+    name: Python unit tests (fast)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install maturin and build/install python extension
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install maturin
+          # install package + dev extras (build uses maturin as PEP517 backend)
+          python -m pip install -e '.[dev]'
+
+      - name: Run Python tests (unit)
+        run: pytest -q
+
+      - name: Run Rust unit tests (library)
+        run: cargo test --lib -q
+
+      - name: Upload Python test log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-pytest-log
+          path: .pytest_cache || test-results || ''

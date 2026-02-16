@@ -1,0 +1,90 @@
+name: LLM integration (gated, GPU)
+
+# Manual / self-hosted GPU job for running RUN_LLM_TESTS=1 integration tests.
+# Runner must provide GPU (e.g. label `gpu`) and satisfy any Torch/CUDA requirements.
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'HF model to test (override)'
+        required: false
+        default: 'distilgpt2'
+      device:
+        description: 'Device for tests (cuda or cpu)'
+        required: false
+        default: 'cuda'
+  push:
+    branches: [ 'main' ]
+
+jobs:
+  llm-tests:
+    name: Real-LLM integration (self-hosted GPU)
+    runs-on: [self-hosted, linux, gpu]
+    timeout-minutes: 120
+    env:
+      RUN_LLM_TESTS: '1'
+      P7_TEST_DEVICE: ${{ github.event.inputs.device || 'cuda' }}
+      P7_LLM_TEST_MODEL: ${{ github.event.inputs.model || 'distilgpt2' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Print runner labels (debug)
+        run: |
+          echo "Runner labels:"
+          echo "${{ runner.labels }}"
+          which nvidia-smi || true
+          nvidia-smi || true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache HuggingFace model hub
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface/hub
+            ~/.cache/torch
+          key: ${{ runner.os }}-hf-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-hf-
+
+      - name: Install maturin + build package with HF extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install maturin
+          # install package + transformers extra (this will pull torch/accelerate per pyproject)
+          python -m pip install -e '.[transformers,dev]'
+
+      - name: Confirm Python / torch / transformers
+        run: |
+          python -c "import sys,torch,transformers; print('python', sys.version.split()[0]); print('torch', getattr(torch,'__version__',None)); print('device count', torch.cuda.device_count())"
+
+      - name: Run gated LLM integration tests
+        run: |
+          pytest -q tests/test_constrained_llm_small.py -q
+          pytest -q tests/test_constrained_llm_large.py -q
+
+      - name: Upload pytest output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-integration-logs
+          path: .pytest_cache || test-results || ''

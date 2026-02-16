@@ -1,0 +1,27 @@
+# Virtual environment
+.venv/
+
+# Nix
+flake.lock
+
+# Build artifacts
+target/
+*.so
+*.pyd
+*.whl
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*/dist/
+*/node_modules/
+# IDE
+.idea/
+.vscode/
+*.swp
+
+
