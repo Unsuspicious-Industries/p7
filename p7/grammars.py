@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 def _load_spec(name: str) -> str:
     """Load a grammar spec from the repository examples directory."""
     repo_root = Path(__file__).resolve().parents[2]
-    spec_path = repo_root / "examples" / f"{name}.spec"
+    spec_path = repo_root / "examples" / f"{name}.auf"
 
     if not spec_path.exists():
         raise FileNotFoundError(f"Grammar spec not found: {spec_path}")

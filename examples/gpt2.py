@@ -3,7 +3,7 @@
 
 import argparse
 
-import proposition_7 as p7
+import p7 as p7
 
 
 PRESETS = {

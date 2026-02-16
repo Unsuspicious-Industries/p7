@@ -20,7 +20,7 @@ def _dbg(msg: str, /, *args, **kwargs) -> None:
     if DEBUG_SAMPLER:
         print("[p7-sampler-debug] " + msg.format(*args, **kwargs), file=sys.stderr)
 
-from proposition_7.proposition_7 import Grammar, ConstrainedGenerator
+from p7.p7 import Grammar, ConstrainedGenerator
 
 
 class CompletionEngine:

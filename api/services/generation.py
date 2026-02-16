@@ -8,7 +8,7 @@ import threading
 import queue
 from typing import Any, Dict, List, Optional
 
-from proposition_7.models import get_model_class
+from p7.models import get_model_class
 
 from services.grammar import check_partial_completable
 from services.streaming import sse

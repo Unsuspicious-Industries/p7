@@ -24,7 +24,7 @@ cd "$ROOT_DIR"
 
 # Check if P7 is installed
 echo -e "${YELLOW}Checking P7 installation...${NC}"
-if python -c "import proposition_7" 2>/dev/null; then
+if python -c "import p7" 2>/dev/null; then
     echo -e "${GREEN}✓ P7 library is installed${NC}"
 else
     echo -e "${RED}✗ P7 library not found${NC}"

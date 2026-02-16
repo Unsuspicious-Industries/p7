@@ -135,7 +135,7 @@ class ReasoningEnvironment:
     Grammar-independent: uses grammar name for tags (e.g., <stlc>, <fun>).
     
     Usage:
-        from proposition_7 import ConstrainedModel, GRAMMARS
+        from p7 import ConstrainedModel, GRAMMARS
         
         model = ConstrainedModel.from_pretrained("...", grammar=get_grammar("stlc"))
         env = ReasoningEnvironment(model, grammar_name="stlc")

@@ -322,13 +322,13 @@ tmux kill-session -t "p7" 2>/dev/null || true
 sleep 2
 
 # Verify the package is properly installed
-echo "[remote] verifying proposition_7 installation..."
-python -c "import proposition_7; print(f'proposition_7 version: {proposition_7.__version__}')" || {
-  echo "[remote] ERROR: proposition_7 module not found or broken"
+echo "[remote] verifying p7 installation..."
+python -c "import p7; print(f'p7 version: {p7.__version__}')" || {
+  echo "[remote] ERROR: p7 module not found or broken"
   echo "[remote] Attempting to rebuild..."
   maturin develop --release
-  python -c "import proposition_7; print(f'proposition_7 version: {proposition_7.__version__}')" || {
-    echo "[remote] FATAL: Could not install proposition_7"
+  python -c "import p7; print(f'p7 version: {p7.__version__}')" || {
+    echo "[remote] FATAL: Could not install p7"
     exit 1
   }
 }

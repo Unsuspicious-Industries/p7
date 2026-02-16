@@ -5,7 +5,7 @@ import argparse
 
 import random
 import time
-import proposition_7 as p7
+import p7 as p7
 
 VOCAB = list(
     "abcdefghijklmnopqrstuvwxyz"

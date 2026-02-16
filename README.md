@@ -1,8 +1,8 @@
-# Proposition 7 
+# p7 (Python bindings)
 
 **Truth by Construction: From Natural Language to Logic Machines Through Formal Constraints.**
 
-Python bindings for the [Proposition 7](https://unsuspicious.org/blog/proposition-7) constrained generation system, built on the Aufbau Rust core.
+Python bindings for the [Proposition 7](https://unsuspicious.org/blog/proposition-7) constrained generation system, built on the [Aufbau Rust core](https://github.com/Unsuspicious-Industries/aufbau).
 
 ## Installation
 
@@ -25,7 +25,7 @@ maturin develop --target-dir target
 ## Quick Start
 
 ```python
-import p7_constrained as p7
+import p7 as p7
 
 # Create a generator with model + grammar (like Outlines!)
 gen = p7.Generator("gpt2", grammar="""
@@ -87,7 +87,7 @@ The backend runs on `http://localhost:5001` and the demo UI on `http://localhost
 All built-in grammars include **typing rules** - this is what distinguishes P7 from CFG-only approaches.
 
 ```python
-import proposition_7 as p7
+import p7 as p7
 
 # List available typed grammars
 print(p7.list_grammars())  # ['stlc', 'imp', 'fun']
@@ -111,7 +111,7 @@ print(imp_engine.debug_completions()["examples"][:5])
 ### Low-level API
 
 ```python
-import p7_constrained as p7
+import p7 as p7
 
 # Direct grammar + constraint engine access
 grammar = p7.Grammar("""...""")
@@ -165,7 +165,7 @@ x ∈ Γ
 The `Generator` class handles HuggingFace integration automatically:
 
 ```python
-import p7_constrained as p7
+import p7 as p7
 
 # GPT-2 (default, small)
 gen = p7.Generator("gpt2", grammar=p7.GRAMMARS["arithmetic"])
@@ -183,7 +183,7 @@ result = gen("Generate something:")
 ### Sampling Modes
 
 ```python
-import p7_constrained as p7
+import p7 as p7
 
 gen = p7.Generator("gpt2", grammar=my_grammar)
 
@@ -201,7 +201,7 @@ result = gen.generate(mode=p7.SamplingMode.BIMODAL)
 ### Configuration
 
 ```python
-import p7_constrained as p7
+import p7 as p7
 
 config = p7.SamplerConfig(
     temperature=0.8,
@@ -276,7 +276,7 @@ This approach draws inspiration from:
 | Feature | proposition-7 | Type-Constrained (arXiv:2504.09246) | Outlines/.txt |
 |---------|----------------|-------------------------------------|---------------|
 | Type-aware | ✅ | ✅ | ❌ |
-| Custom languages | ✅ Any `.spec` grammar | ❌ TypeScript/STLC only | ❌ |
+| Custom languages | ✅ Any `.auf` grammar | ❌ TypeScript/STLC only | ❌ |
 | Declarative rules | ✅ Inference-style | ❌ Hardcoded | ❌ |
 | Regex tokens | ✅ | Partial | ✅ |
 | Persistent state | ✅ | ✅ | ❌ |
@@ -284,6 +284,7 @@ This approach draws inspiration from:
 ## References
 
 ### Philosophy & Foundations
+- Carnap, R. (1937). *The Logical Syntax of Language*.
 - Wittgenstein, L. (1921). *Tractatus Logico-Philosophicus*.
 - Kant, I. (1790). *Critique of Judgment*.
 

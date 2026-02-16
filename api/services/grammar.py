@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, List
 
-import proposition_7 as p7
-from proposition_7.environment import build_system_prompt
+import p7 as p7
+from p7.environment import build_system_prompt
 
 
 def get_system_prompt_for_spec(spec: str) -> Optional[str]:

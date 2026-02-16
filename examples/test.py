@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CompletionEngine smoke checks for built-in fun/imp constrained decoding."""
 
-import proposition_7 as p7
+import p7 as p7
 
 
 CASES = {

@@ -5,7 +5,7 @@ A comprehensive web-based platform for testing, debugging, and visualizing gramm
 ## Features
 
 ### Grammar Editor
-- Syntax-highlighted editor for `.spec` files
+- Syntax-highlighted editor for `.auf` files
 - Real-time grammar validation
 - Error reporting with helpful suggestions
 - Load from built-in examples (STLC, IMP, Fun)
@@ -51,7 +51,7 @@ visualization/
 ## Prerequisites
 
 1. **Python Environment** (3.9+)
-   - P7 library built and installed: `cd python && pip install -e .`
+   - P7 library built and installed: `pip install -e .`
    - PyTorch and Transformers: `pip install torch transformers`
 
 2. **Node.js** (16+)
@@ -62,7 +62,7 @@ visualization/
 ### 1. Build and Install P7 Python Library
 
 ```bash
-cd /path/to/p7/python
+cd /path/to/p7
 pip install -e .
 pip install flask flask-cors transformers torch
 ```
@@ -141,7 +141,7 @@ Fallback order:
 
 ## Grammar Spec Format
 
-The `.spec` format has two parts separated by blank lines:
+The `.auf` format has two parts separated by blank lines:
 
 ### 1. Grammar Productions
 ```
@@ -262,8 +262,8 @@ SSE events:
 
 ## Troubleshooting
 
-### "ModuleNotFoundError: No module named 'proposition_7'"
-- Make sure you've installed the P7 library: `pip install -e .` from the python directory
+### "ModuleNotFoundError: No module named 'p7'"
+- Make sure you've installed the P7 library: `pip install -e .` from the repo root
 
 ### Model download is slow
 - First run will download the model from HuggingFace

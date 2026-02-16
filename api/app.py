@@ -23,17 +23,17 @@ import threading
 import time
 from flask_cors import CORS
 
-# Add parent directory to path to import proposition_7
+# Add parent directory to path to import p7
 _parent = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_parent))
 
 # Also add the python directory for editable installs
-if (_parent / 'proposition_7').exists():
+if (_parent / 'p7').exists():
     sys.path.insert(0, str(_parent))
 
-import proposition_7 as p7
-from proposition_7 import Grammar, ConstrainedGenerator
-from proposition_7.models import list_models
+import p7 as p7
+from p7 import Grammar, ConstrainedGenerator
+from p7.models import list_models
 from services.generation import build_vocab, generate_constrained_stream, generate_unconstrained_stream, get_active_generations, get_model_and_tokenizer
 from services.grammar import check_partial_completable, validate_grammar, GrammarValidationResult
 from services.models import get_device_info

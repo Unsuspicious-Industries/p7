@@ -1,15 +1,15 @@
 [package]
-name = "proposition_7_py"
+name = "p7"
 version = "0.1.0"
 edition = "2021"
 authors = ["Paul Kronlund-Drouault"]
-description = "Python bindings for P7 - Type-aware constrained decoding for LLMs"
+description = "Proposition 7: system-agnostic formally constrained generation for Large Language Models"
 license = "MIT"
 repository = "https://github.com/Unsuspicious-Industries/p7"
 readme = "README.md"
 
 [lib]
-name = "proposition_7"
+name = "p7"
 crate-type = ["cdylib"]
 
 [dependencies]

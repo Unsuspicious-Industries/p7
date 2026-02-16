@@ -240,8 +240,8 @@ function DemoPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/grammars/${name}`);
       const data = await response.json();
-      if (data.spec) {
-        setGrammar(data.spec);
+      if (data.auf) {
+        setGrammar(data.auf);
       }
     } catch (err) {
       console.error('Failed to load grammar:', err);

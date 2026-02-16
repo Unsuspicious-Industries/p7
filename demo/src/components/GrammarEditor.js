@@ -33,7 +33,7 @@ const ErrorItem = styled.div`
   border-radius: 3px;
 `;
 
-// Simple syntax highlighting for .spec files
+// Simple syntax highlighting for .auf files
 const highlight = (code) => {
   // Return code as-is - newlines will be preserved by the editor
   // In the future, could add syntax highlighting here by wrapping tokens in spans

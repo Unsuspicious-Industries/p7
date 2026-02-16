@@ -40,5 +40,5 @@ dev = ["pytest", "numpy", "flask>=2.3.0", "flask-cors>=4.0.0"]
 [tool.maturin]
 features = ["pyo3/extension-module"]
 python-source = "."
-module-name = "proposition_7.proposition_7"
+module-name = "p7.p7"
 target-dir = "target"

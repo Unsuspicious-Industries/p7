@@ -1,4 +1,4 @@
-# proposition_7: Type-aware constrainted decoding for LLMs
+# p7: Type-aware constrainted decoding for LLMs
 #
 # Unlike CFG-only approaches, P7 supports context-dependant grammars
 # with typing rules - enabling generation of well-typed code.
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from proposition_7.proposition_7 import (
+from p7.p7 import (
     Grammar,
     ConstrainedGenerator,
     ConstrainedLogitsProcessor,

@@ -10,7 +10,7 @@ Uses Microsoft's Phi-3.5-mini-instruct.
 https://huggingface.co/microsoft/Phi-3.5-mini-instruct
 """
 
-import proposition_7 as p7
+import p7 as p7
 
 
 # Tasks for the environment to solve

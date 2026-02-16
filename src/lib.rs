@@ -435,7 +435,7 @@ fn regex_prefix_valid(pattern: &str, prefix: &str) -> PyResult<bool> {
 }
 
 #[pymodule]
-fn proposition_7(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn p7(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Grammar>()?;
     m.add_class::<ConstrainedGenerator>()?;
     m.add_class::<ConstrainedLogitsProcessor>()?;
