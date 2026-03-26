@@ -21,8 +21,8 @@ DEFAULT_MODELS = [
     "gpt2",
     "EleutherAI/pythia-160m",
     "EleutherAI/pythia-410m",
-    "Qwen/Qwen3.5-0.8B",
-    "Qwen/Qwen3.5-2B",
+    "Qwen/Qwen3.5-0.5B",
+    "Qwen/Qwen3.5-1.5B",
 ]
 
 
@@ -46,10 +46,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--tries", type=int, default=3)
     p.add_argument("--max-tasks", type=int, default=0, help="0 means all")
     p.add_argument("--out", default=str(OUT / "raw.jsonl"))
-    p.add_argument("--trace-out", default=str(OUT / "trace.jsonl"))
     p.add_argument("--device", default="cpu")
     p.add_argument("--dry", action="store_true")
-    p.add_argument("--feed-only", action="store_true", help="Use feed-only constrained decoding")
     return p.parse_args()
 
 
@@ -117,25 +115,21 @@ def classify(exact: bool, parse_ok: bool, complete: bool) -> str:
     return "semantic_mismatch"
 
 
-def run_one(model: p7.ConstrainedModel, task: Task, mode: str, use_feed_only: bool = False) -> dict[str, Any]:
+def run_one(model: p7.ConstrainedModel, task: Task, mode: str) -> dict[str, Any]:
     gname = grammar_name(task.grammar)
     prompt = f"{grammar_prompt(gname, task.feed)}\n\nTask: {task.instruction}\nOutput only program text.\n"
     t0 = time.time()
-    trace: list[dict[str, Any]] = []
-    text_so_far = task.initial
     if mode == "constrained":
-        gen = model.iter_constrained(
+        result = model.until_complete(
             prompt=prompt,
             initial=task.initial,
             max_tokens=task.max_tokens,
             grammar_name=gname,
             greedy_k=1,
             pre_top_k=100,
-            use_feed_only=use_feed_only,
-            stop_on_complete=True,
         )
     else:
-        gen = model.iter_unconstrained(
+        result = model.generate_unconstrained(
             prompt=prompt,
             initial=task.initial,
             max_tokens=task.max_tokens,
@@ -143,30 +137,11 @@ def run_one(model: p7.ConstrainedModel, task: Task, mode: str, use_feed_only: bo
             temperature=0.8,
             grammar_name=gname,
         )
-
-    while True:
-        try:
-            token = next(gen)
-            text_so_far += token
-            trace.append({"step": len(trace), "token": token, "text": text_so_far})
-        except StopIteration as e:
-            result = e.value
-            break
-
     sec = time.time() - t0
     spec = p7.get_grammar(gname)
     parse_ok, complete, parse_err = check_parse(spec, result.text)
     exact = normalize(result.text) == normalize(task.expected)
     error = classify(exact, parse_ok, complete)
-
-    next_completions: list[str] = []
-    try:
-        s = p7.Synthesizer(p7.Grammar(spec), "")
-        s.set_input(result.text)
-        next_completions = s.get_completions()[:25]
-    except Exception:
-        next_completions = []
-
     return {
         "task_id": task.task_id,
         "language": task.language,
@@ -184,8 +159,6 @@ def run_one(model: p7.ConstrainedModel, task: Task, mode: str, use_feed_only: bo
         "stop_reason": result.stopped_reason,
         "tokens": result.tokens_generated,
         "seconds": sec,
-        "trace": trace,
-        "next_completions": next_completions,
     }
 
 
@@ -199,16 +172,14 @@ def main() -> None:
 
     OUT.mkdir(parents=True, exist_ok=True)
     out_path = Path(args.out)
-    trace_path = Path(args.trace_out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
 
     if args.dry:
         print(f"tasks={len(tasks)} models={len(models)} tries={args.tries}")
         print(f"first_task={tasks[0].task_id if tasks else 'none'}")
         return
 
-    with out_path.open("w", encoding="utf-8") as out, trace_path.open("w", encoding="utf-8") as trace_out:
+    with out_path.open("w", encoding="utf-8") as out:
         for model_name in models:
             for gname in sorted({grammar_name(t.grammar) for t in tasks}):
                 model = p7.ConstrainedModel.from_pretrained(
@@ -221,29 +192,11 @@ def main() -> None:
                         continue
                     for mode in ("constrained", "unconstrained"):
                         for tr in range(args.tries):
-                            rec = run_one(model, t, mode, use_feed_only=args.feed_only)
+                            rec = run_one(model, t, mode)
                             rec["model"] = model_name
                             rec["try"] = tr
-                            trace = rec.pop("trace", [])
                             out.write(json.dumps(rec, ensure_ascii=True) + "\n")
-                            trace_out.write(
-                                json.dumps(
-                                    {
-                                        "model": model_name,
-                                        "task_id": t.task_id,
-                                        "mode": mode,
-                                        "try": tr,
-                                        "trace": trace,
-                                        "stop_reason": rec["stop_reason"],
-                                        "tokens": rec["tokens"],
-                                        "output": rec["output"],
-                                    },
-                                    ensure_ascii=True,
-                                )
-                                + "\n"
-                            )
                             out.flush()
-                            trace_out.flush()
                             print(model_name, t.task_id, mode, tr, rec["error"])
 
 
