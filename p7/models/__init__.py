@@ -8,6 +8,7 @@ from .deepseek import DeepseekConstrainedModel
 from .glm import GlmConstrainedModel
 from .llama import LlamaConstrainedModel
 from .mistral import MistralConstrainedModel
+from .pleias import PleiasConstrainedModel
 
 
 MODEL_CATALOG: List[Dict[str, str]] = [
@@ -22,6 +23,9 @@ MODEL_CATALOG: List[Dict[str, str]] = [
     {"name": "mistralai/Mistral-7B-v0.1", "display_name": "Mistral-7B"},
     {"name": "meta-llama/Meta-Llama-3.1-8B-Instruct", "display_name": "Llama-3.1-8B-Instruct"},
     {"name": "THUDM/glm-4-9b", "display_name": "GLM-4-9B"},
+    # PleIAs SYNTH reasoning series
+    {"name": "PleIAs/Monad", "display_name": "PleIAs Monad (56.7M)"},
+    {"name": "PleIAs/Baguettotron", "display_name": "PleIAs Baguettotron (321M)"},
 ]
 
 
@@ -31,6 +35,9 @@ def list_models() -> List[Dict[str, str]]:
 
 def get_model_class(model_name: str) -> Type[ConstrainedModel]:
     lower_name = model_name.lower()
+    # PleIAs models — check before generic llama since they share the arch
+    if "pleias" in lower_name or "baguettotron" in lower_name or "monad" in lower_name:
+        return PleiasConstrainedModel
     if "deepseek" in lower_name:
         return DeepseekConstrainedModel
     if "glm" in lower_name:
@@ -49,6 +56,7 @@ __all__ = [
     "GlmConstrainedModel",
     "LlamaConstrainedModel",
     "MistralConstrainedModel",
+    "PleiasConstrainedModel",
     "get_model_class",
     "list_models",
 ]

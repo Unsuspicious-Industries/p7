@@ -16,6 +16,7 @@ from enum import Enum
 from typing import Callable, List, Optional, Tuple, Dict, Any
 
 from .grammars import GRAMMARS, get_grammar, get_grammar_info
+from .sampler import _dbg
 
 
 class Mode(Enum):
@@ -85,29 +86,38 @@ def build_system_prompt(
     grammar_name: str,
     task_description: Optional[str] = None,
     include_examples: bool = True,
+    think_open: str = "<think>",
+    think_close: str = "</think>",
 ) -> str:
     """
     Procedurally generate a system prompt for the given grammar.
-    
+
     Args:
         grammar_name: Name of the grammar (e.g., "stlc", "fun", "imp")
         task_description: Optional task-specific description
         include_examples: Whether to include syntax examples
-        
+        think_open: Model-specific opening tag for reasoning blocks
+        think_close: Model-specific closing tag for reasoning blocks
+
     Returns:
         System prompt string
     """
     info = get_grammar_info(grammar_name)
-    
+
+    # Strip trailing whitespace from tags so they render cleanly in the prompt
+    # (some models use "<think>\n" as their open token).
+    think_open_display = think_open.rstrip()
+    think_close_display = think_close.rstrip()
+
     lines = [
         f"You are a reasoning assistant that produces well-typed {info['short']}.",
         "",
         "You can use two modes:",
-        "- <think>...</think>: Free-form reasoning. Think step by step.",
+        f"- {think_open_display}...{think_close_display}: Free-form reasoning. Think step by step.",
         f"- <{grammar_name}>...</{grammar_name}>: Produce the final well-typed output. This is grammar-constrained.",
         "",
         "Process:",
-        "1. Use <think> to reason about the problem",
+        f"1. Use {think_open_display} to reason about the problem",
         f"2. When ready, use <{grammar_name}> to produce typed output",
         "3. The output must be syntactically and type-correct",
     ]
@@ -170,20 +180,26 @@ class ReasoningEnvironment:
         """
         self.model = model
         self.grammar_name = grammar_name
+        self.grammar_obj = model.get_grammar_obj()
         self.think_budget = think_budget
         self.formal_budget = formal_budget
         self.stop_on_complete = stop_on_complete
-
-        # System prompt (procedurally generated or custom)
-        if self.model.allow_system_prompt():
-            self.system_prompt = system_prompt or build_system_prompt(grammar_name)
-        else:
-            self.system_prompt = system_prompt or ""
 
         self.THINK_OPEN = self.model.think_open()
         self.THINK_CLOSE = self.model.think_close()
         self.grammar_open = f"<{grammar_name}>"
         self.grammar_close = f"</{grammar_name}>"
+
+        # System prompt — generated after think tokens are resolved so the
+        # prompt text references the model's actual reasoning tags.
+        if self.model.allow_system_prompt():
+            self.system_prompt = system_prompt or build_system_prompt(
+                grammar_name,
+                think_open=self.THINK_OPEN,
+                think_close=self.THINK_CLOSE,
+            )
+        else:
+            self.system_prompt = system_prompt or ""
 
         # Stop tokens for think mode
         self._think_stop = self.model.stop_tokens_unconstrained(grammar_name)
@@ -232,10 +248,12 @@ class ReasoningEnvironment:
         logit_filter: Optional[Callable[[List[float], str], List[float]]] = None,
     ) -> Tuple[str, bool, int]:
         """
-        Generate grammar-constrained output.
+        Generate grammar-constrained output using Synthesizer for tracking.
         
         Returns: (content, is_complete, tokens_generated)
         """
+        
+
         should_stop_on_complete = self.stop_on_complete if stop_on_complete is None else stop_on_complete
         if should_stop_on_complete:
             result = self.model.until_complete(
@@ -307,6 +325,8 @@ class ReasoningEnvironment:
             if on_mode_switch:
                 tag = self.THINK_OPEN if current_mode == Mode.THINK else self.grammar_open
                 on_mode_switch(current_mode, tag)
+            
+            _dbg(f"Generating block {block_idx+1}/{max_blocks} in mode {current_mode.value}...")
             
             if current_mode == Mode.THINK:
                 content, stop_tag, tokens = self._generate_think(

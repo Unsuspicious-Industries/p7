@@ -32,7 +32,7 @@ if (_parent / 'p7').exists():
     sys.path.insert(0, str(_parent))
 
 import p7 as p7
-from p7 import Grammar, ConstrainedGenerator
+from p7 import Grammar, Synthesizer
 from p7.models import list_models
 from services.generation import build_vocab, generate_constrained_stream, generate_unconstrained_stream, get_active_generations, get_model_and_tokenizer
 from services.grammar import check_partial_completable, validate_grammar, GrammarValidationResult
@@ -158,32 +158,15 @@ def debug_grammar():
     
     try:
         grammar = Grammar(spec)
-        generator = ConstrainedGenerator(grammar)
-        
-        # Feed input if provided
-        if input_text:
-            try:
-                generator.feed_raw(input_text)
-            except TypeError as e:
-                return jsonify({
-                    "valid": True,
-                    "type_error": str(e),
-                    "current_text": input_text,
-                    "is_complete": False,
-                    "completions": {"patterns": [], "examples": []},
-                    "well_typed_tree_count": 0
-                })
-        
-        # Get debug info
-        debug_info = generator.debug_completions()
-        well_typed_count = generator.well_typed_tree_count()
-        
+        synth = Synthesizer(grammar, input_text)
+
+        completions = synth.get_completions()
         return jsonify({
             "valid": True,
-            "current_text": generator.current_text(),
-            "is_complete": generator.is_complete(),
-            "completions": debug_info,
-            "well_typed_tree_count": well_typed_count,
+            "current_text": synth.current_text(),
+            "is_complete": synth.is_complete(),
+            "completions": completions,
+            "well_typed_tree_count": 0,
             "type_error": None
         })
     except BaseException as e:
@@ -206,29 +189,15 @@ def debug_completions():
 
     try:
         grammar = Grammar(spec)
-        generator = ConstrainedGenerator(grammar)
+        synth = Synthesizer(grammar, input_text)
 
-        if input_text:
-            try:
-                generator.feed_raw(input_text)
-            except TypeError as e:
-                return jsonify({
-                    "valid": True,
-                    "type_error": str(e),
-                    "current_text": input_text,
-                    "is_complete": False,
-                    "completions": [],
-                    "debug_completions": {"patterns": [], "examples": []},
-                    "well_typed_tree_count": 0
-                })
-
+        completions = synth.get_completions()
         return jsonify({
             "valid": True,
-            "current_text": generator.current_text(),
-            "is_complete": generator.is_complete(),
-            "completions": generator.get_completions(),
-            "debug_completions": generator.debug_completions(),
-            "well_typed_tree_count": generator.well_typed_tree_count(),
+            "current_text": synth.current_text(),
+            "is_complete": synth.is_complete(),
+            "completions": completions,
+            "well_typed_tree_count": 0,
             "type_error": None
         })
     except BaseException as e:
@@ -251,14 +220,36 @@ def debug_token_filter():
         tokenizer, _ = get_model_and_tokenizer(model_name)
         vocab = build_vocab(tokenizer)
         grammar = Grammar(spec)
-        generator = ConstrainedGenerator(grammar)
+        synth = Synthesizer(grammar, input_text)
 
-        if input_text:
-            generator.feed_raw(input_text)
+        completions = synth.get_completions()
 
-        completions = generator.get_completions()
-        valid_indices = generator.filter_completion_indices(vocab)
-        sample = [vocab[i] for i in list(valid_indices)[:30]]
+        # Filter vocab tokens that match any completion pattern
+        import re as _re
+        literals = set()
+        regexes = []
+        for c in completions:
+            if not c:
+                continue
+            if c.startswith('^'):
+                try:
+                    regexes.append((c, _re.compile(c)))
+                except _re.error:
+                    pass
+            else:
+                literals.add(c)
+
+        valid_tokens = []
+        for token in vocab:
+            stripped = token.lstrip()
+            if stripped in literals or token in literals:
+                valid_tokens.append(token)
+                continue
+            for _, rx in regexes:
+                if rx.match(token) or (stripped != token and rx.match(stripped)):
+                    valid_tokens.append(token)
+                    break
+
         vocab_set = set(vocab)
         completion_checks = []
         for completion in completions[:20]:
@@ -281,15 +272,15 @@ def debug_token_filter():
 
         return jsonify({
             "valid": True,
-            "current_text": generator.current_text(),
-            "is_complete": generator.is_complete(),
+            "current_text": synth.current_text(),
+            "is_complete": synth.is_complete(),
             "completion_count": len(completions),
-            "valid_token_count": len(valid_indices),
-            "valid_token_sample": sample,
+            "valid_token_count": len(valid_tokens),
+            "valid_token_sample": valid_tokens[:30],
             "completion_checks": completion_checks,
             "vocab_size": len(vocab),
         })
-    except TypeError as e:
+    except RuntimeError as e:
         return jsonify({"valid": True, "type_error": str(e)}), 200
     except BaseException as e:
         logger.exception("debug_token_filter failed")
@@ -308,17 +299,14 @@ def get_completions():
     
     try:
         grammar = Grammar(spec)
-        generator = ConstrainedGenerator(grammar)
-        
-        if input_text:
-            generator.feed_raw(input_text)
-        
-        completions = generator.get_completions()
-        
+        synth = Synthesizer(grammar, input_text)
+
+        completions = synth.get_completions()
+
         return jsonify({
-            "current_text": generator.current_text(),
+            "current_text": synth.current_text(),
             "completions": completions,
-            "is_complete": generator.is_complete()
+            "is_complete": synth.is_complete()
         })
     except BaseException as e:
         return jsonify({"error": str(e)}), 500
@@ -404,26 +392,14 @@ def parse_to_ast():
     
     try:
         grammar = Grammar(spec)
-        generator = ConstrainedGenerator(grammar)
-        
-        if input_text:
-            generator.feed_raw(input_text)
-        
-        try:
-            sexpr = generator.to_sexpr()
-            return jsonify({
-                "success": True,
-                "sexpr": sexpr,
-                "current_text": generator.current_text(),
-                "is_complete": generator.is_complete()
-            })
-        except Exception as e:
-            return jsonify({
-                "success": False,
-                "error": str(e),
-                "current_text": generator.current_text(),
-                "is_complete": generator.is_complete()
-            })
+        synth = Synthesizer(grammar, input_text)
+
+        return jsonify({
+            "success": False,
+            "error": "AST/s-expr output not supported in this version",
+            "current_text": synth.current_text(),
+            "is_complete": synth.is_complete()
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

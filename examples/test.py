@@ -11,9 +11,9 @@ CASES = {
         "let f: Float = 1.0; f +.",
     ],
     "imp": [
-        "x: Int = 1; if x < 5 { y: Int = x + 1; } else { y: Int =",
-        "counter: Int = 0; while counter < 3 { counter +",
-        "flag: Int|Bool = true; if flag == true { z: Int = 1; } else { z: Int =",
+        "{ let x: Int = 1; if (x < 5) { let y: Int = x + 1; } else { let y: Int =",
+        "{ let counter: Int = 0; while (counter < 3) { counter = counter + 1; } }",
+        "{ let flag: Bool = true; if (flag) { let z: Int = 1; } else { let z: Int =",
     ],
 }
 
@@ -24,20 +24,11 @@ def run_case(grammar_name: str, seed: str) -> None:
     try:
         engine.feed(seed)
 
-        # prefer the direct API when available (returns concrete examples/patterns)
-        try:
-            raw = engine.get_completions()
-            print(f"  raw completions:     {raw[:10]}")
-        except AttributeError:
-            # fallback to debug_completions for older builds
-            completions = engine.debug_completions()
-            sample = completions.get("examples", [])[:10]
-            patterns = completions.get("patterns", [])[:5]
-            print(f"  completion examples: {sample}")
-            print(f"  regex patterns:      {patterns}")
+        raw = engine.get_completions()
+        print(f"  completions: {raw[:10]}")
 
-    except TypeError as err:
-        print(f"  type error: {err}")
+    except Exception as err:
+        print(f"  error: {err}")
     print()
 
 

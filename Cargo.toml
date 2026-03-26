@@ -13,5 +13,6 @@ name = "p7"
 crate-type = ["cdylib"]
 
 [dependencies]
+aufbau = { version = "0.1.0", path = "../aufbau" }
 pyo3 = { version = "0.23", features = ["extension-module"] }
-aufbau = { version = "0.1.0" }
+

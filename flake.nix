@@ -102,6 +102,9 @@
             unset NIX_LDFLAGS_FOR_TARGET
             unset NIX_CFLAGS_COMPILE_FOR_TARGET
             
+            # Automatically include current directory in PYTHONPATH for local dev
+            export PYTHONPATH="$PWD:$PYTHONPATH"
+            
             echo "╔══════════════════════════════════════════════════════════════╗"
             echo "║                     PROPOSITION 7                            ║"
             echo "║         Type-aware Constrained LLM Generation                ║"

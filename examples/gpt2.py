@@ -2,8 +2,11 @@
 """GPT-2 constrained decoding demo for built-in grammars."""
 
 import argparse
-
+import time
 import p7 as p7
+
+import os
+os.environ["P7_CONSTRAINED_DEBUG"] = "1"
 
 
 PRESETS = {
@@ -12,12 +15,12 @@ PRESETS = {
         "initial": "λf:(Int->Bool).λx:Int.",
     },
     "fun": {
-        "prompt": "Complete this typed functional expression:\n",
-        "initial": "let x: Int = 1; x +",
+        "prompt": "Build me a function that squares an input with:\n",
+        "initial": "let square: Int -> Int = fn x: Int =>",
     },
     "imp": {
         "prompt": "Complete this typed imperative program:\n",
-        "initial": "x: Int = 1; if x < 3 { y: Int = x +",
+        "initial": "{ let x: Int = 1; if (x < 5) { let y: Int = x + 1; } else { let y: Int =",
     },
 }
 
@@ -35,6 +38,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-tokens", type=int, default=20, help="Maximum generated tokens")
     parser.add_argument("--pre-top-k", type=int, default=100, help="Candidate tokens before filtering")
     parser.add_argument("--greedy-k", type=int, default=1, help="Top-k among valid tokens")
+    parser.add_argument("--compare", action="store_true", help="Compare with unconstrained generation")
+    parser.add_argument("--profile", action="store_true", help="Profile generation")
     return parser.parse_args()
 
 
@@ -45,7 +50,7 @@ def main():
     initial_code = args.initial if args.initial is not None else preset["initial"]
 
     print("=" * 60)
-    print("GPT-2 + Typed Constrained Generation")
+    print("GPT-2: Constrained Generation Demo")
     print("=" * 60)
 
     print("\nLoading GPT-2...")
@@ -61,7 +66,20 @@ def main():
     print(f"Initial: '{initial_code}'")
 
     constrained_text = initial_code
-    print("\n--- Constrained Generation ---")
+    print("\n" + "-" * 30)
+    print("--- Constrained Generation ---")
+    print("-" * 30)
+
+    if args.profile:
+        profile_times = {
+            "forward": 0.0,
+            "get_completions": 0.0,
+            "token_matching": 0.0,
+            "sampling": 0.0,
+        }
+    else:
+        profile_times = None
+
     gen = model.iter_constrained(
         prompt=prompt,
         initial=initial_code,
@@ -73,7 +91,10 @@ def main():
     )
 
     step = 0
+    total_start = time.perf_counter()
     while True:
+        step_start = time.perf_counter() if args.profile else None
+
         try:
             token = next(gen)
         except StopIteration as e:
@@ -81,11 +102,25 @@ def main():
             print("\n--- Result ---")
             print(f"Generated: '{result.text}'")
             print(f"Complete: {result.is_complete}")
+            print(f"Reason: {result.stopped_reason}")
             break
+
+        if args.profile and step_start is not None:
+            profile_times["sampling"] += time.perf_counter() - step_start
 
         constrained_text += token
         print(f"  Step {step:2d}: '{repr(token)[1:-1]}' => '{constrained_text}'")
         step += 1
+
+    total_elapsed = time.perf_counter() - total_start
+
+    if args.profile:
+        print("\n" + "-" * 30)
+        print("--- Profile ---")
+        print("-" * 30)
+        print(f"Total time: {total_elapsed:.3f}s")
+        print(f"Steps: {step}")
+        print(f"Time per token: {total_elapsed/step*1000:.1f}ms")
 
 
 if __name__ == "__main__":

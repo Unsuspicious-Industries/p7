@@ -21,7 +21,7 @@ VOCAB = list(
 PRESETS = {
     "stlc": "λf:(Int->Bool).λx:Int.",
     "fun": "let x: Int = 1; x +",
-    "imp": "x: Int = 1; if x < 3 { y: Int = x +",
+    "imp": "{ let x: Int = 1; if (x < 5) { let y: Int = x + 1; } else { let y: Int =",
 }
 
 class Timer:
@@ -103,14 +103,14 @@ def main():
     parser.add_argument(
         "--initial",
         default=None,
-        help="Initial prefix to feed before generation",
+        help="Initial prefix to seed before generation",
     )
     args = parser.parse_args()
 
     timer = Timer()
 
     print("=" * 60)
-    print("TypedSampler: Constrainted Character-Level Generation")
+    print("TypedSampler: Constrained Character-Level Generation")
     print("=" * 60)
     print(f"\nVocab size: {len(VOCAB)} chars")
 
@@ -126,9 +126,9 @@ def main():
 
     print(f"\n--- Starting with: '{initial}' ---")
     with timer("feed_initial"):
-        sampler.feed(initial)
+        sampler.set_input(initial)
     
-    print("\nGenerating tokens (constrainted to well-typed):")
+    print("\nGenerating tokens (constrained to well-typed):")
     generated = initial
     
     PRE_TOP_K = 20
@@ -154,7 +154,7 @@ def main():
             generated += token
             if step % 1 == 0:
                 print(f"  Step {step:3d}: '{repr(token)[1:-1]}' (valid: {valid_count}/{len(VOCAB)})")
-        except TypeError as e:
+        except RuntimeError as e:
             print(f"  Step {step:3d}: Rejected '{token}' - {e}")
             break
     
@@ -167,14 +167,8 @@ def main():
         top_k = sampler.infer_text(k=10, pre_top_k=20)
     print(f"Top 10: {top_k}")
     
-    print("\n--- S-expr AST ---")
-    try:
-        with timer("to_sexpr"):
-            sexpr = sampler.generator.to_sexpr()
-        print(sexpr[:500] + "..." if len(sexpr) > 500 else sexpr)
-    except Exception as e:
-        print(f"Cannot serialize (incomplete): {e}")
-        print("(Parse incomplete)")
+    print("\n--- Current text ---")
+    print(repr(sampler.current_text()))
     
     timer.report()
 

@@ -1,0 +1,101 @@
+task_id,language,grammar,category,instruction,initial,expected,max_tokens,feed
+spec_001_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_001_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(1),80,full
+spec_001_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 1; while (counter < 3) { counter = counter + 1; } },104,full
+spec_002_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_002_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(2),80,full
+spec_002_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 2; while (counter < 4) { counter = counter + 1; } },104,full
+spec_003_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_003_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(3),80,full
+spec_003_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 3; while (counter < 5) { counter = counter + 1; } },104,full
+spec_004_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_004_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(4),80,full
+spec_004_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 4; while (counter < 6) { counter = counter + 1; } },104,full
+spec_005_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_005_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(5),80,full
+spec_005_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 5; while (counter < 7) { counter = counter + 1; } },104,full
+spec_006_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_006_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(6),80,full
+spec_006_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 6; while (counter < 8) { counter = counter + 1; } },104,full
+spec_007_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_007_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(7),80,full
+spec_007_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 7; while (counter < 9) { counter = counter + 1; } },104,full
+spec_008_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_008_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(8),80,full
+spec_008_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 8; while (counter < 10) { counter = counter + 1; } },104,full
+spec_009_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_009_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(9),80,full
+spec_009_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 9; while (counter < 11) { counter = counter + 1; } },104,full
+spec_010_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_010_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(10),80,full
+spec_010_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 10; while (counter < 12) { counter = counter + 1; } },104,full
+spec_011_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_011_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(1),80,full
+spec_011_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 1; while (counter < 3) { counter = counter + 1; } },104,full
+spec_012_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_012_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(2),80,full
+spec_012_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 2; while (counter < 4) { counter = counter + 1; } },104,full
+spec_013_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_013_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(3),80,full
+spec_013_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 3; while (counter < 5) { counter = counter + 1; } },104,full
+spec_014_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_014_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(4),80,full
+spec_014_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 4; while (counter < 6) { counter = counter + 1; } },104,full
+spec_015_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_015_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(5),80,full
+spec_015_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 5; while (counter < 7) { counter = counter + 1; } },104,full
+spec_016_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_016_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(6),80,full
+spec_016_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 6; while (counter < 8) { counter = counter + 1; } },104,full
+spec_017_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_017_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(7),80,full
+spec_017_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 7; while (counter < 9) { counter = counter + 1; } },104,full
+spec_018_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_018_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(8),80,full
+spec_018_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 8; while (counter < 10) { counter = counter + 1; } },104,full
+spec_019_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_019_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(9),80,full
+spec_019_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 9; while (counter < 11) { counter = counter + 1; } },104,full
+spec_020_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_020_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(10),80,full
+spec_020_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 10; while (counter < 12) { counter = counter + 1; } },104,full
+spec_021_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_021_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(1),80,full
+spec_021_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 1; while (counter < 3) { counter = counter + 1; } },104,full
+spec_022_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_022_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(2),80,full
+spec_022_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 2; while (counter < 4) { counter = counter + 1; } },104,full
+spec_023_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_023_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(3),80,full
+spec_023_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 3; while (counter < 5) { counter = counter + 1; } },104,full
+spec_024_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_024_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(4),80,full
+spec_024_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 4; while (counter < 6) { counter = counter + 1; } },104,full
+spec_025_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_025_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(5),80,full
+spec_025_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 5; while (counter < 7) { counter = counter + 1; } },104,full
+spec_026_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_026_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(6),80,full
+spec_026_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 6; while (counter < 8) { counter = counter + 1; } },104,full
+spec_027_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_027_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(7),80,full
+spec_027_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 7; while (counter < 9) { counter = counter + 1; } },104,full
+spec_028_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_028_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(8),80,full
+spec_028_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 8; while (counter < 10) { counter = counter + 1; } },104,full
+spec_029_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_029_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(9),80,full
+spec_029_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 9; while (counter < 11) { counter = counter + 1; } },104,full
+spec_030_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_030_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(10),80,full
+spec_030_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 10; while (counter < 12) { counter = counter + 1; } },104,full
+spec_031_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_031_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(1),80,full
+spec_031_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 1; while (counter < 3) { counter = counter + 1; } },104,full
+spec_032_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_032_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(2),80,full
+spec_032_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 2; while (counter < 4) { counter = counter + 1; } },104,full
+spec_033_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full
+spec_033_f,special,fun,grammar_feed_full,"Using full FUN grammar text, define square then apply.",let square: Int -> Int = (x: Int) =>,let square: Int -> Int = (x: Int) => x * x; square(3),80,full
+spec_033_i,special,imp,grammar_feed_full,"Using full IMP grammar text, make while-counter program.",{ let counter: Int =,{ let counter: Int = 3; while (counter < 5) { counter = counter + 1; } },104,full
+spec_034_s,special,stlc,grammar_feed_full,"Using full STLC grammar text, complete identity for Int.",λx:Int.,λx:Int.x,40,full

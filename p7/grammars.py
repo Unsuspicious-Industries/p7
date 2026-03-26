@@ -6,8 +6,8 @@ from typing import Any, Dict, List
 
 def _load_spec(name: str) -> str:
     """Load a grammar spec from the repository examples directory."""
-    repo_root = Path(__file__).resolve().parents[2]
-    spec_path = repo_root / "examples" / f"{name}.auf"
+    repo_root = Path(__file__).resolve().parents[1]
+    spec_path = repo_root / ".." / "aufbau" / "examples" / f"{name}.auf"
 
     if not spec_path.exists():
         raise FileNotFoundError(f"Grammar spec not found: {spec_path}")
@@ -40,17 +40,17 @@ GRAMMARS: Dict[str, Dict[str, Any]] = {
         "short": "typed imperative programs",
         "description": "Typed imperative language with assignments, conditionals, and loops",
         "syntax_hints": [
-            "Assignment: x: Type = value;",
+            "Programs are wrapped in { ... }",
+            "Assignment: let x: Type = value;",
             "Arithmetic values: x + y, x - 1, a * b",
-            "Conditionals: if cond { ... } else { ... }",
-            "Loops: while cond { ... }",
-            "Type unions are allowed: Int|Bool",
+            "Conditionals: if (cond) { ... } else { ... }",
+            "Loops: while (cond) { ... }",
         ],
         "examples": [
-            ("assignment", "x: Int = 5;"),
-            ("sequence", "x: Int = 1; y: Int = x + 2;"),
-            ("if_else", "x: Int = 1; if x < 5 { y: Int = x + 1; } else { y: Int = 0; }"),
-            ("while", "counter: Int = 0; while counter < 3 { counter + 1; }"),
+            ("assignment", "{ let x: Int = 5; }"),
+            ("sequence", "{ let x: Int = 1; let y: Int = x + 2; }"),
+            ("if_else", "{ let x: Int = 1; if (x < 5) { let y: Int = x + 1; } else { let y: Int = 0; } }"),
+            ("while", "{ let counter: Int = 0; while (counter < 3) { counter = counter + 1; } }"),
         ],
     },
     "fun": {
@@ -84,22 +84,6 @@ GRAMMARS: Dict[str, Dict[str, Any]] = {
         "examples": [
             ("single", "beep:Fizz"),
             ("concat", "beep:Fizz + boop:Fizz"),
-        ],
-    },
-    "json": {
-        "spec": _load_spec("json"),
-        "name": "JSON",
-        "short": "untyped JSON values",
-        "description": "JSON grammar with strings, numbers, arrays, and objects",
-        "syntax_hints": [
-            "Strings like \"hello\" (supports escapes)",
-            "Arrays: [1, 2, 3]",
-            "Objects: {\"k\": true, \"n\": 1}",
-        ],
-        "examples": [
-            ("string", "\"hello\""),
-            ("array", "[1, 2, 3]"),
-            ("object", "{\"k\": true, \"n\": 1}"),
         ],
     },
 }

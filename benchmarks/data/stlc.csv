@@ -1,0 +1,101 @@
+task_id,language,grammar,category,instruction,initial,expected,max_tokens,feed
+stlc_01_id,stlc,stlc,smoke_identity,Use the provided complete identity over Int.,λx:Int.x,λx:Int.x,0,hints
+stlc_01_k,stlc,stlc,const,Return first arg for Int then Bool.,λx:Int.,λx:Int.λy:Bool.x,40,hints
+stlc_01_k2,stlc,stlc,const,Return second arg for Int then Bool.,λx:Int.,λx:Int.λy:Bool.y,40,hints
+stlc_01_app,stlc,stlc,application,Apply f:(Int->Bool) to x:Int.,λf:(Int->Bool).,λf:(Int->Bool).λx:Int.(f x),48,hints
+stlc_01_twice,stlc,stlc,repetition,Apply f:(Int->Int) twice.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f x)),56,hints
+stlc_01_comp,stlc,stlc,composition,Compose (Bool->Int) with (Int->Bool).,λf:(Bool->Int).,λf:(Bool->Int).λg:(Int->Bool).λx:Int.(f (g x)),72,hints
+stlc_01_eta,stlc,stlc,eta,Eta-expand (Int->Bool).,λf:(Int->Bool).,λf:(Int->Bool).λx:Int.(f x),56,hints
+stlc_01_arg,stlc,stlc,argument_order,"Take x:Int, then f:(Int->Bool), return f x.",λx:Int.,λx:Int.λf:(Int->Bool).(f x),56,hints
+stlc_01_hid,stlc,stlc,higher_order,Identity over (Int->Bool).,λh:(Int->Bool).,λh:(Int->Bool).h,40,hints
+stlc_01_triple,stlc,stlc,repetition,Apply f:(Int->Int) three times.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f (f x))),80,hints
+stlc_02_id,stlc,stlc,smoke_identity,Use the provided complete identity over Bool.,λx:Bool.x,λx:Bool.x,0,hints
+stlc_02_k,stlc,stlc,const,Return first arg for Bool then Int.,λx:Bool.,λx:Bool.λy:Int.x,40,hints
+stlc_02_k2,stlc,stlc,const,Return second arg for Bool then Int.,λx:Bool.,λx:Bool.λy:Int.y,40,hints
+stlc_02_app,stlc,stlc,application,Apply f:(Bool->Int) to x:Bool.,λf:(Bool->Int).,λf:(Bool->Int).λx:Bool.(f x),48,hints
+stlc_02_twice,stlc,stlc,repetition,Apply f:(Bool->Bool) twice.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f x)),56,hints
+stlc_02_comp,stlc,stlc,composition,Compose (Int->Bool) with (Bool->Int).,λf:(Int->Bool).,λf:(Int->Bool).λg:(Bool->Int).λx:Bool.(f (g x)),72,hints
+stlc_02_eta,stlc,stlc,eta,Eta-expand (Bool->Int).,λf:(Bool->Int).,λf:(Bool->Int).λx:Bool.(f x),56,hints
+stlc_02_arg,stlc,stlc,argument_order,"Take x:Bool, then f:(Bool->Int), return f x.",λx:Bool.,λx:Bool.λf:(Bool->Int).(f x),56,hints
+stlc_02_hid,stlc,stlc,higher_order,Identity over (Bool->Int).,λh:(Bool->Int).,λh:(Bool->Int).h,40,hints
+stlc_02_triple,stlc,stlc,repetition,Apply f:(Bool->Bool) three times.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f (f x))),80,hints
+stlc_03_id,stlc,stlc,smoke_identity,Use the provided complete identity over Int.,λx:Int.x,λx:Int.x,0,hints
+stlc_03_k,stlc,stlc,const,Return first arg for Int then Int.,λx:Int.,λx:Int.λy:Int.x,40,hints
+stlc_03_k2,stlc,stlc,const,Return second arg for Int then Int.,λx:Int.,λx:Int.λy:Int.y,40,hints
+stlc_03_app,stlc,stlc,application,Apply f:(Int->Int) to x:Int.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f x),48,hints
+stlc_03_twice,stlc,stlc,repetition,Apply f:(Int->Int) twice.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f x)),56,hints
+stlc_03_comp,stlc,stlc,composition,Compose (Int->Int) with (Int->Int).,λf:(Int->Int).,λf:(Int->Int).λg:(Int->Int).λx:Int.(f (g x)),72,hints
+stlc_03_eta,stlc,stlc,eta,Eta-expand (Int->Int).,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f x),56,hints
+stlc_03_arg,stlc,stlc,argument_order,"Take x:Int, then f:(Int->Int), return f x.",λx:Int.,λx:Int.λf:(Int->Int).(f x),56,hints
+stlc_03_hid,stlc,stlc,higher_order,Identity over (Int->Int).,λh:(Int->Int).,λh:(Int->Int).h,40,hints
+stlc_03_triple,stlc,stlc,repetition,Apply f:(Int->Int) three times.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f (f x))),80,hints
+stlc_04_id,stlc,stlc,smoke_identity,Use the provided complete identity over Bool.,λx:Bool.x,λx:Bool.x,0,hints
+stlc_04_k,stlc,stlc,const,Return first arg for Bool then Bool.,λx:Bool.,λx:Bool.λy:Bool.x,40,hints
+stlc_04_k2,stlc,stlc,const,Return second arg for Bool then Bool.,λx:Bool.,λx:Bool.λy:Bool.y,40,hints
+stlc_04_app,stlc,stlc,application,Apply f:(Bool->Bool) to x:Bool.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f x),48,hints
+stlc_04_twice,stlc,stlc,repetition,Apply f:(Bool->Bool) twice.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f x)),56,hints
+stlc_04_comp,stlc,stlc,composition,Compose (Bool->Bool) with (Bool->Bool).,λf:(Bool->Bool).,λf:(Bool->Bool).λg:(Bool->Bool).λx:Bool.(f (g x)),72,hints
+stlc_04_eta,stlc,stlc,eta,Eta-expand (Bool->Bool).,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f x),56,hints
+stlc_04_arg,stlc,stlc,argument_order,"Take x:Bool, then f:(Bool->Bool), return f x.",λx:Bool.,λx:Bool.λf:(Bool->Bool).(f x),56,hints
+stlc_04_hid,stlc,stlc,higher_order,Identity over (Bool->Bool).,λh:(Bool->Bool).,λh:(Bool->Bool).h,40,hints
+stlc_04_triple,stlc,stlc,repetition,Apply f:(Bool->Bool) three times.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f (f x))),80,hints
+stlc_05_id,stlc,stlc,smoke_identity,Use the provided complete identity over Int.,λx:Int.x,λx:Int.x,0,hints
+stlc_05_k,stlc,stlc,const,Return first arg for Int then Bool.,λx:Int.,λx:Int.λy:Bool.x,40,hints
+stlc_05_k2,stlc,stlc,const,Return second arg for Int then Bool.,λx:Int.,λx:Int.λy:Bool.y,40,hints
+stlc_05_app,stlc,stlc,application,Apply f:(Int->Bool) to x:Int.,λf:(Int->Bool).,λf:(Int->Bool).λx:Int.(f x),48,hints
+stlc_05_twice,stlc,stlc,repetition,Apply f:(Int->Int) twice.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f x)),56,hints
+stlc_05_comp,stlc,stlc,composition,Compose (Bool->Int) with (Int->Bool).,λf:(Bool->Int).,λf:(Bool->Int).λg:(Int->Bool).λx:Int.(f (g x)),72,hints
+stlc_05_eta,stlc,stlc,eta,Eta-expand (Int->Bool).,λf:(Int->Bool).,λf:(Int->Bool).λx:Int.(f x),56,hints
+stlc_05_arg,stlc,stlc,argument_order,"Take x:Int, then f:(Int->Bool), return f x.",λx:Int.,λx:Int.λf:(Int->Bool).(f x),56,hints
+stlc_05_hid,stlc,stlc,higher_order,Identity over (Int->Bool).,λh:(Int->Bool).,λh:(Int->Bool).h,40,hints
+stlc_05_triple,stlc,stlc,repetition,Apply f:(Int->Int) three times.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f (f x))),80,hints
+stlc_06_id,stlc,stlc,smoke_identity,Use the provided complete identity over Bool.,λx:Bool.x,λx:Bool.x,0,hints
+stlc_06_k,stlc,stlc,const,Return first arg for Bool then Int.,λx:Bool.,λx:Bool.λy:Int.x,40,hints
+stlc_06_k2,stlc,stlc,const,Return second arg for Bool then Int.,λx:Bool.,λx:Bool.λy:Int.y,40,hints
+stlc_06_app,stlc,stlc,application,Apply f:(Bool->Int) to x:Bool.,λf:(Bool->Int).,λf:(Bool->Int).λx:Bool.(f x),48,hints
+stlc_06_twice,stlc,stlc,repetition,Apply f:(Bool->Bool) twice.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f x)),56,hints
+stlc_06_comp,stlc,stlc,composition,Compose (Int->Bool) with (Bool->Int).,λf:(Int->Bool).,λf:(Int->Bool).λg:(Bool->Int).λx:Bool.(f (g x)),72,hints
+stlc_06_eta,stlc,stlc,eta,Eta-expand (Bool->Int).,λf:(Bool->Int).,λf:(Bool->Int).λx:Bool.(f x),56,hints
+stlc_06_arg,stlc,stlc,argument_order,"Take x:Bool, then f:(Bool->Int), return f x.",λx:Bool.,λx:Bool.λf:(Bool->Int).(f x),56,hints
+stlc_06_hid,stlc,stlc,higher_order,Identity over (Bool->Int).,λh:(Bool->Int).,λh:(Bool->Int).h,40,hints
+stlc_06_triple,stlc,stlc,repetition,Apply f:(Bool->Bool) three times.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f (f x))),80,hints
+stlc_07_id,stlc,stlc,smoke_identity,Use the provided complete identity over Int.,λx:Int.x,λx:Int.x,0,hints
+stlc_07_k,stlc,stlc,const,Return first arg for Int then Int.,λx:Int.,λx:Int.λy:Int.x,40,hints
+stlc_07_k2,stlc,stlc,const,Return second arg for Int then Int.,λx:Int.,λx:Int.λy:Int.y,40,hints
+stlc_07_app,stlc,stlc,application,Apply f:(Int->Int) to x:Int.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f x),48,hints
+stlc_07_twice,stlc,stlc,repetition,Apply f:(Int->Int) twice.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f x)),56,hints
+stlc_07_comp,stlc,stlc,composition,Compose (Int->Int) with (Int->Int).,λf:(Int->Int).,λf:(Int->Int).λg:(Int->Int).λx:Int.(f (g x)),72,hints
+stlc_07_eta,stlc,stlc,eta,Eta-expand (Int->Int).,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f x),56,hints
+stlc_07_arg,stlc,stlc,argument_order,"Take x:Int, then f:(Int->Int), return f x.",λx:Int.,λx:Int.λf:(Int->Int).(f x),56,hints
+stlc_07_hid,stlc,stlc,higher_order,Identity over (Int->Int).,λh:(Int->Int).,λh:(Int->Int).h,40,hints
+stlc_07_triple,stlc,stlc,repetition,Apply f:(Int->Int) three times.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f (f x))),80,hints
+stlc_08_id,stlc,stlc,smoke_identity,Use the provided complete identity over Bool.,λx:Bool.x,λx:Bool.x,0,hints
+stlc_08_k,stlc,stlc,const,Return first arg for Bool then Bool.,λx:Bool.,λx:Bool.λy:Bool.x,40,hints
+stlc_08_k2,stlc,stlc,const,Return second arg for Bool then Bool.,λx:Bool.,λx:Bool.λy:Bool.y,40,hints
+stlc_08_app,stlc,stlc,application,Apply f:(Bool->Bool) to x:Bool.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f x),48,hints
+stlc_08_twice,stlc,stlc,repetition,Apply f:(Bool->Bool) twice.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f x)),56,hints
+stlc_08_comp,stlc,stlc,composition,Compose (Bool->Bool) with (Bool->Bool).,λf:(Bool->Bool).,λf:(Bool->Bool).λg:(Bool->Bool).λx:Bool.(f (g x)),72,hints
+stlc_08_eta,stlc,stlc,eta,Eta-expand (Bool->Bool).,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f x),56,hints
+stlc_08_arg,stlc,stlc,argument_order,"Take x:Bool, then f:(Bool->Bool), return f x.",λx:Bool.,λx:Bool.λf:(Bool->Bool).(f x),56,hints
+stlc_08_hid,stlc,stlc,higher_order,Identity over (Bool->Bool).,λh:(Bool->Bool).,λh:(Bool->Bool).h,40,hints
+stlc_08_triple,stlc,stlc,repetition,Apply f:(Bool->Bool) three times.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f (f x))),80,hints
+stlc_09_id,stlc,stlc,smoke_identity,Use the provided complete identity over Int.,λx:Int.x,λx:Int.x,0,hints
+stlc_09_k,stlc,stlc,const,Return first arg for Int then Bool.,λx:Int.,λx:Int.λy:Bool.x,40,hints
+stlc_09_k2,stlc,stlc,const,Return second arg for Int then Bool.,λx:Int.,λx:Int.λy:Bool.y,40,hints
+stlc_09_app,stlc,stlc,application,Apply f:(Int->Bool) to x:Int.,λf:(Int->Bool).,λf:(Int->Bool).λx:Int.(f x),48,hints
+stlc_09_twice,stlc,stlc,repetition,Apply f:(Int->Int) twice.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f x)),56,hints
+stlc_09_comp,stlc,stlc,composition,Compose (Bool->Int) with (Int->Bool).,λf:(Bool->Int).,λf:(Bool->Int).λg:(Int->Bool).λx:Int.(f (g x)),72,hints
+stlc_09_eta,stlc,stlc,eta,Eta-expand (Int->Bool).,λf:(Int->Bool).,λf:(Int->Bool).λx:Int.(f x),56,hints
+stlc_09_arg,stlc,stlc,argument_order,"Take x:Int, then f:(Int->Bool), return f x.",λx:Int.,λx:Int.λf:(Int->Bool).(f x),56,hints
+stlc_09_hid,stlc,stlc,higher_order,Identity over (Int->Bool).,λh:(Int->Bool).,λh:(Int->Bool).h,40,hints
+stlc_09_triple,stlc,stlc,repetition,Apply f:(Int->Int) three times.,λf:(Int->Int).,λf:(Int->Int).λx:Int.(f (f (f x))),80,hints
+stlc_10_id,stlc,stlc,smoke_identity,Use the provided complete identity over Bool.,λx:Bool.x,λx:Bool.x,0,hints
+stlc_10_k,stlc,stlc,const,Return first arg for Bool then Int.,λx:Bool.,λx:Bool.λy:Int.x,40,hints
+stlc_10_k2,stlc,stlc,const,Return second arg for Bool then Int.,λx:Bool.,λx:Bool.λy:Int.y,40,hints
+stlc_10_app,stlc,stlc,application,Apply f:(Bool->Int) to x:Bool.,λf:(Bool->Int).,λf:(Bool->Int).λx:Bool.(f x),48,hints
+stlc_10_twice,stlc,stlc,repetition,Apply f:(Bool->Bool) twice.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f x)),56,hints
+stlc_10_comp,stlc,stlc,composition,Compose (Int->Bool) with (Bool->Int).,λf:(Int->Bool).,λf:(Int->Bool).λg:(Bool->Int).λx:Bool.(f (g x)),72,hints
+stlc_10_eta,stlc,stlc,eta,Eta-expand (Bool->Int).,λf:(Bool->Int).,λf:(Bool->Int).λx:Bool.(f x),56,hints
+stlc_10_arg,stlc,stlc,argument_order,"Take x:Bool, then f:(Bool->Int), return f x.",λx:Bool.,λx:Bool.λf:(Bool->Int).(f x),56,hints
+stlc_10_hid,stlc,stlc,higher_order,Identity over (Bool->Int).,λh:(Bool->Int).,λh:(Bool->Int).h,40,hints
+stlc_10_triple,stlc,stlc,repetition,Apply f:(Bool->Bool) three times.,λf:(Bool->Bool).,λf:(Bool->Bool).λx:Bool.(f (f (f x))),80,hints

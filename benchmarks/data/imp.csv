@@ -1,0 +1,101 @@
+task_id,language,grammar,category,instruction,initial,expected,max_tokens,feed
+imp_01_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 1; },{ let x: Int = 1; },0,hints
+imp_01_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 1; let y: Int = x + 2; },64,hints
+imp_01_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 1; if (x < 4) { let y: Int = x + 1; } else { let y: Int = 2; } },96,hints
+imp_01_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 1; while (counter < 4) { counter = counter + 1; } },96,hints
+imp_01_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 1; } else { let z: Int = 2; } },96,hints
+imp_01_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 1; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_01_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 1; x = x + 2; },72,hints
+imp_01_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 1; if (x < 4) { if (x < 5) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 2; } },120,hints
+imp_01_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 1; while (n < 7) { n = n + 2; } },96,hints
+imp_01_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 1; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_02_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 2; },{ let x: Int = 2; },0,hints
+imp_02_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 2; let y: Int = x + 3; },64,hints
+imp_02_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 2; if (x < 5) { let y: Int = x + 1; } else { let y: Int = 3; } },96,hints
+imp_02_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 2; while (counter < 5) { counter = counter + 1; } },96,hints
+imp_02_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 2; } else { let z: Int = 3; } },96,hints
+imp_02_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 2; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_02_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 2; x = x + 3; },72,hints
+imp_02_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 2; if (x < 5) { if (x < 6) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 3; } },120,hints
+imp_02_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 2; while (n < 8) { n = n + 2; } },96,hints
+imp_02_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 2; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_03_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 3; },{ let x: Int = 3; },0,hints
+imp_03_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 3; let y: Int = x + 4; },64,hints
+imp_03_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 3; if (x < 6) { let y: Int = x + 1; } else { let y: Int = 4; } },96,hints
+imp_03_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 3; while (counter < 6) { counter = counter + 1; } },96,hints
+imp_03_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 3; } else { let z: Int = 4; } },96,hints
+imp_03_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 3; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_03_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 3; x = x + 4; },72,hints
+imp_03_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 3; if (x < 6) { if (x < 7) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 4; } },120,hints
+imp_03_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 3; while (n < 9) { n = n + 2; } },96,hints
+imp_03_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 3; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_04_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 4; },{ let x: Int = 4; },0,hints
+imp_04_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 4; let y: Int = x + 5; },64,hints
+imp_04_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 4; if (x < 7) { let y: Int = x + 1; } else { let y: Int = 5; } },96,hints
+imp_04_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 4; while (counter < 7) { counter = counter + 1; } },96,hints
+imp_04_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 4; } else { let z: Int = 5; } },96,hints
+imp_04_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 4; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_04_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 4; x = x + 5; },72,hints
+imp_04_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 4; if (x < 7) { if (x < 8) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 5; } },120,hints
+imp_04_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 4; while (n < 10) { n = n + 2; } },96,hints
+imp_04_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 4; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_05_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 5; },{ let x: Int = 5; },0,hints
+imp_05_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 5; let y: Int = x + 6; },64,hints
+imp_05_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 5; if (x < 8) { let y: Int = x + 1; } else { let y: Int = 6; } },96,hints
+imp_05_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 5; while (counter < 8) { counter = counter + 1; } },96,hints
+imp_05_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 5; } else { let z: Int = 6; } },96,hints
+imp_05_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 5; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_05_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 5; x = x + 6; },72,hints
+imp_05_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 5; if (x < 8) { if (x < 9) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 6; } },120,hints
+imp_05_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 5; while (n < 11) { n = n + 2; } },96,hints
+imp_05_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 5; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_06_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 6; },{ let x: Int = 6; },0,hints
+imp_06_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 6; let y: Int = x + 7; },64,hints
+imp_06_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 6; if (x < 9) { let y: Int = x + 1; } else { let y: Int = 7; } },96,hints
+imp_06_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 6; while (counter < 9) { counter = counter + 1; } },96,hints
+imp_06_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 6; } else { let z: Int = 7; } },96,hints
+imp_06_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 6; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_06_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 6; x = x + 7; },72,hints
+imp_06_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 6; if (x < 9) { if (x < 10) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 7; } },120,hints
+imp_06_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 6; while (n < 12) { n = n + 2; } },96,hints
+imp_06_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 6; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_07_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 7; },{ let x: Int = 7; },0,hints
+imp_07_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 7; let y: Int = x + 8; },64,hints
+imp_07_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 7; if (x < 10) { let y: Int = x + 1; } else { let y: Int = 8; } },96,hints
+imp_07_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 7; while (counter < 10) { counter = counter + 1; } },96,hints
+imp_07_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 7; } else { let z: Int = 8; } },96,hints
+imp_07_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 7; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_07_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 7; x = x + 8; },72,hints
+imp_07_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 7; if (x < 10) { if (x < 11) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 8; } },120,hints
+imp_07_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 7; while (n < 13) { n = n + 2; } },96,hints
+imp_07_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 7; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_08_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 8; },{ let x: Int = 8; },0,hints
+imp_08_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 8; let y: Int = x + 9; },64,hints
+imp_08_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 8; if (x < 11) { let y: Int = x + 1; } else { let y: Int = 9; } },96,hints
+imp_08_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 8; while (counter < 11) { counter = counter + 1; } },96,hints
+imp_08_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 8; } else { let z: Int = 9; } },96,hints
+imp_08_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 8; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_08_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 8; x = x + 9; },72,hints
+imp_08_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 8; if (x < 11) { if (x < 12) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 9; } },120,hints
+imp_08_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 8; while (n < 14) { n = n + 2; } },96,hints
+imp_08_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 8; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_09_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 9; },{ let x: Int = 9; },0,hints
+imp_09_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 9; let y: Int = x + 10; },64,hints
+imp_09_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 9; if (x < 12) { let y: Int = x + 1; } else { let y: Int = 10; } },96,hints
+imp_09_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 9; while (counter < 12) { counter = counter + 1; } },96,hints
+imp_09_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 9; } else { let z: Int = 10; } },96,hints
+imp_09_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 9; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_09_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 9; x = x + 10; },72,hints
+imp_09_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 9; if (x < 12) { if (x < 13) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 10; } },120,hints
+imp_09_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 9; while (n < 15) { n = n + 2; } },96,hints
+imp_09_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 9; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints
+imp_10_dec,imp,imp,smoke_declaration,Use the provided complete declaration program.,{ let x: Int = 10; },{ let x: Int = 10; },0,hints
+imp_10_seq,imp,imp,sequence,Declare x then y = x + c.,{ let x: Int =,{ let x: Int = 10; let y: Int = x + 11; },64,hints
+imp_10_if,imp,imp,if_else,If-else on x < limit defines y.,{ let x: Int =,{ let x: Int = 10; if (x < 13) { let y: Int = x + 1; } else { let y: Int = 11; } },96,hints
+imp_10_wh,imp,imp,while,Count up with while.,{ let counter: Int =,{ let counter: Int = 10; while (counter < 13) { counter = counter + 1; } },96,hints
+imp_10_bf,imp,imp,bool,"Branch on Bool flag, define Int z both branches.",{ let flag: Bool =,{ let flag: Bool = true; if (flag) { let z: Int = 10; } else { let z: Int = 11; } },96,hints
+imp_10_ar,imp,imp,arithmetic,Chain arithmetic declarations.,{ let a: Int =,{ let a: Int = 10; let b: Int = a * 2; let c: Int = b - 1; },88,hints
+imp_10_as,imp,imp,assignment,Declare x then update x by assignment.,{ let x: Int =,{ let x: Int = 10; x = x + 11; },72,hints
+imp_10_ni,imp,imp,nested_if,Nested if in then branch.,{ let x: Int =,{ let x: Int = 10; if (x < 13) { if (x < 14) { let y: Int = x + 1; } else { let y: Int = x; } } else { let y: Int = 11; } },120,hints
+imp_10_w2,imp,imp,while,While loop with +2 increment.,{ let n: Int =,{ let n: Int = 10; while (n < 16) { n = n + 2; } },96,hints
+imp_10_mix,imp,imp,mixed,Bool guard and Int output.,{ let ready: Bool =,{ let ready: Bool = true; let x: Int = 10; if (ready) { let out: Int = x + 1; } else { let out: Int = x; } },112,hints

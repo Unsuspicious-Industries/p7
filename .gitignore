@@ -19,6 +19,7 @@ dist/
 build/
 */dist/
 */node_modules/
+benchmarks/out
 # IDE
 .idea/
 .vscode/

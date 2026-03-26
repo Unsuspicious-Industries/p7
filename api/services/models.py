@@ -20,34 +20,6 @@ def mask_repeated_whitespace(logits: List[float], vocab: List[str], current_text
     return masked
 
 
-def sample_unconstrained_token(
-    logits: List[float],
-    tokenizer,
-    top_k: int = 50,
-    temperature: float = 1.0,
-) -> str:
-    """Sample a token from logits for more natural unconstrained text."""
-    import torch
-
-    logits_t = torch.tensor(logits, dtype=torch.float32)
-    if temperature != 1.0:
-        logits_t = logits_t / max(temperature, 1e-6)
-
-    vocab_size = logits_t.shape[0]
-    if top_k and top_k < vocab_size:
-        values, indices = torch.topk(logits_t, top_k)
-        probs = torch.softmax(values, dim=-1)
-        choice = torch.multinomial(probs, num_samples=1).item()
-        token_id = indices[choice].item()
-    else:
-        probs = torch.softmax(logits_t, dim=-1)
-        token_id = torch.multinomial(probs, num_samples=1).item()
-
-    return tokenizer.decode([token_id])
-
-
-
-
 def get_device_info() -> Dict[str, str]:
     try:
         import torch

@@ -1,0 +1,101 @@
+task_id,language,grammar,category,instruction,initial,expected,max_tokens,feed
+fun_01_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(1),let square: Int -> Int = (x: Int) => x * x; square(1),0,hints
+fun_01_inc,fun,fun,int_ops,Define inc:Int->Int and call on 1.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(1),72,hints
+fun_01_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 1.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(1)),84,hints
+fun_01_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 1.0; f +. 2.0,56,hints
+fun_01_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 1.0; f *. 2.0,56,hints
+fun_01_la,fun,fun,lambda,Apply lambda adding 1 to 10.,((x: Int) =>,((x: Int) => x + 1)(10),56,hints
+fun_01_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 1; let b: Int = 2; a * b,72,hints
+fun_01_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 1; n - 1,48,hints
+fun_01_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 1.0; f /. 2.0,56,hints
+fun_01_id,fun,fun,identity,Define id:Int->Int and call on 1.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(1),64,hints
+fun_02_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(2),let square: Int -> Int = (x: Int) => x * x; square(2),0,hints
+fun_02_inc,fun,fun,int_ops,Define inc:Int->Int and call on 2.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(2),72,hints
+fun_02_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 2.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(2)),84,hints
+fun_02_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 1.5; f +. 2.0,56,hints
+fun_02_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 1.5; f *. 2.0,56,hints
+fun_02_la,fun,fun,lambda,Apply lambda adding 2 to 10.,((x: Int) =>,((x: Int) => x + 2)(10),56,hints
+fun_02_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 2; let b: Int = 3; a * b,72,hints
+fun_02_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 2; n - 1,48,hints
+fun_02_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 1.5; f /. 2.0,56,hints
+fun_02_id,fun,fun,identity,Define id:Int->Int and call on 2.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(2),64,hints
+fun_03_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(3),let square: Int -> Int = (x: Int) => x * x; square(3),0,hints
+fun_03_inc,fun,fun,int_ops,Define inc:Int->Int and call on 3.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(3),72,hints
+fun_03_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 3.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(3)),84,hints
+fun_03_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 2.0; f +. 2.0,56,hints
+fun_03_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 2.0; f *. 2.0,56,hints
+fun_03_la,fun,fun,lambda,Apply lambda adding 3 to 10.,((x: Int) =>,((x: Int) => x + 3)(10),56,hints
+fun_03_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 3; let b: Int = 4; a * b,72,hints
+fun_03_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 3; n - 1,48,hints
+fun_03_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 2.0; f /. 2.0,56,hints
+fun_03_id,fun,fun,identity,Define id:Int->Int and call on 3.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(3),64,hints
+fun_04_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(4),let square: Int -> Int = (x: Int) => x * x; square(4),0,hints
+fun_04_inc,fun,fun,int_ops,Define inc:Int->Int and call on 4.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(4),72,hints
+fun_04_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 4.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(4)),84,hints
+fun_04_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 2.5; f +. 2.0,56,hints
+fun_04_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 2.5; f *. 2.0,56,hints
+fun_04_la,fun,fun,lambda,Apply lambda adding 4 to 10.,((x: Int) =>,((x: Int) => x + 4)(10),56,hints
+fun_04_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 4; let b: Int = 5; a * b,72,hints
+fun_04_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 4; n - 1,48,hints
+fun_04_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 2.5; f /. 2.0,56,hints
+fun_04_id,fun,fun,identity,Define id:Int->Int and call on 4.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(4),64,hints
+fun_05_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(5),let square: Int -> Int = (x: Int) => x * x; square(5),0,hints
+fun_05_inc,fun,fun,int_ops,Define inc:Int->Int and call on 5.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(5),72,hints
+fun_05_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 5.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(5)),84,hints
+fun_05_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 3.0; f +. 2.0,56,hints
+fun_05_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 3.0; f *. 2.0,56,hints
+fun_05_la,fun,fun,lambda,Apply lambda adding 5 to 10.,((x: Int) =>,((x: Int) => x + 5)(10),56,hints
+fun_05_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 5; let b: Int = 6; a * b,72,hints
+fun_05_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 5; n - 1,48,hints
+fun_05_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 3.0; f /. 2.0,56,hints
+fun_05_id,fun,fun,identity,Define id:Int->Int and call on 5.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(5),64,hints
+fun_06_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(6),let square: Int -> Int = (x: Int) => x * x; square(6),0,hints
+fun_06_inc,fun,fun,int_ops,Define inc:Int->Int and call on 6.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(6),72,hints
+fun_06_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 6.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(6)),84,hints
+fun_06_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 3.5; f +. 2.0,56,hints
+fun_06_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 3.5; f *. 2.0,56,hints
+fun_06_la,fun,fun,lambda,Apply lambda adding 6 to 10.,((x: Int) =>,((x: Int) => x + 6)(10),56,hints
+fun_06_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 6; let b: Int = 7; a * b,72,hints
+fun_06_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 6; n - 1,48,hints
+fun_06_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 3.5; f /. 2.0,56,hints
+fun_06_id,fun,fun,identity,Define id:Int->Int and call on 6.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(6),64,hints
+fun_07_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(7),let square: Int -> Int = (x: Int) => x * x; square(7),0,hints
+fun_07_inc,fun,fun,int_ops,Define inc:Int->Int and call on 7.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(7),72,hints
+fun_07_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 7.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(7)),84,hints
+fun_07_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 4.0; f +. 2.0,56,hints
+fun_07_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 4.0; f *. 2.0,56,hints
+fun_07_la,fun,fun,lambda,Apply lambda adding 7 to 10.,((x: Int) =>,((x: Int) => x + 7)(10),56,hints
+fun_07_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 7; let b: Int = 8; a * b,72,hints
+fun_07_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 7; n - 1,48,hints
+fun_07_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 4.0; f /. 2.0,56,hints
+fun_07_id,fun,fun,identity,Define id:Int->Int and call on 7.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(7),64,hints
+fun_08_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(8),let square: Int -> Int = (x: Int) => x * x; square(8),0,hints
+fun_08_inc,fun,fun,int_ops,Define inc:Int->Int and call on 8.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(8),72,hints
+fun_08_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 8.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(8)),84,hints
+fun_08_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 4.5; f +. 2.0,56,hints
+fun_08_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 4.5; f *. 2.0,56,hints
+fun_08_la,fun,fun,lambda,Apply lambda adding 8 to 10.,((x: Int) =>,((x: Int) => x + 8)(10),56,hints
+fun_08_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 8; let b: Int = 9; a * b,72,hints
+fun_08_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 8; n - 1,48,hints
+fun_08_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 4.5; f /. 2.0,56,hints
+fun_08_id,fun,fun,identity,Define id:Int->Int and call on 8.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(8),64,hints
+fun_09_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(9),let square: Int -> Int = (x: Int) => x * x; square(9),0,hints
+fun_09_inc,fun,fun,int_ops,Define inc:Int->Int and call on 9.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(9),72,hints
+fun_09_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 9.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(9)),84,hints
+fun_09_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 5.0; f +. 2.0,56,hints
+fun_09_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 5.0; f *. 2.0,56,hints
+fun_09_la,fun,fun,lambda,Apply lambda adding 9 to 10.,((x: Int) =>,((x: Int) => x + 9)(10),56,hints
+fun_09_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 9; let b: Int = 10; a * b,72,hints
+fun_09_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 9; n - 1,48,hints
+fun_09_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 5.0; f /. 2.0,56,hints
+fun_09_id,fun,fun,identity,Define id:Int->Int and call on 9.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(9),64,hints
+fun_10_sq,fun,fun,smoke_square,Use the provided complete square program.,let square: Int -> Int = (x: Int) => x * x; square(10),let square: Int -> Int = (x: Int) => x * x; square(10),0,hints
+fun_10_inc,fun,fun,int_ops,Define inc:Int->Int and call on 10.,let inc: Int -> Int = (n: Int) =>,let inc: Int -> Int = (n: Int) => n + 1; inc(10),72,hints
+fun_10_dbl,fun,fun,application,Define dbl:Int->Int and call twice on 10.,let dbl: Int -> Int = (x: Int) =>,let dbl: Int -> Int = (x: Int) => x + x; dbl(dbl(10)),84,hints
+fun_10_fa,fun,fun,float_ops,Bind Float and add with +.,let f: Float =,let f: Float = 5.5; f +. 2.0,56,hints
+fun_10_fm,fun,fun,float_ops,Bind Float and multiply with *.,let f: Float =,let f: Float = 5.5; f *. 2.0,56,hints
+fun_10_la,fun,fun,lambda,Apply lambda adding 10 to 10.,((x: Int) =>,((x: Int) => x + 10)(10),56,hints
+fun_10_let,fun,fun,let,Use two Int lets then multiply.,let a: Int =,let a: Int = 10; let b: Int = 11; a * b,72,hints
+fun_10_sub,fun,fun,int_ops,Subtract one from bound Int.,let n: Int =,let n: Int = 10; n - 1,48,hints
+fun_10_fd,fun,fun,float_ops,Bind Float and divide with /.,let f: Float =,let f: Float = 5.5; f /. 2.0,56,hints
+fun_10_id,fun,fun,identity,Define id:Int->Int and call on 10.,let id: Int -> Int = (x: Int) =>,let id: Int -> Int = (x: Int) => x; id(10),64,hints

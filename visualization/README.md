@@ -280,7 +280,7 @@ SSE events:
 ### Backend Development
 The Flask backend provides REST API endpoints for:
 - Grammar validation using the P7 `Grammar` class
-- Parsing and type-checking via `ConstrainedGenerator`
+- Parsing and type-checking via `Synthesizer`
 - Model inference using HuggingFace Transformers
 
 ### Demo Development
