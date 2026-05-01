@@ -1,0 +1,18 @@
+id = "stlc_higher_identity_bool_endo"
+grammar = "stlc"
+category = "stlc:logic_higher_order"
+max_tokens = 40
+
+[prompt]
+text = "Write a lambda term that takes a Bool-to-Bool function and returns that function unchanged."
+
+[initial]
+text = "λh:(Bool->Bool)."
+
+[expected]
+text = "λh:(Bool->Bool).h"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Bool) -> Bool -> Bool"
+normalization = ["alpha", "beta"]

@@ -1,0 +1,19 @@
+id = "fun_subtract_chain"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 128
+
+[prompt]
+text = "Write a function that takes a starting amount and subtracts two deductions from it, then return that function as the final expression."
+
+[initial]
+text = "let deduct2: Int -> Int -> Int -> Int ="
+
+[expected]
+text = "let deduct2: Int -> Int -> Int -> Int = (start: Int) => (a: Int) => (b: Int) => start - a - b; deduct2"
+
+[resolution]
+mode = "samples"
+samples = [{start = 100, a = 17, b = 25, v = 58}, {start = 50, a = 10, b = 20, v = 20}, {start = 100, a = 50, b = 50, v = 0}]
+structure = {let_bindings = 1, applications = 0, lambdas = 3, operations = ["-"]}
+fn = "deduct2"

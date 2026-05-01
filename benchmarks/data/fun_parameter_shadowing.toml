@@ -1,0 +1,19 @@
+id = "fun_parameter_shadowing"
+grammar = "fun"
+category = "fun:function"
+max_tokens = 128
+
+[prompt]
+text = "Write a function that takes a value and increments it by one, then return that function as the final expression."
+
+[initial]
+text = "let inc: Int -> Int ="
+
+[expected]
+text = "let inc: Int -> Int = (y: Int) => y + 1; inc"
+
+[resolution]
+mode = "samples"
+samples = [{y = 6, v = 7}, {y = 0, v = 1}, {y = -5, v = -4}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["+"]}
+fn = "inc"

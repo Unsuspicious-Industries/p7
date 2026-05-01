@@ -1,0 +1,22 @@
+id = "imp_while_multiply_by_addition"
+grammar = "imp"
+category = "imp:loops"
+max_tokens = 176
+
+[prompt]
+text = "Write an imperative program that initializes a, b, i, and total, then uses a while loop and repeated addition to compute a times b into total."
+
+[initial]
+text = "{ let a: Int ="
+
+[expected]
+text = "{ let a: Int = 6; let b: Int = 7; let i: Int = 0; let total: Int = 0; while (i < a) { total = total + b; i = i + 1; } }"
+
+[resolution]
+mode = "samples"
+input_vars = ["a", "b"]
+vars = ["total"]
+samples = [{a = 6, b = 7, total = 42}, {a = 3, b = 4, total = 12}, {a = 0, b = 9, total = 0}]
+hidden_samples = 16
+input_domains = {a = {min = 0, max = 8}, b = {min = -8, max = 8}}
+structure = {let_bindings = 4, assignments = 2, ifs = 0, whiles = 1, operations = ["<", "+"]}

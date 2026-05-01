@@ -1,0 +1,18 @@
+id = "fun_curry"
+grammar = "fun"
+category = "fun:function_higher_order"
+max_tokens = 192
+
+[prompt]
+text = "Write a function that takes a binary function and returns its curried form. Return curry as the final expression."
+
+[initial]
+text = "let curry: (Int -> Int -> Int) -> Int -> Int -> Int ="
+
+[expected]
+text = "let curry: (Int -> Int -> Int) -> Int -> Int -> Int = (f: Int -> Int -> Int) => (x: Int) => (y: Int) => f(x)(y); curry"
+
+[resolution]
+mode = "equivalence"
+structure = {let_bindings = 1, applications = 2, lambdas = 3}
+fn = "curry"

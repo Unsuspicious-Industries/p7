@@ -1,0 +1,18 @@
+id = "stlc_step_pred_cont_int"
+grammar = "stlc"
+category = "stlc:logic_composition"
+max_tokens = 128
+
+[prompt]
+text = "Write a lambda term that takes a Bool-to-Int continuation, then an Int-to-Bool predicate, then an Int transformer, then an Int, and passes the transformed Int through the predicate into the continuation."
+
+[initial]
+text = "λk:(Bool->Int)."
+
+[expected]
+text = "λk:(Bool->Int).λpred:(Int->Bool).λstep:(Int->Int).λx:Int.(k (pred (step x)))"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Int) -> (Int -> Bool) -> (Int -> Int) -> Int -> Int"
+normalization = ["alpha", "beta"]

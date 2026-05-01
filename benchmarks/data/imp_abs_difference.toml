@@ -1,0 +1,21 @@
+id = "imp_abs_difference"
+grammar = "imp"
+category = "imp:branching"
+max_tokens = 176
+
+[prompt]
+text = "Write an imperative program that initializes a, b, and d, then uses an if statement to store the absolute difference between a and b in d."
+
+[initial]
+text = "{ let a: Int ="
+
+[expected]
+text = "{ let a: Int = 10; let b: Int = 3; let d: Int = 0; if (a < b) { d = b - a; } else { d = a - b; } }"
+
+[resolution]
+mode = "samples"
+input_vars = ["a", "b"]
+vars = ["d"]
+samples = [{a = 10, b = 3, d = 7}, {a = 3, b = 10, d = 7}, {a = -2, b = 5, d = 7}, {a = 4, b = 4, d = 0}]
+hidden_samples = 16
+structure = {let_bindings = 3, assignments = 2, ifs = 1, whiles = 0, operations = ["<", "-"]}

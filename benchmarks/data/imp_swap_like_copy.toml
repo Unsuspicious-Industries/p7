@@ -1,0 +1,18 @@
+id = "imp_swap_like_copy"
+grammar = "imp"
+category = "imp:sequence"
+max_tokens = 136
+
+[prompt]
+text = "Write an imperative program that initializes a and b, then swaps their values by using a temporary variable tmp."
+
+[initial]
+text = "{ let a: Int ="
+
+[expected]
+text = "{ let a: Int = 42; let b: Int = 7; let tmp: Int = a; a = b; b = tmp; }"
+
+[resolution]
+mode = "env"
+env = {a = 7, b = 42}
+vars = ["a", "b"]

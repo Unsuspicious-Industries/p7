@@ -1,0 +1,19 @@
+id = "fun_second_binding"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 144
+
+[prompt]
+text = "Write a function that takes one integer and multiplies it by four, then return that function as the final expression."
+
+[initial]
+text = "let mul4: Int -> Int ="
+
+[expected]
+text = "let mul4: Int -> Int = (x: Int) => x * 4; mul4"
+
+[resolution]
+mode = "samples"
+samples = [{x = 9, v = 36}, {x = 2, v = 8}, {x = 0, v = 0}, {x = -1, v = -4}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["*"]}
+fn = "mul4"

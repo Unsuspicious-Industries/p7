@@ -1,0 +1,21 @@
+id = "imp_if_assignment_false"
+grammar = "imp"
+category = "imp:branching"
+max_tokens = 144
+
+[prompt]
+text = "Write an imperative program that initializes x and out, then uses an if statement where the false branch assigns x - 8 to out."
+
+[initial]
+text = "{ let x: Int ="
+
+[expected]
+text = "{ let x: Int = 50; let out: Int = 0; if (x < 20) { out = x; } else { out = x - 8; } }"
+
+[resolution]
+mode = "samples"
+input_vars = ["x"]
+vars = ["out"]
+samples = [{x = 50, out = 42}, {x = 10, out = 10}, {x = 20, out = 12}]
+hidden_samples = 16
+structure = {let_bindings = 2, assignments = 2, ifs = 1, whiles = 0, operations = ["<", "-"]}

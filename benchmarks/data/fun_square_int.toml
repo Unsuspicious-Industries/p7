@@ -1,0 +1,19 @@
+id = "fun_square_int"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 112
+
+[prompt]
+text = "Write a function that squares its input, then return that function as the final expression."
+
+[initial]
+text = "let square: Int -> Int ="
+
+[expected]
+text = "let square: Int -> Int = (x: Int) => x * x; square"
+
+[resolution]
+mode = "samples"
+samples = [{x = 7, v = 49}, {x = 3, v = 9}, {x = 0, v = 0}, {x = -3, v = 9}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["*"]}
+fn = "square"

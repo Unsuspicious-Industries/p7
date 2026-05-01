@@ -1,0 +1,18 @@
+id = "stlc_compose_to_int"
+grammar = "stlc"
+category = "stlc:logic_composition"
+max_tokens = 80
+
+[prompt]
+text = "Write a lambda term that takes a Bool-to-Int function, then an Int-to-Bool function, then an Int, and composes them so the Int-to-Bool function runs first."
+
+[initial]
+text = "λf:(Bool->Int)."
+
+[expected]
+text = "λf:(Bool->Int).λg:(Int->Bool).λx:Int.(f (g x))"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Int) -> (Int -> Bool) -> Int -> Int"
+normalization = ["alpha", "beta"]

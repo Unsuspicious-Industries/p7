@@ -1,13 +1,10 @@
-name: Python + Rust CI
+name: Python CI
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
-env:
-  CARGO_TERM_COLOR: always
 
 jobs:
   python-tests:
@@ -17,15 +14,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -40,18 +28,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install maturin and build/install python extension
+      - name: Install aufbau bindings and p7
         run: |
           python -m pip install --upgrade pip
-          python -m pip install maturin
-          # install package + dev extras (build uses maturin as PEP517 backend)
+          git clone --depth 1 https://github.com/Unsuspicious-Industries/aufbau.git /tmp/aufbau
+          python -m pip install /tmp/aufbau
           python -m pip install -e '.[dev]'
 
       - name: Run Python tests (unit)
         run: pytest -q
-
-      - name: Run Rust unit tests (library)
-        run: cargo test --lib -q
 
       - name: Upload Python test log (on failure)
         if: failure()

@@ -1,0 +1,19 @@
+id = "fun_cube_int"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 112
+
+[prompt]
+text = "Write a function that cubes its input, then return that function as the final expression."
+
+[initial]
+text = "let cube: Int -> Int ="
+
+[expected]
+text = "let cube: Int -> Int = (x: Int) => x * x * x; cube"
+
+[resolution]
+mode = "samples"
+samples = [{x = 3, v = 27}, {x = 2, v = 8}, {x = 0, v = 0}, {x = -2, v = -8}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["*"]}
+fn = "cube"

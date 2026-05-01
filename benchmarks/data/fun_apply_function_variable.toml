@@ -1,0 +1,19 @@
+id = "fun_apply_function_variable"
+grammar = "fun"
+category = "fun:function_application"
+max_tokens = 96
+
+[prompt]
+text = "Define a function that doubles its input, then return that function as the final expression."
+
+[initial]
+text = "let times2: Int -> Int ="
+
+[expected]
+text = "let times2: Int -> Int = (x: Int) => x * 2; times2"
+
+[resolution]
+mode = "samples"
+samples = [{x = 7, v = 14}, {x = 0, v = 0}, {x = -3, v = -6}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["*"]}
+fn = "times2"

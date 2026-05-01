@@ -1,0 +1,18 @@
+id = "fun_twice_hof"
+grammar = "fun"
+category = "fun:function_higher_order"
+max_tokens = 176
+
+[prompt]
+text = "Write a higher-order function that takes a function from Int to Int and a value, applies the function twice to the value, and then returns twice as the final expression."
+
+[initial]
+text = "let twice: (Int -> Int) -> Int -> Int ="
+
+[expected]
+text = "let twice: (Int -> Int) -> Int -> Int = (f: Int -> Int) => (x: Int) => f(f(x)); twice"
+
+[resolution]
+mode = "equivalence"
+fn = "twice"
+structure = {let_bindings = 1, applications = 2, lambdas = 2}

@@ -1,0 +1,21 @@
+id = "imp_bool_equality_true"
+grammar = "imp"
+category = "imp:boolean"
+max_tokens = 80
+
+[prompt]
+text = "Write an imperative program that sets x and stores whether x equals 42 in same."
+
+[initial]
+text = "{ let x: Int ="
+
+[expected]
+text = "{ let x: Int = 42; let same: Bool = x == 42; }"
+
+[resolution]
+mode = "samples"
+input_vars = ["x"]
+vars = ["same"]
+samples = [{x = 42, same = true}, {x = 41, same = false}, {x = 0, same = false}]
+hidden_samples = 16
+structure = {let_bindings = 2, assignments = 0, ifs = 0, whiles = 0, operations = ["=="]}

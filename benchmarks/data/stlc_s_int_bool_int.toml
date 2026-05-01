@@ -1,0 +1,18 @@
+id = "stlc_s_int_bool_int"
+grammar = "stlc"
+category = "stlc:logic_substitution"
+max_tokens = 112
+
+[prompt]
+text = "Write a lambda term that takes a curried function of type Int -> Bool -> Int, then a function from Int to Bool, then an Int, and feeds that Int both into the curried function and into the Bool-producing function."
+
+[initial]
+text = "λf:(Int->Bool->Int)."
+
+[expected]
+text = "λf:(Int->Bool->Int).λg:(Int->Bool).λx:Int.((f x) (g x))"
+
+[resolution]
+mode = "equivalence"
+type = "(Int -> Bool -> Int) -> (Int -> Bool) -> Int -> Int"
+normalization = ["alpha", "beta"]

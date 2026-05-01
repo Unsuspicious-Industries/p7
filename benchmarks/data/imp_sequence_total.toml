@@ -1,0 +1,21 @@
+id = "imp_sequence_total"
+grammar = "imp"
+category = "imp:sequence"
+max_tokens = 96
+
+[prompt]
+text = "Write an imperative program that initializes a and b, then stores their sum in total."
+
+[initial]
+text = "{ let a: Int ="
+
+[expected]
+text = "{ let a: Int = 19; let b: Int = 23; let total: Int = a + b; }"
+
+[resolution]
+mode = "samples"
+input_vars = ["a", "b"]
+vars = ["total"]
+samples = [{a = 19, b = 23, total = 42}, {a = 1, b = 2, total = 3}, {a = -5, b = 8, total = 3}]
+hidden_samples = 16
+structure = {let_bindings = 3, assignments = 0, ifs = 0, whiles = 0, operations = ["+"]}

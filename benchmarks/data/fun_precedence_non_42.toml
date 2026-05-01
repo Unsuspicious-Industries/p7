@@ -1,0 +1,19 @@
+id = "fun_precedence_non_42"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 112
+
+[prompt]
+text = "Write a function that takes x, y, and z, multiplies y by z, then adds the result to x. Return that function as the final expression."
+
+[initial]
+text = "let weighted: Int -> Int -> Int -> Int ="
+
+[expected]
+text = "let weighted: Int -> Int -> Int -> Int = (x: Int) => (y: Int) => (z: Int) => x + y * z; weighted"
+
+[resolution]
+mode = "samples"
+samples = [{x = 3, y = 4, z = 5, v = 23}, {x = 0, y = 7, z = 6, v = 42}, {x = 1, y = 1, z = 1, v = 2}]
+structure = {let_bindings = 1, applications = 0, lambdas = 3, operations = ["*", "+"]}
+fn = "weighted"

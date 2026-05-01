@@ -1,0 +1,19 @@
+id = "fun_float_discount"
+grammar = "fun"
+category = "fun:function_float"
+max_tokens = 128
+
+[prompt]
+text = "Write a function that takes a price and a discount amount, and returns the discounted price, then return that function as the final expression."
+
+[initial]
+text = "let discount: Float -> Float -> Float ="
+
+[expected]
+text = "let discount: Float -> Float -> Float = (price: Float) => (d: Float) => price -. d; discount"
+
+[resolution]
+mode = "samples"
+samples = [{price = 20.0, d = 3.5, v = 16.5}, {price = 100.0, d = 10.0, v = 90.0}, {price = 0.0, d = 5.0, v = -5.0}]
+structure = {let_bindings = 1, applications = 0, lambdas = 2, operations = ["-."]}
+fn = "discount"

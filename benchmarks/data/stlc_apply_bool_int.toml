@@ -1,0 +1,18 @@
+id = "stlc_apply_bool_int"
+grammar = "stlc"
+category = "stlc:logic_modus_ponens"
+max_tokens = 64
+
+[prompt]
+text = "Write a lambda term that takes a function from Bool to Int, then a Bool, and applies the function to that Bool."
+
+[initial]
+text = "λf:(Bool->Int)."
+
+[expected]
+text = "λf:(Bool->Int).λb:Bool.(f b)"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Int) -> Bool -> Int"
+normalization = ["alpha", "beta"]

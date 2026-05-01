@@ -1,0 +1,18 @@
+id = "imp_while_count_down"
+grammar = "imp"
+category = "imp:while_loop"
+max_tokens = 104
+
+[prompt]
+text = "Write an imperative program that initializes n and uses a while loop to count it down to zero."
+
+[initial]
+text = "{ let n: Int ="
+
+[expected]
+text = "{ let n: Int = 6; while (n > 0) { n = n - 1; } }"
+
+[resolution]
+mode = "env"
+env = {n = 0}
+vars = ["n"]

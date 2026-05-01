@@ -1,0 +1,19 @@
+id = "fun_nested_lets_total"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 144
+
+[prompt]
+text = "Write a function that takes an integer and computes (a + 6) * 3 where a is the input, then return that function as the final expression."
+
+[initial]
+text = "let compute: Int -> Int ="
+
+[expected]
+text = "let compute: Int -> Int = (a: Int) => (a + 6) * 3; compute"
+
+[resolution]
+mode = "samples"
+samples = [{a = 4, v = 30}, {a = 0, v = 18}, {a = -6, v = 0}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["*", "+"]}
+fn = "compute"

@@ -1,0 +1,18 @@
+id = "fun_flip"
+grammar = "fun"
+category = "fun:function"
+max_tokens = 192
+
+[prompt]
+text = "Write a function that flips the arguments of a binary function. Return flip as the final expression."
+
+[initial]
+text = "let flip: (Int -> Int -> Int) -> Int -> Int -> Int ="
+
+[expected]
+text = "let flip: (Int -> Int -> Int) -> Int -> Int -> Int = (f: Int -> Int -> Int) => (a: Int) => (b: Int) => f(b)(a); flip"
+
+[resolution]
+mode = "equivalence"
+structure = {let_bindings = 1, applications = 2, lambdas = 3}
+fn = "flip"

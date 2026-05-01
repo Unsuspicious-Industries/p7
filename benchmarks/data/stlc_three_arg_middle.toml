@@ -1,0 +1,18 @@
+id = "stlc_three_arg_middle"
+grammar = "stlc"
+category = "stlc:logic_projection"
+max_tokens = 72
+
+[prompt]
+text = "Write a lambda term that takes an Int, then a Bool, then another Int, and returns the middle Bool argument."
+
+[initial]
+text = "λx:Int."
+
+[expected]
+text = "λx:Int.λb:Bool.λy:Int.b"
+
+[resolution]
+mode = "equivalence"
+type = "Int -> Bool -> Int -> Bool"
+normalization = ["alpha", "beta"]

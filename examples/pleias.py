@@ -29,9 +29,12 @@ python examples/pleias.py --model PleIAs/Monad --mode all
 import argparse
 import sys
 import time
+import os
 
-import p7
-from p7.models import PleiasConstrainedModel
+# Ensure the local `src/` package is importable when running examples
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import src as p7
+from src.models import PleiasConstrainedModel
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +99,7 @@ def load_model(model_name: str, grammar_name: str) -> "PleiasConstrainedModel":
         grammar=p7.get_grammar(grammar_name),
     )
     elapsed = time.perf_counter() - t0
-    print(f"Loaded in {elapsed:.1f}s  |  vocab size: {len(model.vocab)}")
+    print(f"Loaded in {elapsed:.1f}s")
     model.model.eval()
     return model  # type: ignore[return-value]
 
@@ -112,27 +115,17 @@ def run_constrained(model: PleiasConstrainedModel, grammar_name: str, task: dict
     print(f"  Expect:  {task['description']}")
     print()
 
-    tokens: list[str] = []
-
-    def on_token(tok: str, step: int) -> None:
-        tokens.append(tok)
-        print(tok, end="", flush=True)
-
-    print(f"  Output:  {task['initial']}", end="", flush=True)
+    print(f"  Output:  ", end="", flush=True)
     t0 = time.perf_counter()
 
-    result = model.until_complete(
+    result = model.generate_constrained(
         prompt=task["prompt"],
         initial=task["initial"],
         max_tokens=60,
-        greedy_k=3,
-        pre_top_k=100,
         grammar_name=grammar_name,
-        on_token=on_token,
     )
 
     elapsed = time.perf_counter() - t0
-    print()
     print()
     print(f"  Complete:  {result.is_complete}")
     print(f"  Tokens:    {result.tokens_generated}  ({elapsed*1000/max(result.tokens_generated,1):.0f}ms/tok)")
@@ -173,31 +166,16 @@ def run_reasoning(model: PleiasConstrainedModel, grammar_name: str) -> None:
         print(f"  Initial: {task['initial']}")
         print()
 
-        def on_mode_switch(mode: p7.Mode, tag: str) -> None:
-            print(f"\n[{mode.value.upper()}] {tag}", flush=True)
-
-        def on_think_token(tok: str, step: int) -> None:
-            print(tok, end="", flush=True)
-
-        def on_formal_token(tok: str, step: int) -> None:
-            # highlight constrained output in bold
-            print(f"\033[1m{tok}\033[0m", end="", flush=True)
-
         try:
             result = env.generate(
                 prompt=task["prompt"],
                 initial=task["initial"],
-                max_blocks=4,
-                start_thinking=True,
-                on_mode_switch=on_mode_switch,
-                on_think_token=on_think_token,
-                on_formal_token=on_formal_token,
             )
             print("\n")
             print(f"  Complete:      {result.is_complete}")
             print(f"  Total tokens:  {result.total_tokens}")
             print(f"  Think blocks:  {len(result.think_blocks)}")
-            print(f"  Grammar blocks:{len(result.grammar_blocks)}")
+            print(f"  Formal blocks: {len(result.formal_blocks)}")
             if result.final_output:
                 print(f"  Final output:  {result.final_output.content!r}")
 

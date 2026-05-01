@@ -1,0 +1,21 @@
+id = "imp_square_number"
+grammar = "imp"
+category = "imp:arithmetic"
+max_tokens = 80
+
+[prompt]
+text = "Write an imperative program that initializes n and stores its square in square."
+
+[initial]
+text = "{ let n: Int ="
+
+[expected]
+text = "{ let n: Int = 7; let square: Int = n * n; }"
+
+[resolution]
+mode = "samples"
+input_vars = ["n"]
+vars = ["square"]
+samples = [{n = 7, square = 49}, {n = 0, square = 0}, {n = -4, square = 16}]
+hidden_samples = 16
+structure = {let_bindings = 2, assignments = 0, ifs = 0, whiles = 0, operations = ["*"]}

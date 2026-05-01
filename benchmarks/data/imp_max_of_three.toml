@@ -1,0 +1,21 @@
+id = "imp_max_of_three"
+grammar = "imp"
+category = "imp:branching"
+max_tokens = 224
+
+[prompt]
+text = "Write an imperative program that initializes a, b, c, and max, then uses nested if statements to store the largest of a, b, and c in max."
+
+[initial]
+text = "{ let a: Int ="
+
+[expected]
+text = "{ let a: Int = 5; let b: Int = 9; let c: Int = 7; let max: Int = 0; if (a < b) { if (b < c) { max = c; } else { max = b; } } else { if (a < c) { max = c; } else { max = a; } } }"
+
+[resolution]
+mode = "samples"
+input_vars = ["a", "b", "c"]
+vars = ["max"]
+samples = [{a = 5, b = 9, c = 7, max = 9}, {a = 10, b = 3, c = 8, max = 10}, {a = -1, b = -2, c = 4, max = 4}, {a = 6, b = 6, c = 6, max = 6}]
+hidden_samples = 16
+structure = {let_bindings = 4, assignments = 4, ifs = 3, whiles = 0, operations = ["<"]}

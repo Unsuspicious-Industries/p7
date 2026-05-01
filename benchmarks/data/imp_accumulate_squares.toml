@@ -1,0 +1,22 @@
+id = "imp_accumulate_squares"
+grammar = "imp"
+category = "imp:loops"
+max_tokens = 176
+
+[prompt]
+text = "Write an imperative program that initializes limit, i, and total, then uses a while loop to add the squares of the integers from 1 through limit into total."
+
+[initial]
+text = "{ let limit: Int ="
+
+[expected]
+text = "{ let limit: Int = 3; let i: Int = 1; let total: Int = 0; while (i <= limit) { total = total + i * i; i = i + 1; } }"
+
+[resolution]
+mode = "samples"
+input_vars = ["limit"]
+vars = ["total"]
+samples = [{limit = 3, total = 14}, {limit = 1, total = 1}, {limit = 4, total = 30}]
+hidden_samples = 12
+input_domains = {limit = {min = 0, max = 6}}
+structure = {let_bindings = 3, assignments = 2, ifs = 0, whiles = 1, operations = ["<=", "+", "*"]}

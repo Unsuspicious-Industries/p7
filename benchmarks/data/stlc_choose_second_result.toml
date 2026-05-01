@@ -1,0 +1,18 @@
+id = "stlc_choose_second_result"
+grammar = "stlc"
+category = "stlc:logic_choice"
+max_tokens = 80
+
+[prompt]
+text = "Write a lambda term that takes two functions from Int to Bool and an Int, then returns the result of applying the second function to the Int."
+
+[initial]
+text = "λf:(Int->Bool)."
+
+[expected]
+text = "λf:(Int->Bool).λg:(Int->Bool).λx:Int.(g x)"
+
+[resolution]
+mode = "equivalence"
+type = "(Int -> Bool) -> (Int -> Bool) -> Int -> Bool"
+normalization = ["alpha", "beta"]

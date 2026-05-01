@@ -1,0 +1,21 @@
+id = "imp_if_true_max_fixed"
+grammar = "imp"
+category = "imp:branching"
+max_tokens = 152
+
+[prompt]
+text = "Write an imperative program that initializes a, b, and max, then uses an if statement to store the larger value in max."
+
+[initial]
+text = "{ let a: Int ="
+
+[expected]
+text = "{ let a: Int = 5; let b: Int = 9; let max: Int = 0; if (a < b) { max = b; } else { max = a; } }"
+
+[resolution]
+mode = "samples"
+input_vars = ["a", "b"]
+vars = ["max"]
+samples = [{a = 5, b = 9, max = 9}, {a = 12, b = 3, max = 12}, {a = -2, b = -7, max = -2}]
+hidden_samples = 16
+structure = {let_bindings = 3, assignments = 2, ifs = 1, whiles = 0, operations = ["<"]}

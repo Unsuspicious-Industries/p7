@@ -1,0 +1,18 @@
+id = "stlc_ignore_function"
+grammar = "stlc"
+category = "stlc:logic_weakening"
+max_tokens = 64
+
+[prompt]
+text = "Write a lambda term that takes an Int-to-Bool function and an Int, ignores the function, and returns the Int."
+
+[initial]
+text = "λf:(Int->Bool)."
+
+[expected]
+text = "λf:(Int->Bool).λx:Int.x"
+
+[resolution]
+mode = "equivalence"
+type = "(Int -> Bool) -> Int -> Int"
+normalization = ["alpha", "beta"]

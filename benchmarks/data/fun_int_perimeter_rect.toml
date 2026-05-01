@@ -1,0 +1,19 @@
+id = "fun_int_perimeter_rect"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 144
+
+[prompt]
+text = "Write a function that takes width and height and returns the perimeter (2*w + 2*h), then return that function as the final expression."
+
+[initial]
+text = "let perimeter: Int -> Int -> Int ="
+
+[expected]
+text = "let perimeter: Int -> Int -> Int = (w: Int) => (h: Int) => w + w + h + h; perimeter"
+
+[resolution]
+mode = "samples"
+samples = [{w = 8, h = 13, v = 42}, {w = 3, h = 4, v = 14}, {w = 1, h = 1, v = 4}]
+structure = {let_bindings = 1, applications = 0, lambdas = 2, operations = ["+"]}
+fn = "perimeter"

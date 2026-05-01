@@ -1,0 +1,18 @@
+id = "stlc_constant_function"
+grammar = "stlc"
+category = "stlc:logic_function_result"
+max_tokens = 56
+
+[prompt]
+text = "Write a lambda term that takes an Int and returns a constant Int-to-Int function that always returns that original Int."
+
+[initial]
+text = "λx:Int."
+
+[expected]
+text = "λx:Int.λy:Int.x"
+
+[resolution]
+mode = "equivalence"
+type = "Int -> Int -> Int"
+normalization = ["alpha", "beta"]

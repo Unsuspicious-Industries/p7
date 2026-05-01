@@ -1,0 +1,19 @@
+id = "fun_float_pipeline"
+grammar = "fun"
+category = "fun:function_float"
+max_tokens = 160
+
+[prompt]
+text = "Write a function that takes a float value, scales it by a factor, then adds an offset. Return that function as the final expression."
+
+[initial]
+text = "let transform: Float -> Float -> Float -> Float ="
+
+[expected]
+text = "let transform: Float -> Float -> Float -> Float = (x: Float) => (factor: Float) => (offset: Float) => x *. factor +. offset; transform"
+
+[resolution]
+mode = "samples"
+samples = [{x = 3.5, factor = 4.0, offset = 1.0, v = 15.0}, {x = 2.0, factor = 3.0, offset = 0.0, v = 6.0}, {x = 10.0, factor = 0.5, offset = -2.0, v = 3.0}]
+structure = {let_bindings = 1, applications = 0, lambdas = 3, operations = ["*.", "+."]}
+fn = "transform"

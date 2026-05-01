@@ -1,0 +1,18 @@
+id = "stlc_continuation_chain"
+grammar = "stlc"
+category = "stlc:logic_continuation"
+max_tokens = 96
+
+[prompt]
+text = "Write a lambda term that takes a Bool-to-Int continuation, then an Int-to-Bool function, then an Int, and feeds the transformed Int result into the continuation."
+
+[initial]
+text = "λk:(Bool->Int)."
+
+[expected]
+text = "λk:(Bool->Int).λh:(Int->Bool).λx:Int.(k (h x))"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Int) -> (Int -> Bool) -> Int -> Int"
+normalization = ["alpha", "beta"]

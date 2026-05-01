@@ -1,0 +1,18 @@
+id = "imp_decrement_assignment"
+grammar = "imp"
+category = "imp:assignment"
+max_tokens = 72
+
+[prompt]
+text = "Write an imperative program that initializes x to 43 and then decrements x by assignment."
+
+[initial]
+text = "{ let x: Int ="
+
+[expected]
+text = "{ let x: Int = 43; x = x - 1; }"
+
+[resolution]
+mode = "env"
+env = {x = 42}
+vars = ["x"]

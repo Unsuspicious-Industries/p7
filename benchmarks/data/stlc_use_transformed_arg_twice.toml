@@ -1,0 +1,18 @@
+id = "stlc_use_transformed_arg_twice"
+grammar = "stlc"
+category = "stlc:logic_contraction"
+max_tokens = 128
+
+[prompt]
+text = "Write a lambda term that takes an Int transformer, then a curried function of type Int -> Int -> Bool, then an Int, transforms the Int once, and uses that transformed value as both arguments to the curried function."
+
+[initial]
+text = "λstep:(Int->Int)."
+
+[expected]
+text = "λstep:(Int->Int).λf:(Int->Int->Bool).λx:Int.((f (step x)) (step x))"
+
+[resolution]
+mode = "equivalence"
+type = "(Int -> Int) -> (Int -> Int -> Bool) -> Int -> Bool"
+normalization = ["alpha", "beta"]

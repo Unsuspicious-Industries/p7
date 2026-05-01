@@ -1,0 +1,19 @@
+id = "fun_float_three_part_sum"
+grammar = "fun"
+category = "fun:function_float"
+max_tokens = 144
+
+[prompt]
+text = "Write a function that takes three float values and returns their sum, then return that function as the final expression."
+
+[initial]
+text = "let sum3: Float -> Float -> Float -> Float ="
+
+[expected]
+text = "let sum3: Float -> Float -> Float -> Float = (a: Float) => (b: Float) => (c: Float) => a +. b +. c; sum3"
+
+[resolution]
+mode = "samples"
+samples = [{a = 10.5, b = 20.25, c = 0.25, v = 31.0}, {a = 0.0, b = 0.0, c = 0.0, v = 0.0}, {a = 1.5, b = 2.5, c = 3.0, v = 7.0}]
+structure = {let_bindings = 1, applications = 0, lambdas = 3, operations = ["+."]}
+fn = "sum3"

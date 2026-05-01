@@ -1,0 +1,20 @@
+id = "fun_transform_twice"
+grammar = "fun"
+category = "fun:function_closure"
+max_tokens = 224
+
+[prompt]
+text = "Write a function that takes an offset, a scale, and a value, builds a helper step(y) = (y + offset) * scale, applies step twice to the value, and then returns transformtwice as the final expression."
+
+[initial]
+text = "let transformtwice: Int -> Int -> Int -> Int ="
+
+[expected]
+text = "let transformtwice: Int -> Int -> Int -> Int = (offset: Int) => (scale: Int) => (x: Int) => let step: Int -> Int = (y: Int) => (y + offset) * scale; step(step(x)); transformtwice"
+
+[resolution]
+mode = "samples"
+fn = "transformtwice"
+samples = [{offset = 1, scale = 2, x = 3, v = 18}, {offset = 0, scale = 3, x = 2, v = 18}, {offset = -1, scale = 2, x = 5, v = 14}]
+hidden_samples = 20
+structure = {let_bindings = 2, applications = 2, lambdas = 4, operations = ["+", "*"]}

@@ -1,0 +1,18 @@
+id = "fun_double_then_square"
+grammar = "fun"
+category = "fun:function_application"
+max_tokens = 144
+
+[prompt]
+text = "Define a doubling function and a squaring function, then compute square(dbl(5))."
+
+[initial]
+text = "let dbl: Int -> Int ="
+
+[expected]
+text = "let dbl: Int -> Int = (x: Int) => x + x; let square: Int -> Int = (x: Int) => x * x; square(dbl(5))"
+
+[resolution]
+mode = "equivalence"
+value = 100
+structure = { let_bindings = 2, applications = 2, lambdas = 2, operations = ["*", "+"] }

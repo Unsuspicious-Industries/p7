@@ -1,0 +1,19 @@
+id = "fun_bool_const_false"
+grammar = "fun"
+category = "fun:boolean"
+max_tokens = 96
+
+[prompt]
+text = "Write a function that always returns false regardless of its input, then return that function as the final expression."
+
+[initial]
+text = "let nope: Bool -> Bool ="
+
+[expected]
+text = "let nope: Bool -> Bool = (b: Bool) => false; nope"
+
+[resolution]
+mode = "samples"
+samples = [{b = true, v = false}, {b = false, v = false}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = []}
+fn = "nope"

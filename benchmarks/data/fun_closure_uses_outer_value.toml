@@ -1,0 +1,18 @@
+id = "fun_closure_uses_outer_value"
+grammar = "fun"
+category = "fun:function_application"
+max_tokens = 144
+
+[prompt]
+text = "Define the offset to 13 and then write a function that adds it to its argument."
+
+[initial]
+text = "let offset: Int ="
+
+[expected]
+text = "let offset: Int = 13; let addoffset: Int -> Int = (x: Int) => x + offset; addoffset(8)"
+
+[resolution]
+mode = "equivalence"
+value = 21
+structure = { let_bindings = 2, applications = 1, lambdas = 1, operations = ["+"] }

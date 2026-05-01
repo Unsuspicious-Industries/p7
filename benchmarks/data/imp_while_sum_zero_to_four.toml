@@ -1,0 +1,22 @@
+id = "imp_while_sum_zero_to_four"
+grammar = "imp"
+category = "imp:loops"
+max_tokens = 160
+
+[prompt]
+text = "Write an imperative program that initializes n, i, and sum, then uses a while loop to add the integers from 0 through n into sum."
+
+[initial]
+text = "{ let n: Int ="
+
+[expected]
+text = "{ let n: Int = 4; let i: Int = 0; let sum: Int = 0; while (i <= n) { sum = sum + i; i = i + 1; } }"
+
+[resolution]
+mode = "samples"
+input_vars = ["n"]
+vars = ["sum"]
+samples = [{n = 4, sum = 10}, {n = 0, sum = 0}, {n = 3, sum = 6}]
+hidden_samples = 16
+input_domains = {n = {min = 0, max = 8}}
+structure = {let_bindings = 3, assignments = 2, ifs = 0, whiles = 1, operations = ["<=", "+"]}

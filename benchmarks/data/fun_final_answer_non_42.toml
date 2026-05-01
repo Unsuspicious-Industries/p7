@@ -1,0 +1,19 @@
+id = "fun_final_answer_non_42"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 96
+
+[prompt]
+text = "Write a function that adds 10 to its input, then return that function as the final expression."
+
+[initial]
+text = "let add10: Int -> Int ="
+
+[expected]
+text = "let add10: Int -> Int = (x: Int) => x + 10; add10"
+
+[resolution]
+mode = "samples"
+samples = [{x = 3, v = 13}, {x = 0, v = 10}, {x = -5, v = 5}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["+"]}
+fn = "add10"

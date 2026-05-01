@@ -1,0 +1,18 @@
+id = "imp_loop_overshoot"
+grammar = "imp"
+category = "imp:while_loop"
+max_tokens = 112
+
+[prompt]
+text = "Write an imperative program that initializes n to 0 and uses a while loop to add 5 repeatedly until n is no longer less than 12."
+
+[initial]
+text = "{ let n: Int ="
+
+[expected]
+text = "{ let n: Int = 0; while (n < 12) { n = n + 5; } }"
+
+[resolution]
+mode = "env"
+env = {n = 15}
+vars = ["n"]

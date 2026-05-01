@@ -1,9 +1,9 @@
 [build-system]
-requires = ["maturin>=1.4,<2.0"]
-build-backend = "maturin"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "proposition_7"
+name = "proposition7"
 version = "0.1.0"
 description = "Type-aware constrained decoding for LLMs using the Proposition 7 grammar format"
 readme = "README.md"
@@ -22,11 +22,11 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Compilers",
 ]
 keywords = ["llm", "constrained-decoding", "type-systems", "grammar", "code-generation"]
+dependencies = ["aufbau-rs>=0.1.2", "tomli>=2.0.0; python_version<'3.11'"]
 
 [project.urls]
 Homepage = "https://unsuspicious.org/blog/proposition-7"
@@ -34,11 +34,19 @@ Repository = "https://github.com/Unsuspicious-Industries/p7"
 Documentation = "https://github.com/Unsuspicious-Industries/p7"
 
 [project.optional-dependencies]
-transformers = ["transformers>=4.30.0", "torch>=2.0.0","accelerate"]
+transformers = ["transformers>=4.30.0", "torch>=2.0.0", "accelerate"]
+modal = ["modal>=0.64.0", "transformers>=4.30.0", "torch>=2.0.0", "accelerate"]
+outlines = ["outlines>=0.1.0", "transformers>=4.30.0", "torch>=2.0.0", "accelerate"]
 dev = ["pytest", "numpy", "flask>=2.3.0", "flask-cors>=4.0.0"]
 
-[tool.maturin]
-features = ["pyo3/extension-module"]
-python-source = "."
-module-name = "p7.p7"
-target-dir = "target"
+[tool.setuptools]
+packages = ["p7", "p7.grammars", "p7.models", "proposition7"]
+package-dir = {"p7" = "src", "proposition7" = "src/proposition7"}
+
+[tool.setuptools.package-data]
+"p7.grammars" = ["*.auf"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["*.py"]
+pythonpath = ["src", "."]

@@ -1,0 +1,18 @@
+id = "stlc_higher_identity_int_bool"
+grammar = "stlc"
+category = "stlc:logic_higher_order"
+max_tokens = 40
+
+[prompt]
+text = "Write a lambda term that takes an Int-to-Bool function and returns that function unchanged."
+
+[initial]
+text = "λh:(Int->Bool)."
+
+[expected]
+text = "λh:(Int->Bool).h"
+
+[resolution]
+mode = "equivalence"
+type = "(Int -> Bool) -> Int -> Bool"
+normalization = ["alpha", "beta"]

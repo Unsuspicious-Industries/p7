@@ -1,0 +1,18 @@
+id = "stlc_identity_bool"
+grammar = "stlc"
+category = "stlc:logic_identity"
+max_tokens = 32
+
+[prompt]
+text = "Write a lambda term that takes a Bool and returns it unchanged."
+
+[initial]
+text = "λb:Bool."
+
+[expected]
+text = "λb:Bool.b"
+
+[resolution]
+mode = "equivalence"
+type = "Bool -> Bool"
+normalization = ["alpha", "beta"]

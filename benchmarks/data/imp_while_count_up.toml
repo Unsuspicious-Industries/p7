@@ -1,0 +1,18 @@
+id = "imp_while_count_up"
+grammar = "imp"
+category = "imp:while_loop"
+max_tokens = 104
+
+[prompt]
+text = "Write an imperative program that initializes x and uses a while loop to count it up to 10."
+
+[initial]
+text = "{ let x: Int ="
+
+[expected]
+text = "{ let x: Int = 0; while (x < 10) { x = x + 1; } }"
+
+[resolution]
+mode = "env"
+env = {x = 10}
+vars = ["x"]

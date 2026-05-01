@@ -1,0 +1,22 @@
+id = "imp_while_factorial_four"
+grammar = "imp"
+category = "imp:loops"
+max_tokens = 176
+
+[prompt]
+text = "Write an imperative program that initializes n and acc, then uses a while loop with repeated multiplication to compute n factorial into acc."
+
+[initial]
+text = "{ let n: Int ="
+
+[expected]
+text = "{ let n: Int = 4; let acc: Int = 1; while (n > 0) { acc = acc * n; n = n - 1; } }"
+
+[resolution]
+mode = "samples"
+input_vars = ["n"]
+vars = ["acc"]
+samples = [{n = 4, acc = 24}, {n = 0, acc = 1}, {n = 5, acc = 120}]
+hidden_samples = 12
+input_domains = {n = {min = 0, max = 6}}
+structure = {let_bindings = 2, assignments = 2, ifs = 0, whiles = 1, operations = [">", "*", "-"]}

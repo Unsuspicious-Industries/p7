@@ -1,0 +1,19 @@
+id = "fun_bool_identity_true"
+grammar = "fun"
+category = "fun:boolean"
+max_tokens = 96
+
+[prompt]
+text = "Write a function that returns its Bool argument unchanged, then return that function as the final expression."
+
+[initial]
+text = "let idbool: Bool -> Bool ="
+
+[expected]
+text = "let idbool: Bool -> Bool = (b: Bool) => b; idbool"
+
+[resolution]
+mode = "samples"
+samples = [{b = true, v = true}, {b = false, v = false}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = []}
+fn = "idbool"

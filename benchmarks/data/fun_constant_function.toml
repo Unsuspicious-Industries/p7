@@ -1,0 +1,19 @@
+id = "fun_constant_function"
+grammar = "fun"
+category = "fun:function_constant"
+max_tokens = 96
+
+[prompt]
+text = "Write a function that ignores its input and always returns 42, then return that function as the final expression."
+
+[initial]
+text = "let answer: Int -> Int ="
+
+[expected]
+text = "let answer: Int -> Int = (ignored: Int) => 42; answer"
+
+[resolution]
+mode = "samples"
+samples = [{ignored = 0, v = 42}, {ignored = 100, v = 42}, {ignored = -999, v = 42}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = []}
+fn = "answer"

@@ -38,11 +38,6 @@ jobs:
           which nvidia-smi || true
           nvidia-smi || true
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -66,11 +61,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-hf-
 
-      - name: Install maturin + build package with HF extras
+      - name: Install aufbau bindings + p7 with HF extras
         run: |
           python -m pip install --upgrade pip
-          python -m pip install maturin
-          # install package + transformers extra (this will pull torch/accelerate per pyproject)
+          git clone --depth 1 https://github.com/Unsuspicious-Industries/aufbau.git /tmp/aufbau
+          python -m pip install /tmp/aufbau
           python -m pip install -e '.[transformers,dev]'
 
       - name: Confirm Python / torch / transformers

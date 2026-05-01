@@ -1,0 +1,18 @@
+id = "stlc_eta_bool_function"
+grammar = "stlc"
+category = "stlc:logic_eta"
+max_tokens = 64
+
+[prompt]
+text = "Write a lambda term that eta-expands a Bool-to-Bool function by taking the function and a Bool argument and applying the function to that Bool."
+
+[initial]
+text = "λf:(Bool->Bool)."
+
+[expected]
+text = "λf:(Bool->Bool).λb:Bool.(f b)"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Bool) -> Bool -> Bool"
+normalization = ["alpha", "beta"]

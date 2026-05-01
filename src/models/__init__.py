@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+from typing import Dict, List, Type
+
+from ..llm import ConstrainedModel
+from .chat import ChatConstrainedModel
+from .deepseek import DeepseekConstrainedModel
+from .glm import GlmConstrainedModel
+from .llama import LlamaConstrainedModel
+from .mistral import MistralConstrainedModel
+from .pleias import PleiasConstrainedModel
+
+
+MODEL_CATALOG: List[Dict[str, str]] = [
+    {"name": "gpt2", "display_name": "GPT-2 (124M)"},
+    {"name": "gpt2-medium", "display_name": "GPT-2 Medium (355M)"},
+    {"name": "EleutherAI/pythia-160m", "display_name": "Pythia-160M"},
+    {"name": "EleutherAI/pythia-410m", "display_name": "Pythia-410M"},
+    {"name": "EleutherAI/pythia-1.4b", "display_name": "Pythia-1.4B"},
+    {"name": "EleutherAI/pythia-2.8b", "display_name": "Pythia-2.8B"},
+    {"name": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", "display_name": "DeepSeek R1 Distill 1.5B"},
+    {"name": "Qwen/Qwen3.5-9B", "display_name": "Qwen 3.5 9B"},
+    {"name": "EleutherAI/pythia-6.9b", "display_name": "Pythia-6.9B"},
+    {"name": "mistralai/Mistral-7B-v0.1", "display_name": "Mistral-7B"},
+    {"name": "meta-llama/Meta-Llama-3.1-8B-Instruct", "display_name": "Llama-3.1-8B-Instruct"},
+    {"name": "THUDM/glm-4-9b", "display_name": "GLM-4-9B"},
+    # PleIAs SYNTH reasoning series
+    {"name": "PleIAs/Monad", "display_name": "PleIAs Monad (56.7M)"},
+    {"name": "PleIAs/Baguettotron", "display_name": "PleIAs Baguettotron (321M)"},
+]
+
+
+def list_models() -> List[Dict[str, str]]:
+    return list(MODEL_CATALOG)
+
+
+def get_model_class(model_name: str) -> Type[ConstrainedModel]:
+    lower_name = model_name.lower()
+    # PleIAs models — check before generic llama since they share the arch
+    if "pleias" in lower_name or "baguettotron" in lower_name or "monad" in lower_name:
+        return PleiasConstrainedModel
+    if "deepseek" in lower_name:
+        return DeepseekConstrainedModel
+    if "qwen" in lower_name and "base" not in lower_name:
+        return ChatConstrainedModel
+    if "glm" in lower_name:
+        return GlmConstrainedModel
+    if "llama" in lower_name:
+        return LlamaConstrainedModel
+    if "mistral" in lower_name:
+        return MistralConstrainedModel
+    return ConstrainedModel
+
+
+__all__ = [
+    "ConstrainedModel",
+    "ChatConstrainedModel",
+    "DeepseekConstrainedModel",
+    "GlmConstrainedModel",
+    "LlamaConstrainedModel",
+    "MistralConstrainedModel",
+    "PleiasConstrainedModel",
+    "get_model_class",
+    "list_models",
+]

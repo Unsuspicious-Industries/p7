@@ -1,0 +1,18 @@
+id = "imp_branch_then_loop"
+grammar = "imp"
+category = "imp:mixed_control"
+max_tokens = 176
+
+[prompt]
+text = "Write an imperative program that initializes start, uses an if statement to choose its value, then uses a while loop to count it up until it is no longer below 6."
+
+[initial]
+text = "{ let start: Int ="
+
+[expected]
+text = "{ let start: Int = 0; if (start < 1) { start = 3; } else { start = 8; } while (start < 6) { start = start + 1; } }"
+
+[resolution]
+mode = "env"
+env = {start = 6}
+vars = ["start"]

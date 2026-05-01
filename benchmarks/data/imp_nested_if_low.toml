@@ -1,0 +1,18 @@
+id = "imp_nested_if_low"
+grammar = "imp"
+category = "imp:nested_branching"
+max_tokens = 176
+
+[prompt]
+text = "Write an imperative program that initializes x and out, then uses nested if statements to classify x = 3 so that out ends up in the low-value case."
+
+[initial]
+text = "{ let x: Int ="
+
+[expected]
+text = "{ let x: Int = 3; let out: Int = 0; if (x < 10) { if (x < 5) { out = 1; } else { out = 2; } } else { out = 3; } }"
+
+[resolution]
+mode = "env"
+env = {out = 1}
+vars = ["out"]

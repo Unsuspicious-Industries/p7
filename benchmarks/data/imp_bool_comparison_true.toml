@@ -1,0 +1,21 @@
+id = "imp_bool_comparison_true"
+grammar = "imp"
+category = "imp:boolean"
+max_tokens = 80
+
+[prompt]
+text = "Write an imperative program that sets x and stores whether x is less than 10 in ok."
+
+[initial]
+text = "{ let x: Int ="
+
+[expected]
+text = "{ let x: Int = 4; let ok: Bool = x < 10; }"
+
+[resolution]
+mode = "samples"
+input_vars = ["x"]
+vars = ["ok"]
+samples = [{x = 4, ok = true}, {x = 10, ok = false}, {x = -1, ok = true}]
+hidden_samples = 16
+structure = {let_bindings = 2, assignments = 0, ifs = 0, whiles = 0, operations = ["<"]}

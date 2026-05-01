@@ -1,0 +1,18 @@
+id = "stlc_bool_to_bool_via_int"
+grammar = "stlc"
+category = "stlc:logic_pipeline"
+max_tokens = 104
+
+[prompt]
+text = "Write a lambda term that takes a Bool-to-Int function, then an Int-to-Bool function, then a Bool, and converts the Bool through Int back to Bool."
+
+[initial]
+text = "λtoInt:(Bool->Int)."
+
+[expected]
+text = "λtoInt:(Bool->Int).λtoBool:(Int->Bool).λb:Bool.(toBool (toInt b))"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Int) -> (Int -> Bool) -> Bool -> Bool"
+normalization = ["alpha", "beta"]

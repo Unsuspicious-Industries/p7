@@ -1,0 +1,19 @@
+id = "fun_multiply_sum"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 144
+
+[prompt]
+text = "Write a function that takes three integers and returns (a + b) * c, then return that function as the final expression."
+
+[initial]
+text = "let muladd: Int -> Int -> Int -> Int ="
+
+[expected]
+text = "let muladd: Int -> Int -> Int -> Int = (a: Int) => (b: Int) => (c: Int) => (a + b) * c; muladd"
+
+[resolution]
+mode = "samples"
+samples = [{a = 6, b = 7, c = 3, v = 39}, {a = 1, b = 2, c = 3, v = 9}, {a = 0, b = 0, c = 5, v = 0}]
+structure = {let_bindings = 1, applications = 0, lambdas = 3, operations = ["*", "+"]}
+fn = "muladd"

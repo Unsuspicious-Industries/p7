@@ -1,0 +1,18 @@
+id = "fun_compose3"
+grammar = "fun"
+category = "fun:function_composition"
+max_tokens = 224
+
+[prompt]
+text = "Write a higher-order function that takes three functions from Int to Int and a value, applies the third function first, then the second, then the first, and returns compose3 as the final expression."
+
+[initial]
+text = "let compose3: (Int -> Int) -> (Int -> Int) -> (Int -> Int) -> Int -> Int ="
+
+[expected]
+text = "let compose3: (Int -> Int) -> (Int -> Int) -> (Int -> Int) -> Int -> Int = (f: Int -> Int) => (g: Int -> Int) => (h: Int -> Int) => (x: Int) => f(g(h(x))); compose3"
+
+[resolution]
+mode = "equivalence"
+fn = "compose3"
+structure = {let_bindings = 1, applications = 3, lambdas = 4}

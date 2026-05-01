@@ -1,0 +1,18 @@
+id = "fun_inc_then_double"
+grammar = "fun"
+category = "fun:function_application"
+max_tokens = 144
+
+[prompt]
+text = "Define an increment function, define a doubling function, then compute dbl(inc(8))."
+
+[initial]
+text = "let inc: Int -> Int ="
+
+[expected]
+text = "let inc: Int -> Int = (n: Int) => n + 1; let dbl: Int -> Int = (x: Int) => x + x; dbl(inc(8))"
+
+[resolution]
+mode = "equivalence"
+value = 18
+structure = { let_bindings = 2, applications = 2, lambdas = 2, operations = ["+"] }

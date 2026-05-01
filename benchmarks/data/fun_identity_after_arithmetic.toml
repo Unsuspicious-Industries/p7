@@ -1,0 +1,19 @@
+id = "fun_identity_after_arithmetic"
+grammar = "fun"
+category = "fun:function"
+max_tokens = 112
+
+[prompt]
+text = "Write a function that adds two integers and returns the result, then return that function as the final expression."
+
+[initial]
+text = "let add: Int -> Int -> Int ="
+
+[expected]
+text = "let add: Int -> Int -> Int = (a: Int) => (b: Int) => a + b; add"
+
+[resolution]
+mode = "samples"
+samples = [{a = 19, b = 23, v = 42}, {a = 5, b = 5, v = 10}, {a = 0, b = 0, v = 0}]
+structure = {let_bindings = 1, applications = 0, lambdas = 2, operations = ["+"]}
+fn = "add"

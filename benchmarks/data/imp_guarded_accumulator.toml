@@ -1,0 +1,18 @@
+id = "imp_guarded_accumulator"
+grammar = "imp"
+category = "imp:mixed_control"
+max_tokens = 208
+
+[prompt]
+text = "Write an imperative program that initializes i and acc, then uses a while loop with an inner if statement to accumulate into acc while i increases from 0 to 3."
+
+[initial]
+text = "{ let i: Int ="
+
+[expected]
+text = "{ let i: Int = 0; let acc: Int = 0; while (i < 4) { if (i < 3) { acc = acc + 10; } else { acc = acc + 12; } i = i + 1; } }"
+
+[resolution]
+mode = "env"
+env = {acc = 42}
+vars = ["acc"]

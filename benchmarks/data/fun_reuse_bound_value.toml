@@ -1,0 +1,19 @@
+id = "fun_reuse_bound_value"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 160
+
+[prompt]
+text = "Write a function that takes a value and computes three times its value using addition, then return that function as the final expression."
+
+[initial]
+text = "let triple: Int -> Int ="
+
+[expected]
+text = "let triple: Int -> Int = (x: Int) => x + x + x; triple"
+
+[resolution]
+mode = "samples"
+samples = [{x = 14, v = 42}, {x = 5, v = 15}, {x = 0, v = 0}, {x = -3, v = -9}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["+"]}
+fn = "triple"

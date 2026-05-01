@@ -1,0 +1,20 @@
+id = "fun_apply_twice_offset"
+grammar = "fun"
+category = "fun:function_closure"
+max_tokens = 192
+
+[prompt]
+text = "Write a function that takes an offset and a value, builds a helper that adds the offset once, applies that helper twice to the value, and then returns applytwiceoffset as the final expression."
+
+[initial]
+text = "let applytwiceoffset: Int -> Int -> Int ="
+
+[expected]
+text = "let applytwiceoffset: Int -> Int -> Int = (offset: Int) => (x: Int) => let addoffset: Int -> Int = (y: Int) => y + offset; addoffset(addoffset(x)); applytwiceoffset"
+
+[resolution]
+mode = "samples"
+fn = "applytwiceoffset"
+samples = [{offset = 5, x = 10, v = 20}, {offset = -2, x = 9, v = 5}, {offset = 0, x = 7, v = 7}]
+hidden_samples = 20
+structure = {let_bindings = 2, applications = 2, lambdas = 3, operations = ["+"]}

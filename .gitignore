@@ -1,5 +1,6 @@
 # Virtual environment
 .venv/
+.venv-nix/
 
 # Nix
 flake.lock
@@ -15,14 +16,15 @@ __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
+.env
 dist/
 build/
 */dist/
 */node_modules/
 benchmarks/out
+.nix-pip
 # IDE
 .idea/
 .vscode/
 *.swp
-
 

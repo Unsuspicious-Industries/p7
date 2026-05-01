@@ -1,0 +1,19 @@
+id = "fun_float_add_price"
+grammar = "fun"
+category = "fun:function_float"
+max_tokens = 128
+
+[prompt]
+text = "Write a function that takes a price and a fee, and returns the total, then return that function as the final expression."
+
+[initial]
+text = "let total: Float -> Float -> Float ="
+
+[expected]
+text = "let total: Float -> Float -> Float = (price: Float) => (fee: Float) => price +. fee; total"
+
+[resolution]
+mode = "samples"
+samples = [{price = 19.5, fee = 2.5, v = 22.0}, {price = 0.0, fee = 5.0, v = 5.0}, {price = 100.0, fee = 0.0, v = 100.0}]
+structure = {let_bindings = 1, applications = 0, lambdas = 2, operations = ["+."]}
+fn = "total"

@@ -1,0 +1,19 @@
+id = "fun_parentheses_non_42"
+grammar = "fun"
+category = "fun:function_arithmetic"
+max_tokens = 112
+
+[prompt]
+text = "Write a function that takes x, y, and z, multiplies x by y, then adds z. Return that function as the final expression."
+
+[initial]
+text = "let muladd: Int -> Int -> Int -> Int ="
+
+[expected]
+text = "let muladd: Int -> Int -> Int -> Int = (x: Int) => (y: Int) => (z: Int) => x * y + z; muladd"
+
+[resolution]
+mode = "samples"
+samples = [{x = 3, y = 4, z = 5, v = 17}, {x = 1, y = 1, z = 0, v = 1}, {x = 2, y = 3, z = 10, v = 16}]
+structure = {let_bindings = 1, applications = 0, lambdas = 3, operations = ["*", "+"]}
+fn = "muladd"

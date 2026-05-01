@@ -1,0 +1,18 @@
+id = "stlc_apply_nested_arg"
+grammar = "stlc"
+category = "stlc:logic_application"
+max_tokens = 88
+
+[prompt]
+text = "Write a lambda term that takes an Int transformer, then an Int-to-Bool predicate, then an Int, and applies the predicate to the transformed Int."
+
+[initial]
+text = "λg:(Int->Int)."
+
+[expected]
+text = "λg:(Int->Int).λf:(Int->Bool).λx:Int.(f (g x))"
+
+[resolution]
+mode = "equivalence"
+type = "(Int -> Int) -> (Int -> Bool) -> Int -> Bool"
+normalization = ["alpha", "beta"]

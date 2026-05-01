@@ -1,0 +1,18 @@
+id = "stlc_compose_three_stage"
+grammar = "stlc"
+category = "stlc:logic_composition"
+max_tokens = 136
+
+[prompt]
+text = "Write a lambda term that takes a Bool-to-Int function, then an Int-to-Bool function, then another Bool-to-Int function, then a Bool, and applies the third function first, then the second, then the first."
+
+[initial]
+text = "λf:(Bool->Int)."
+
+[expected]
+text = "λf:(Bool->Int).λg:(Int->Bool).λh:(Bool->Int).λb:Bool.(f (g (h b)))"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Int) -> (Int -> Bool) -> (Bool -> Int) -> Bool -> Int"
+normalization = ["alpha", "beta"]

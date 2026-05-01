@@ -1,0 +1,19 @@
+id = "fun_inline_square_lambda"
+grammar = "fun"
+category = "fun:function"
+max_tokens = 96
+
+[prompt]
+text = "Write a function that squares its input, then return that function as the final expression."
+
+[initial]
+text = "let square: Int -> Int ="
+
+[expected]
+text = "let square: Int -> Int = (x: Int) => x * x; square"
+
+[resolution]
+mode = "samples"
+samples = [{x = 12, v = 144}, {x = 5, v = 25}, {x = -4, v = 16}]
+structure = {let_bindings = 1, applications = 0, lambdas = 1, operations = ["*"]}
+fn = "square"

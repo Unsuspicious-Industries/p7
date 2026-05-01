@@ -1,0 +1,18 @@
+id = "fun_compose"
+grammar = "fun"
+category = "fun:function_composition"
+max_tokens = 192
+
+[prompt]
+text = "Write a function that composes two functions: it takes f and g, and returns a function that applies g first, then f. Return compose as the final expression."
+
+[initial]
+text = "let compose: (Int -> Int) -> (Int -> Int) -> Int -> Int ="
+
+[expected]
+text = "let compose: (Int -> Int) -> (Int -> Int) -> Int -> Int = (f: Int -> Int) => (g: Int -> Int) => (x: Int) => f(g(x)); compose"
+
+[resolution]
+mode = "equivalence"
+structure = {let_bindings = 1, applications = 2, lambdas = 3}
+fn = "compose"

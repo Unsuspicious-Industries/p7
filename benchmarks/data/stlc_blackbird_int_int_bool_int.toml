@@ -1,0 +1,18 @@
+id = "stlc_blackbird_int_int_bool_int"
+grammar = "stlc"
+category = "stlc:logic_composition"
+max_tokens = 136
+
+[prompt]
+text = "Write a lambda term that takes a function from Bool to Int, then a curried function from Int to Int to Bool, then two Int arguments, and feeds the Bool result of the curried function into the Bool-to-Int function."
+
+[initial]
+text = "λf:(Bool->Int)."
+
+[expected]
+text = "λf:(Bool->Int).λg:(Int->Int->Bool).λx:Int.λy:Int.(f ((g x) y))"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Int) -> (Int -> Int -> Bool) -> Int -> Int -> Int"
+normalization = ["alpha", "beta"]

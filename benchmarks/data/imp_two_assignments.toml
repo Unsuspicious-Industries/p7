@@ -1,0 +1,18 @@
+id = "imp_two_assignments"
+grammar = "imp"
+category = "imp:assignment"
+max_tokens = 104
+
+[prompt]
+text = "Write an imperative program that initializes x, then updates it with two assignments: first add 11, then multiply by 2."
+
+[initial]
+text = "{ let x: Int ="
+
+[expected]
+text = "{ let x: Int = 10; x = x + 11; x = x * 2; }"
+
+[resolution]
+mode = "env"
+env = {x = 42}
+vars = ["x"]

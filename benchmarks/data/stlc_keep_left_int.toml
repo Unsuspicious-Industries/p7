@@ -1,0 +1,18 @@
+id = "stlc_keep_left_int"
+grammar = "stlc"
+category = "stlc:logic_weakening"
+max_tokens = 48
+
+[prompt]
+text = "Write a lambda term that takes an Int and then a Bool, and returns the original Int."
+
+[initial]
+text = "λx:Int."
+
+[expected]
+text = "λx:Int.λb:Bool.x"
+
+[resolution]
+mode = "equivalence"
+type = "Int -> Bool -> Int"
+normalization = ["alpha", "beta"]

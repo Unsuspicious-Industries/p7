@@ -1,0 +1,18 @@
+id = "stlc_apply_thrice_bool"
+grammar = "stlc"
+category = "stlc:logic_repetition"
+max_tokens = 88
+
+[prompt]
+text = "Write a lambda term that takes a Bool endofunction and a Bool, and applies the function three times to the Bool."
+
+[initial]
+text = "λf:(Bool->Bool)."
+
+[expected]
+text = "λf:(Bool->Bool).λb:Bool.(f (f (f b)))"
+
+[resolution]
+mode = "equivalence"
+type = "(Bool -> Bool) -> Bool -> Bool"
+normalization = ["alpha", "beta"]
