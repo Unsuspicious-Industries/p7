@@ -1,6 +1,6 @@
 # p7 Benchmark Suite
 
-This suite is built for large Vast.ai/local-GPU runs. Modal is not part of the benchmark path.
+This suite is built for reproducible local/OpenRouter benchmark runs from one TOML config. Modal is not part of the benchmark path.
 
 ## Task Format
 
@@ -50,72 +50,95 @@ Benchmark modes are code-owned, not task-owned.
 - `constrained_direct`: p7/Aufbau direct constrained generation.
 - `constrained_mixed`: p7 reasoning environment plus constrained formal generation.
 - `outlines`: syntax-only Outlines CFG constraint engine. This intentionally drops type/context information.
-- `closed_unconstrained`: OpenRouter closed-model unconstrained phase, launched by `benchmarks/models.py` through the `openrouter` backend.
+- OpenRouter models use the same runner through `backend = "openrouter"` matrix entries.
 
 Outlines is a constraint engine mode, not a backend. The backend remains local for open models.
 
-## Vast.ai Run
+## Single Runner
 
 Install dependencies:
 
 ```bash
 pip install -e ".[transformers]"
-pip install outlines  # only needed for --modes outlines / default matrix
+pip install outlines  # only needed when a config includes outlines mode
 ```
 
-Run the full default matrix:
+Run the bundled smoke config:
 
 ```bash
-python benchmarks/models.py --tries 1
+python benchmarks/run.py --config benchmarks/configs/smoke.toml
 ```
 
-The default matrix includes local open-model phases for `unconstrained`, `unconstrained_raw`, `constrained_direct`, `constrained_mixed`, and `outlines`, plus the OpenRouter closed-model unconstrained phase. Disable expensive/optional phases as needed:
+Run the full paper-oriented suite:
 
 ```bash
-python benchmarks/models.py --without-closed --without-mixed --without-outlines
+python benchmarks/run.py --config benchmarks/configs/paper.toml
 ```
 
-Smoke run:
+Or, after installation:
 
 ```bash
-python benchmarks/models.py --models gpt2 --max-tasks 2 --max-tokens-override 16 --without-closed
+p7-benchmark --config benchmarks/configs/smoke.toml
 ```
 
-Use a model file for large runs:
+Resume an interrupted run without overwriting data:
 
 ```bash
-python benchmarks/models.py --models-file models.txt --tries 1
+python benchmarks/run.py --config path/to/benchmark.toml --resume
 ```
 
-## Direct Runner
+Every fresh run creates a dedicated run directory under `run.output_root/run.name`. If that directory already exists and `--resume` is not set, the runner creates a new timestamped sibling directory instead of overwriting the old one.
 
-Run selected modes directly:
-
-```bash
-python benchmarks/run.py \
-  --tasks stlc \
-  --models gpt2 \
-  --modes constrained_direct,outlines,unconstrained_raw,unconstrained \
-  --device cuda \
-  --device-map auto \
-  --resume \
-  --out benchmarks/out/manual/raw.jsonl
-```
-
-Run OpenRouter closed models directly:
+## Config Format
 
 ```bash
-python benchmarks/run.py \
-  --backend openrouter \
-  --models openai/gpt-4o-mini \
-  --modes unconstrained \
-  --openrouter-env .env \
-  --resume
+schema_version = 1
+
+[run]
+name = "paper"
+output_root = "benchmarks/out"
+save_traces = false
+
+[tasks]
+selectors = ["all"]
+ids = []
+max_tasks = 0
+max_tokens_override = 0
+
+[execution]
+tries = 1
+seed = 7
+timeout = 600.0
+think_budget = 128
+parallel_tasks = "auto"
+low_space = true
+
+[local]
+device = "cuda"
+torch_dtype = "auto"
+device_map = "auto"
+
+[local.model_kwargs]
+
+[openrouter]
+env_file = ".env"
+
+[[matrix]]
+name = "open-models"
+backend = "local"
+models = ["Qwen/Qwen3.5-4B", "Qwen/Qwen3.5-9B"]
+modes = ["constrained_direct", "constrained_mixed", "unconstrained_raw", "unconstrained"]
+
+[[matrix]]
+name = "closed-baseline"
+backend = "openrouter"
+models = ["openai/gpt-5.4-mini", "anthropic/claude-4.5-haiku"]
+modes = ["unconstrained"]
 ```
 
 ## Resume Safety
 
-Resume is enabled by default in `benchmarks/models.py` and opt-in in `benchmarks/run.py` via `--resume`.
+Resume is opt-in via `--resume`.
 
 The resume key is hash-aware:
 
@@ -123,16 +146,14 @@ The resume key is hash-aware:
 (backend, model, task_id, task_hash, resolution_hash, mode, try)
 ```
 
-Changing a TOML task or resolution will not reuse stale rows. Aggregation uses the same hash-aware key and keeps the latest duplicate record.
+Changing a TOML task or resolution will not reuse stale rows. The raw JSONL line format is unchanged, and aggregation keeps the latest duplicate record for the same key.
 
 ## Output
 
-- `<phase>/raw.jsonl`: one record per benchmark attempt.
-- `<phase>/summary.csv`: metrics by backend, model, mode, and grammar.
-- `<phase>/summary_by_category.csv`: metrics by category.
-- `combined/raw.jsonl`: merged phase records.
-- `combined/delta.csv`: direct p7 constrained vs unconstrained deltas, preferring `unconstrained_raw` when present.
-- `combined/report.md`: concise markdown summary.
+- `<run>/config.toml`: exact copied config used for the run.
+- `<run>/raw.jsonl`: append-only benchmark ledger. Record format is unchanged.
+- `<run>/results.json`: canonical artifact with metadata, config, summaries, and deduped records.
+- `<run>/traces.jsonl`: optional token traces when `run.save_traces = true`.
 
 ## Validation
 

@@ -95,30 +95,24 @@ automatically. You can pass `env_path=...` if the file lives elsewhere.
 
 ## Benchmarks
 
-Run a local smoke pass and aggregate results:
+Run a local smoke pass from one reproducible config:
 
 ```bash
-python benchmarks/run.py --dry --max-tasks 5
-python benchmarks/run.py --tasks stlc --models gpt2 --modes constrained_direct,unconstrained_raw,unconstrained --tries 1 --device cpu --out benchmarks/out/smoke/raw.jsonl
-python benchmarks/agg.py --in benchmarks/out/smoke/raw.jsonl --out-dir benchmarks/out/smoke
+python benchmarks/run.py --config benchmarks/configs/smoke.toml --dry-run
+python benchmarks/run.py --config benchmarks/configs/smoke.toml
 ```
 
-Run the full open-model matrix on a Vast.ai/local GPU instance:
+The runner creates a dedicated run directory, keeps the append-only `raw.jsonl`
+format unchanged for compatibility, and writes a standardized `results.json`
+artifact for reproducibility. Resume an interrupted run with:
 
 ```bash
-python benchmarks/models.py \
-  --tasks all \
-  --models-file models.txt \
-  --tries 1
+python benchmarks/run.py --config path/to/benchmark.toml --resume
 ```
 
-`benchmarks/models.py` defaults to local CUDA execution, writes phase outputs to
-`benchmarks/out/vast_model_matrix/`, writes the cross-mode report to
-`benchmarks/out/vast_model_matrix/combined/`, and resumes by default. Resume
-skips raw records with the same `(backend, model, task_id, task_hash,
-resolution_hash, mode, try)` key and aggregation de-duplicates accidental
-duplicate appends. Benchmark tasks are one TOML file per task in
-`benchmarks/data/`; execution modes are code-owned.
+Benchmark tasks are one TOML file per task in `benchmarks/data/`; benchmark run
+parameters live in the run config TOML. See `benchmarks/README.md` for the full
+config schema and output layout.
 
 ## Grammars
 

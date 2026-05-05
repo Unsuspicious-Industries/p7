@@ -39,12 +39,16 @@ modal = ["modal>=0.64.0", "transformers>=4.30.0", "torch>=2.0.0", "accelerate"]
 outlines = ["outlines>=0.1.0", "transformers>=4.30.0", "torch>=2.0.0", "accelerate"]
 dev = ["pytest", "numpy", "flask>=2.3.0", "flask-cors>=4.0.0"]
 
+[project.scripts]
+p7-benchmark = "benchmarks.run:main"
+
 [tool.setuptools]
-packages = ["p7", "p7.grammars", "p7.models", "proposition7"]
+packages = ["p7", "p7.grammars", "p7.models", "proposition7", "benchmarks"]
 package-dir = {"p7" = "src", "proposition7" = "src/proposition7"}
 
 [tool.setuptools.package-data]
 "p7.grammars" = ["*.auf"]
+"benchmarks" = ["data/*.toml", "configs/*.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

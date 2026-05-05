@@ -6,7 +6,6 @@ from types import SimpleNamespace
 import p7
 import pytest
 import benchmarks.run as bench_run
-from benchmarks.models import LOCAL_ASCENDING_MODELS
 
 from benchmarks.api import (
     BenchmarkTask,
@@ -345,19 +344,6 @@ def test_default_model_matrix_excludes_gated_llama_and_keeps_current_open_models
     args = SimpleNamespace(device="cuda", torch_dtype="auto")
     monkeypatch.setattr(bench_run, "gpu_vram_gib", lambda _args: 48.0)
 
-    assert LOCAL_ASCENDING_MODELS == [
-        "Qwen/Qwen3.5-9B",
-        "Qwen/Qwen3.5-9B-Base",
-        "Qwen/Qwen3.5-4B",
-        "Qwen/Qwen3.5-4B-Base",
-        "Qwen/Qwen3.5-2B",
-        "Qwen/Qwen3.5-1.5B",
-        "Qwen/Qwen3.5-0.8B",
-        "Ministral-3-8B-Instruct-2512-GGUF",
-        "microsoft/Phi-4-mini-instruct",
-        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-    ]
-    assert all("llama" not in model.lower() for model in LOCAL_ASCENDING_MODELS)
     assert auto_parallel_tasks(args, "Qwen/Qwen3.5-9B", 32) >= 2
 
 
@@ -680,62 +666,218 @@ def test_aggregator_handles_missing_input_and_tracks_timeout_rates(tmp_path):
     assert row["other_error_rate"] == round(100.0 / 3.0, 2)
 
 
-def test_models_script_dry_run_builds_commands(tmp_path):
-    import subprocess
-    import sys
+def test_benchmark_config_parses_toml_matrix(tmp_path):
+    config_path = tmp_path / "benchmark.toml"
+    config_path.write_text(
+        """
+schema_version = 1
 
-    root = Path(__file__).resolve().parents[1]
-    result = subprocess.run(
-        [
-            sys.executable,
-            "benchmarks/models.py",
-            "--dry-run",
-            "--without-closed",
-            "--low-space",
-            "--parallel-tasks",
-            "auto",
-            "--max-tasks",
-            "1",
-            "--tries",
-            "1",
-            "--out-dir",
-            str(tmp_path / "out"),
-        ],
-        cwd=root,
-        check=False,
-        capture_output=True,
-        text=True,
+[run]
+name = "smoke"
+output_root = "benchmarks/out"
+
+[tasks]
+selectors = ["stlc"]
+max_tasks = 1
+
+[execution]
+tries = 1
+parallel_tasks = "auto"
+low_space = true
+
+[local]
+device = "cpu"
+torch_dtype = "none"
+device_map = ""
+
+[local.model_kwargs]
+
+[openrouter]
+env_file = ".env"
+
+[[matrix]]
+name = "local-smoke"
+backend = "local"
+models = ["gpt2"]
+modes = ["unconstrained"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
     )
 
-    assert result.returncode == 0
-    assert "benchmarks/run.py" in result.stdout
-    assert "--low-space" in result.stdout
-    assert "--parallel-tasks auto" in result.stdout
-    assert "benchmarks/agg.py" in result.stdout
+    config = bench_run.load_benchmark_config(config_path)
+
+    assert config.run_name == "smoke"
+    assert config.parallel_tasks == "auto"
+    assert config.low_space is True
+    assert config.matrices[0].name == "local-smoke"
+    assert config.matrices[0].models == ["gpt2"]
 
 
-def test_run_script_dry_run_accepts_parallel_auto(tmp_path):
+def test_resolve_run_paths_avoids_overwriting_existing_run_dir(tmp_path):
+    config = SimpleNamespace(output_root=tmp_path, run_name="artifact")
+
+    first = bench_run.resolve_run_paths(config, resume=False, explicit_run_dir="")
+    first.run_dir.mkdir(parents=True)
+    second = bench_run.resolve_run_paths(config, resume=False, explicit_run_dir="")
+    resumed = bench_run.resolve_run_paths(config, resume=True, explicit_run_dir="")
+
+    assert first.run_dir == tmp_path / "artifact"
+    assert second.run_dir != first.run_dir
+    assert resumed.run_dir == first.run_dir
+
+
+def test_results_artifact_keeps_raw_jsonl_and_dedupes_rows(tmp_path):
+    config_path = tmp_path / "benchmark.toml"
+    config_path.write_text(
+        """
+schema_version = 1
+
+[run]
+name = "artifact"
+output_root = """
+        + json.dumps(str(tmp_path))
+        + """
+
+[tasks]
+selectors = ["stlc"]
+max_tasks = 1
+
+[execution]
+tries = 1
+
+[local]
+device = "cpu"
+torch_dtype = "none"
+device_map = ""
+
+[local.model_kwargs]
+
+[[matrix]]
+name = "local-smoke"
+backend = "local"
+models = ["gpt2"]
+modes = ["unconstrained"]
+""",
+        encoding="utf-8",
+    )
+    config = bench_run.load_benchmark_config(config_path)
+    paths = bench_run.resolve_run_paths(config, resume=False, explicit_run_dir="")
+    bench_run.ensure_run_directory(config, paths, resume=False)
+    rows = [
+        {
+            "backend": "local",
+            "model": "gpt2",
+            "task_id": "t1",
+            "task_hash": "h1",
+            "resolution_hash": "r1",
+            "mode": "unconstrained",
+            "language": "stlc",
+            "category": "stlc:test",
+            "error": "ok",
+            "exact": True,
+            "tokens": 3,
+            "seconds": 0.1,
+            "try": 0,
+        },
+        {
+            "backend": "local",
+            "model": "gpt2",
+            "task_id": "t1",
+            "task_hash": "h1",
+            "resolution_hash": "r1",
+            "mode": "unconstrained",
+            "language": "stlc",
+            "category": "stlc:test",
+            "error": "ok",
+            "exact": True,
+            "tokens": 4,
+            "seconds": 0.2,
+            "try": 0,
+        },
+    ]
+    paths.raw_jsonl.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
+
+    artifact = bench_run.build_results_artifact(
+        config,
+        paths,
+        config.matrices,
+        {"local-smoke": 1},
+        status="running",
+        total_jobs=1,
+    )
+
+    assert artifact["run"]["records_file"].endswith("raw.jsonl")
+    assert artifact["run"]["raw_record_count"] == 2
+    assert artifact["run"]["deduped_record_count"] == 1
+    assert artifact["records"][0]["tokens"] == 4
+
+
+def test_paper_config_parses_and_stays_within_model_cap():
+    config = bench_run.load_benchmark_config(
+        Path("benchmarks/configs/paper.toml")
+    )
+    unique_models = {
+        model_name
+        for matrix in config.matrices
+        for model_name in matrix.models
+    }
+
+    assert config.run_name == "paper"
+    assert len(unique_models) == 31
+    assert len(unique_models) <= 31
+    assert any(matrix.backend == "openrouter" for matrix in config.matrices)
+    assert any("constrained_mixed" in matrix.modes for matrix in config.matrices)
+
+
+def test_run_script_dry_run_accepts_config(tmp_path):
     import subprocess
     import sys
+
+    config_path = tmp_path / "benchmark.toml"
+    config_path.write_text(
+        """
+schema_version = 1
+
+[run]
+name = "smoke"
+output_root = "benchmarks/out"
+
+[tasks]
+selectors = ["stlc"]
+max_tasks = 1
+
+[execution]
+tries = 1
+parallel_tasks = "auto"
+
+[local]
+device = "cpu"
+torch_dtype = "none"
+device_map = ""
+
+[local.model_kwargs]
+
+[[matrix]]
+name = "local-smoke"
+backend = "local"
+models = ["gpt2"]
+modes = ["unconstrained"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
 
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
         [
             sys.executable,
             "benchmarks/run.py",
-            "--dry",
-            "--tasks",
-            "stlc",
-            "--models",
-            "gpt2",
-            "--modes",
-            "unconstrained",
-            "--max-tasks",
-            "1",
-            "--parallel-tasks",
-            "auto",
-            "--out",
-            str(tmp_path / "raw.jsonl"),
+            "--config",
+            str(config_path),
+            "--dry-run",
         ],
         cwd=root,
         check=False,
@@ -744,7 +886,8 @@ def test_run_script_dry_run_accepts_parallel_auto(tmp_path):
     )
 
     assert result.returncode == 0
-    assert "parallel_tasks=auto" in result.stdout
+    assert "[plan]" in result.stdout
+    assert "pending_jobs=1" in result.stdout
 
 
 def test_outlines_has_syntax_adapters_for_every_builtin_grammar():

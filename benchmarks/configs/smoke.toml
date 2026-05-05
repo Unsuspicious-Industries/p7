@@ -1,0 +1,36 @@
+schema_version = 1
+
+[run]
+name = "smoke"
+output_root = "benchmarks/out"
+save_traces = false
+
+[tasks]
+selectors = ["stlc"]
+ids = []
+max_tasks = 1
+max_tokens_override = 16
+
+[execution]
+tries = 1
+seed = 7
+timeout = 0.0
+think_budget = 128
+parallel_tasks = "1"
+low_space = false
+
+[local]
+device = "cpu"
+torch_dtype = "none"
+device_map = ""
+
+[local.model_kwargs]
+
+[openrouter]
+env_file = ".env"
+
+[[matrix]]
+name = "local-smoke"
+backend = "local"
+models = ["gpt2"]
+modes = ["constrained_direct", "unconstrained_raw", "unconstrained"]
