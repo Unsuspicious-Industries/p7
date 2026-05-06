@@ -1,6 +1,6 @@
 # p7 Benchmark Suite
 
-This suite is built for reproducible local/OpenRouter benchmark runs from one TOML config. Modal is not part of the benchmark path.
+This suite is built for reproducible local/OpenRouter benchmark runs from one TOML config. The artifact submission path is the Docker image built by `scripts/build_artifact_image.sh`. Modal is not part of the benchmark path.
 
 ## Task Format
 
@@ -45,8 +45,8 @@ All checked-in TOML tasks are validated by tests: expected outputs must parse an
 
 Benchmark modes are code-owned, not task-owned.
 
-- `unconstrained`: plain local Hugging Face generation plus post-hoc program extraction for legacy comparison.
-- `unconstrained_raw`: plain local Hugging Face generation evaluated exactly as emitted, without markdown/newline/code-block extraction helpers.
+- `unconstrained`: plain generation evaluated exactly as emitted.
+- `unconstrained_cleaned`: plain generation followed by post-hoc program extraction before evaluation.
 - `constrained_direct`: p7/Aufbau direct constrained generation.
 - `constrained_mixed`: p7 reasoning environment plus constrained formal generation.
 - `outlines`: syntax-only Outlines CFG constraint engine. This intentionally drops type/context information.
@@ -54,7 +54,43 @@ Benchmark modes are code-owned, not task-owned.
 
 Outlines is a constraint engine mode, not a backend. The backend remains local for open models.
 
-## Single Runner
+## Artifact Container
+
+Build the reviewable Docker image tarball:
+
+```bash
+./scripts/build_artifact_image.sh
+```
+
+Load it on another machine and run the smoke suite:
+
+```bash
+docker load -i dist/p7-benchmark-artifact.tar
+docker run --rm -v "$PWD/artifact-output:/workspace/benchmarks/out" p7-benchmark-artifact:latest smoke
+```
+
+Run the full paper suite on a GPU host:
+
+```bash
+docker run --rm --gpus all \
+  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+  -v "$PWD/.env:/workspace/.env:ro" \
+  p7-benchmark-artifact:latest paper --resume
+```
+
+Mount `.env` only if the config includes an OpenRouter matrix. It must define `OPENROUTER_API_KEY`.
+
+Run the Modal A10G smoke validation using the same artifact container definition:
+
+```bash
+pip install -e ".[modal]"
+modal setup
+python scripts/modal_sandbox_run.py --config benchmarks/configs/modal_qwen_smoke.toml
+```
+
+That launcher copies `raw.jsonl` and `results.json` back to `dist/modal-qwen-smoke/`.
+
+## Source Runner
 
 Install dependencies:
 
@@ -91,7 +127,7 @@ Every fresh run creates a dedicated run directory under `run.output_root/run.nam
 
 ## Config Format
 
-```bash
+```toml
 schema_version = 1
 
 [run]
@@ -127,13 +163,13 @@ env_file = ".env"
 name = "open-models"
 backend = "local"
 models = ["Qwen/Qwen3.5-4B", "Qwen/Qwen3.5-9B"]
-modes = ["constrained_direct", "constrained_mixed", "unconstrained_raw", "unconstrained"]
+modes = ["constrained_direct", "constrained_mixed", "unconstrained", "unconstrained_cleaned"]
 
 [[matrix]]
 name = "closed-baseline"
 backend = "openrouter"
 models = ["openai/gpt-5.4-mini", "anthropic/claude-4.5-haiku"]
-modes = ["unconstrained"]
+modes = ["unconstrained", "unconstrained_cleaned"]
 ```
 
 ## Resume Safety

@@ -143,11 +143,9 @@ def delta_rows(summary: list[dict], dimensions: tuple[str, ...]) -> list[dict]:
 
     rows = []
     for key, vals in sorted(pair.items()):
-        constrained = [
-            val for val in vals if val["mode"] in {"constrained", "constrained_direct"}
-        ]
-        raw_unconstrained = [val for val in vals if val["mode"] == "unconstrained_raw"]
-        assisted_unconstrained = [val for val in vals if val["mode"] == "unconstrained"]
+        constrained = [val for val in vals if val["mode"] == "constrained_direct"]
+        raw_unconstrained = [val for val in vals if val["mode"] == "unconstrained"]
+        assisted_unconstrained = [val for val in vals if val["mode"] == "unconstrained_cleaned"]
         unconstrained = raw_unconstrained or assisted_unconstrained
         if not constrained or not unconstrained:
             continue
@@ -254,7 +252,7 @@ def main() -> None:
         f.write("- `timeout_rate`: job hit the configured timeout\n")
         f.write("- `other_error_rate`: uncategorized runtime/model errors\n\n")
         f.write("## Constrained vs unconstrained delta\n\n")
-        f.write("Uses `unconstrained_raw` as the baseline when present.\n\n")
+        f.write("Uses raw `unconstrained` as the baseline when present.\n\n")
         for r in delta_rows_:
             f.write(
                 f"- {r['backend']} {r['model']} {r['language']} vs {r['unconstrained_mode']}: exact delta {r['exact_delta']} pts, "

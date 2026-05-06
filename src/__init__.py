@@ -11,7 +11,6 @@ from .grammars import (
 )
 from .inference import GenerationResult
 from .llm import ConstrainedModel
-from .modal_deployment import ModalDeployment
 from .models import (
     get_model_class,
     PleiasConstrainedModel,
@@ -41,7 +40,6 @@ __all__ = [
     "Synthesizer",
     "GenerationResult",
     "ConstrainedModel",
-    "ModalDeployment",
     "get_model_class",
     "ChatConstrainedModel",
     "DeepseekConstrainedModel",

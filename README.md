@@ -8,7 +8,7 @@ Type-aware constrained generation for language models. The package is exported a
 ```bash
 pip install -e .
 pip install -e ".[transformers]"  # local Hugging Face generation
-pip install -e ".[modal]"         # Modal remote execution
+pip install -e ".[modal]"         # Modal sandbox launcher
 ```
 
 ## Local Generation
@@ -55,47 +55,45 @@ result = p7.generate(
 )
 ```
 
-## Modal Remote Generation
+## Modal Sandbox Runs
 
-Create a `.env` file in the project root or current working directory:
+Modal supports container-based execution directly from the artifact Dockerfile.
+This repository uses `modal.Image.from_dockerfile(...)` plus `modal.Sandbox.create(...)`
+instead of a custom Modal app/function wrapper.
 
-```dotenv
-MODAL_TOKEN_ID=your-token-id
-MODAL_TOKEN_SECRET=your-token-secret
-```
-
-Deploy the Modal app once:
+After `modal setup`, launch the small Qwen smoke suite on one A10G with:
 
 ```bash
-modal deploy -m proposition7.modal
+python scripts/modal_sandbox_run.py --config benchmarks/configs/modal_qwen_smoke.toml
 ```
 
-Then call the deployed model through the same generation interface:
-
-```python
-import proposition7 as p7
-
-remote = p7.ModalDeployment(
-    model_name="gpt2",
-    grammar="fun",
-    gpu="T4",
-)
-
-result = remote.generate_constrained(
-    prompt="Define inc:Int->Int and call it on 1. Output only program text.",
-    initial="let inc: Int -> Int = (n: Int) =>",
-    max_tokens=64,
-)
-
-print(result.text)
-```
-
-`ModalDeployment` loads `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` from `.env`
-automatically. You can pass `env_path=...` if the file lives elsewhere.
+That script copies `raw.jsonl` and `results.json` back to a local output directory.
 
 ## Benchmarks
 
-Run a local smoke pass from one reproducible config:
+Build the artifact Docker image tarball:
+
+```bash
+./scripts/build_artifact_image.sh
+```
+
+Run the containerized smoke suite:
+
+```bash
+docker load -i dist/p7-benchmark-artifact.tar
+docker run --rm -v "$PWD/artifact-output:/workspace/benchmarks/out" p7-benchmark-artifact:latest smoke
+```
+
+Run the paper suite on a GPU host:
+
+```bash
+docker run --rm --gpus all \
+  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+  -v "$PWD/.env:/workspace/.env:ro" \
+  p7-benchmark-artifact:latest paper --resume
+```
+
+Run directly from a source checkout:
 
 ```bash
 python benchmarks/run.py --config benchmarks/configs/smoke.toml --dry-run
@@ -131,7 +129,6 @@ Pass a grammar name through high-level APIs, or pass a raw grammar spec to
 ## Public API
 
 - `proposition7.ConstrainedModel`: local Hugging Face model wrapper.
-- `proposition7.ModalDeployment`: remote Modal client with the same generation methods.
 - `generate_constrained(...)`: constrained decoding, returning `GenerationResult`.
 - `generate_unconstrained(...)`: standard sampling, returning `GenerationResult`.
 - `proposition7.generate(...)`: high-level convenience function returning `Result`.
@@ -143,7 +140,6 @@ src/
   __init__.py              # p7 compatibility package
   api.py                   # high-level generate() and Session
   llm.py                   # ConstrainedModel
-  modal_deployment.py      # Modal app and ModalDeployment
   sampler.py               # typed token sampler
   inference.py             # low-level constrained loop
   environment.py           # optional reasoning environment
@@ -152,9 +148,13 @@ src/
   proposition7/            # exported proposition7 alias package
 benchmarks/
   api.py                   # backend-neutral benchmark interaction API
-  run.py                   # Vast.ai/local benchmark runner
-  models.py                # Vast.ai/local-GPU benchmark matrix runner
+  run.py                   # TOML-driven benchmark artifact runner
+  configs/                 # smoke and paper benchmark configs
   agg.py                   # result aggregation
+artifact/                   # Docker artifact image files
+scripts/
+  build_artifact_image.sh   # builds dist/p7-benchmark-artifact.tar
+  modal_sandbox_run.py      # launches artifact container on Modal A10G
 tests/                     # pytest suite
 ```
 

@@ -1,0 +1,15 @@
+\begin{table}[htbp]
+  \centering
+  \caption{Error distribution by generation mode. Constrained modes eliminate parse errors (0\%), shifting failures to Task Invalid (logic errors).}
+  \label{tab:error_breakdown}
+  \begin{tabular}{lrrrrrrrr}
+    \toprule
+    mode & attempts & pass\_rate & parse\_error\_rate & semantic\_mismatch\_rate & incomplete\_rate & non\_completable\_rate & timeout\_rate & other\_error\_rate \\
+    \midrule
+    constrained\_direct & 658 & 31.0 & 0.15 & 36.63 & 32.22 & 0.0 & 0.0 & 0.0 \\
+    constrained\_mixed & 942 & \textbf{50.32} & 0.0 & 31.85 & 17.83 & 0.0 & 0.0 & 0.0 \\
+    unconstrained & 1316 & 31.46 & 2.66 & 15.27 & 1.52 & 49.09 & 0.0 & 0.0 \\
+    unconstrained\_raw & 1128 & 32.09 & 0.0 & 8.16 & 3.37 & 56.38 & 0.0 & 0.0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

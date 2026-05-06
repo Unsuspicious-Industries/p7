@@ -58,8 +58,8 @@ models = [
 modes = [
   "constrained_direct",
   "constrained_mixed",
-  "unconstrained_raw",
   "unconstrained",
+  "unconstrained_cleaned",
 ]
 
 [[matrix]]
@@ -86,4 +86,4 @@ models = [
   "qwen/qwen3.5-35b-a3b",
   "google/gemma-4-31b-it",
 ]
-modes = ["unconstrained_raw", "unconstrained"]
+modes = ["unconstrained", "unconstrained_cleaned"]

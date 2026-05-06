@@ -348,32 +348,26 @@ def ensure_run_directory(
 
 
 def normalize_modes(raw_modes: list[str], backend: str) -> list[str]:
-    aliases = {
-        "constrained": "constrained_direct",
-        "mixed": "constrained_mixed",
-    }
-    modes = [aliases.get(mode.strip(), mode.strip()) for mode in raw_modes if mode.strip()]
+    modes = [mode.strip() for mode in raw_modes if mode.strip()]
     valid_modes = {
         "constrained_direct",
         "constrained_mixed",
         "outlines",
         "unconstrained",
-        "unconstrained_raw",
+        "unconstrained_cleaned",
     }
     unknown = set(modes) - valid_modes
     if unknown:
         raise SystemExit(f"Unknown modes: {', '.join(sorted(unknown))}")
     if backend == "openrouter":
-        skipped = [
-            mode for mode in modes if mode not in {"unconstrained", "unconstrained_raw"}
+        unsupported = [
+            mode for mode in modes if mode not in {"unconstrained", "unconstrained_cleaned"}
         ]
-        if skipped:
-            print(
-                "[skip] OpenRouter backend only supports unconstrained modes: "
-                + ", ".join(skipped),
-                flush=True,
+        if unsupported:
+            raise SystemExit(
+                "OpenRouter backend only supports unconstrained modes: "
+                + ", ".join(unsupported)
             )
-        modes = [mode for mode in modes if mode in {"unconstrained", "unconstrained_raw"}]
     if not modes:
         raise SystemExit("No runnable modes selected")
     return modes

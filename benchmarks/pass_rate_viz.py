@@ -14,8 +14,8 @@ sns.set_style("whitegrid")
 MODES = [
     "constrained_direct",
     "constrained_mixed",
-    "unconstrained_raw",
     "unconstrained",
+    "unconstrained_cleaned",
 ]
 MODE_COLORS = ["#1f77b4", "#ff7f0e", "#d62728", "#2ca02c"]
 

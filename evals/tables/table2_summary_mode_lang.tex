@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+  \centering
+  \caption{Summary of benchmark results by mode and language.}
+  \label{tab:summary_mode_lang}
+  \begin{tabular}{lrrrr}
+    \toprule
+    mode & language & pass\_rate & parse\_error\_rate & semantic\_mismatch\_rate \\
+    \midrule
+    constrained\_direct & fun & 35.93 & 0.00 & 25.54 \\
+    constrained\_direct & imp & 22.96 & 0.00 & 56.12 \\
+    constrained\_direct & stlc & 32.90 & 0.43 & 31.17 \\
+    constrained\_mixed & fun & 46.83 & 0.00 & 23.41 \\
+    constrained\_mixed & imp & 31.07 & 0.00 & 60.72 \\
+    constrained\_mixed & stlc & 75.15 & 0.00 & 13.64 \\
+    unconstrained & fun & 25.32 & 3.25 & 23.16 \\
+    unconstrained & imp & 13.52 & 2.30 & 13.52 \\
+    unconstrained & stlc & 52.81 & 2.38 & 8.87 \\
+    unconstrained\_raw & fun & 25.17 & 0.00 & 2.10 \\
+    unconstrained\_raw & imp & 29.46 & 0.00 & 17.56 \\
+    unconstrained\_raw & stlc & 39.14 & 0.00 & 6.06 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

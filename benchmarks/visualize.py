@@ -14,15 +14,15 @@ sns.set_style("whitegrid")
 MODES = [
     "constrained_direct",
     "constrained_mixed",
-    "unconstrained_raw",
     "unconstrained",
+    "unconstrained_cleaned",
 ]
 
 MODE_LABELS = {
     "constrained_direct": "Constrained (Direct)",
     "constrained_mixed": "Constrained (Mixed)",
-    "unconstrained_raw": "Unconstrained (Raw)",
     "unconstrained": "Unconstrained",
+    "unconstrained_cleaned": "Unconstrained (Cleaned)",
 }
 
 
@@ -39,10 +39,10 @@ def make_entry_name(row: pd.Series) -> str:
     model = row["model"]
     if mode in ("constrained_direct", "constrained_mixed"):
         return f"{model} (constrained)"
-    elif mode == "unconstrained_raw":
-        return f"{model} (unconstrained raw)"
-    else:
+    elif mode == "unconstrained":
         return f"{model} (unconstrained)"
+    else:
+        return f"{model} (unconstrained cleaned)"
 
 
 def plot_model_mode_heatmap(df: pd.DataFrame, out_dir: Path, metric: str = "pass_rate"):
@@ -50,14 +50,14 @@ def plot_model_mode_heatmap(df: pd.DataFrame, out_dir: Path, metric: str = "pass
     data["entry"] = data.apply(make_entry_name, axis=1)
 
     constrained = data[data["mode"].isin(["constrained_direct", "constrained_mixed"])]
-    unconstrained_raw = data[data["mode"] == "unconstrained_raw"]
+    unconstrained = data[data["mode"] == "unconstrained"]
 
     constrained_pivot = constrained.pivot_table(
         values=metric, index="model", columns="mode", aggfunc="mean"
     )
     constrained_pivot = constrained_pivot[["constrained_direct", "constrained_mixed"]]
 
-    unconstrained_raw_pivot = unconstrained_raw.pivot_table(
+    unconstrained_pivot = unconstrained.pivot_table(
         values=metric, index="model", columns="mode", aggfunc="mean"
     )
 
@@ -80,10 +80,10 @@ def plot_model_mode_heatmap(df: pd.DataFrame, out_dir: Path, metric: str = "pass
         plt.close()
         print(f"  Generated heatmap_constrained.png")
 
-    if not unconstrained_raw_pivot.empty:
-        plt.figure(figsize=(4, max(4, len(unconstrained_raw_pivot) * 0.5)))
+    if not unconstrained_pivot.empty:
+        plt.figure(figsize=(4, max(4, len(unconstrained_pivot) * 0.5)))
         sns.heatmap(
-            unconstrained_raw_pivot,
+            unconstrained_pivot,
             annot=True,
             fmt=".1f",
             cmap="RdYlGn",
@@ -91,13 +91,13 @@ def plot_model_mode_heatmap(df: pd.DataFrame, out_dir: Path, metric: str = "pass
             vmax=100,
             cbar_kws={"label": f"{metric.replace('_', ' ').title()} (%)"},
         )
-        plt.title("Unconstrained Raw: Model × Mode", fontsize=13, fontweight="bold")
+        plt.title("Unconstrained: Model × Mode", fontsize=13, fontweight="bold")
         plt.xlabel("")
         plt.ylabel("Model")
         plt.tight_layout()
-        plt.savefig(out_dir / "heatmap_unconstrained_raw.png", bbox_inches="tight")
+        plt.savefig(out_dir / "heatmap_unconstrained.png", bbox_inches="tight")
         plt.close()
-        print(f"  Generated heatmap_unconstrained_raw.png")
+        print(f"  Generated heatmap_unconstrained.png")
 
 
 def plot_global_ranking(df: pd.DataFrame, out_dir: Path, metric: str = "pass_rate"):
@@ -141,7 +141,7 @@ def plot_mode_ranking(df: pd.DataFrame, out_dir: Path, metric: str = "pass_rate"
     data = filter_modes(df)
 
     constrained_modes = ["constrained_direct", "constrained_mixed"]
-    unconstrained_raw_modes = ["unconstrained_raw"]
+    unconstrained_modes = ["unconstrained"]
 
     fig, axes = plt.subplots(1, 2, figsize=(14, max(6, data["model"].nunique() * 0.4)))
 
@@ -156,7 +156,7 @@ def plot_mode_ranking(df: pd.DataFrame, out_dir: Path, metric: str = "pass_rate"
     axes[0].set_title("Constrained Modes Avg", fontweight="bold")
     axes[0].set_xlim(0, 105)
 
-    udata = data[data["mode"].isin(unconstrained_raw_modes)]
+    udata = data[data["mode"].isin(unconstrained_modes)]
     urank = udata.groupby("model")[metric].mean().reset_index()
     urank = urank.sort_values(metric, ascending=True)
 
@@ -164,7 +164,7 @@ def plot_mode_ranking(df: pd.DataFrame, out_dir: Path, metric: str = "pass_rate"
     axes[1].set_yticks(range(len(urank)))
     axes[1].set_yticklabels(urank["model"])
     axes[1].set_xlabel(metric.replace("_", " ").title() + " (%)")
-    axes[1].set_title("Unconstrained Raw Avg", fontweight="bold")
+    axes[1].set_title("Unconstrained Avg", fontweight="bold")
     axes[1].set_xlim(0, 105)
 
     plt.suptitle("Model Rankings by Category", fontsize=14, fontweight="bold", y=1.02)

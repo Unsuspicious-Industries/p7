@@ -46,8 +46,10 @@ def compute_stats(records: list[dict]) -> dict:
 
         if mode in ("constrained_direct", "constrained_mixed"):
             entry = f"{model} (constrained)"
-        elif mode == "unconstrained_raw":
-            entry = f"{model} (unconstrained raw)"
+        elif mode == "unconstrained":
+            entry = f"{model} (unconstrained)"
+        elif mode == "unconstrained_cleaned":
+            entry = f"{model} (unconstrained cleaned)"
         else:
             entry = f"{model} ({mode})"
 

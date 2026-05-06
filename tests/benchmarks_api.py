@@ -13,6 +13,7 @@ from benchmarks.api import (
     build_prompt,
     build_token_log,
     check_parse,
+    classify,
     extract_program_output,
     grammar_name,
     load_tasks,
@@ -347,22 +348,31 @@ def test_default_model_matrix_excludes_gated_llama_and_keeps_current_open_models
     assert auto_parallel_tasks(args, "Qwen/Qwen3.5-9B", 32) >= 2
 
 
-def test_selected_modes_accepts_unconstrained_raw_for_local_and_openrouter():
+def test_selected_modes_accepts_raw_and_cleaned_unconstrained_modes():
     local = selected_modes(
         SimpleNamespace(
-            modes="constrained,unconstrained_raw,unconstrained",
+            modes="constrained_direct,unconstrained,unconstrained_cleaned",
             backend="local",
         )
     )
     remote = selected_modes(
         SimpleNamespace(
-            modes="constrained_direct,unconstrained_raw,unconstrained",
+            modes="unconstrained,unconstrained_cleaned",
             backend="openrouter",
         )
     )
 
-    assert local == ["constrained_direct", "unconstrained_raw", "unconstrained"]
-    assert remote == ["unconstrained_raw", "unconstrained"]
+    assert local == ["constrained_direct", "unconstrained", "unconstrained_cleaned"]
+    assert remote == ["unconstrained", "unconstrained_cleaned"]
+
+
+def test_selected_modes_rejects_removed_aliases():
+    with pytest.raises(SystemExit):
+        selected_modes(SimpleNamespace(modes="constrained", backend="local"))
+    with pytest.raises(SystemExit):
+        selected_modes(SimpleNamespace(modes="unconstrained_raw", backend="local"))
+    with pytest.raises(SystemExit):
+        selected_modes(SimpleNamespace(modes="constrained_direct", backend="openrouter"))
 
 
 def test_parallel_jobs_are_grouped_by_model_before_chunking():
@@ -579,7 +589,7 @@ def test_aggregation_dedupes_by_hash_aware_benchmark_job_key():
     assert deduped[1]["output"] == "changed"
 
 
-def test_delta_rows_prefers_unconstrained_raw_when_available():
+def test_delta_rows_prefers_raw_unconstrained_when_available():
     summary = [
         {
             "backend": "local",
@@ -595,7 +605,7 @@ def test_delta_rows_prefers_unconstrained_raw_when_available():
             "backend": "local",
             "model": "m",
             "language": "toy",
-            "mode": "unconstrained",
+            "mode": "unconstrained_cleaned",
             "exact_rate": 60.0,
             "pass_rate": 55.0,
             "parse_error_rate": 20.0,
@@ -605,7 +615,7 @@ def test_delta_rows_prefers_unconstrained_raw_when_available():
             "backend": "local",
             "model": "m",
             "language": "toy",
-            "mode": "unconstrained_raw",
+            "mode": "unconstrained",
             "exact_rate": 40.0,
             "pass_rate": 35.0,
             "parse_error_rate": 45.0,
@@ -615,9 +625,37 @@ def test_delta_rows_prefers_unconstrained_raw_when_available():
 
     [row] = delta_rows(summary, ("backend", "model", "language"))
 
-    assert row["unconstrained_mode"] == "unconstrained_raw"
+    assert row["unconstrained_mode"] == "unconstrained"
     assert row["exact_delta"] == 40.0
     assert row["parse_error_delta"] == 45.0
+
+
+def test_non_completable_is_disallowed_for_constrained_modes():
+    for mode in ["constrained_direct", "constrained_mixed", "outlines"]:
+        with pytest.raises(
+            AssertionError,
+            match="Constrained decoding produced a non-completable output",
+        ):
+            classify(
+                False,
+                False,
+                False,
+                "Parse error: no parse found at input length 7",
+                None,
+                mode=mode,
+            )
+
+    assert (
+        classify(
+            False,
+            False,
+            False,
+            "Parse error: no parse found at input length 7",
+            None,
+            mode="unconstrained",
+        )
+        == "non_completable"
+    )
 
 
 def test_aggregator_handles_missing_input_and_tracks_timeout_rates(tmp_path):

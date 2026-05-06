@@ -1,0 +1,38 @@
+schema_version = 1
+
+[run]
+name = "modal-qwen-smoke"
+output_root = "benchmarks/out"
+save_traces = false
+
+[tasks]
+selectors = ["all"]
+ids = []
+max_tasks = 1
+max_tokens_override = 16
+
+[execution]
+tries = 1
+seed = 7
+timeout = 300.0
+think_budget = 256
+parallel_tasks = "1"
+low_space = true
+
+[local]
+device = "cuda"
+torch_dtype = "auto"
+device_map = "auto"
+
+[local.model_kwargs]
+
+[[matrix]]
+name = "qwen-smoke"
+backend = "local"
+models = [
+  "Qwen/Qwen3.5-0.8B",
+  "Qwen/Qwen3.5-2B",
+  "Qwen/Qwen3.5-4B",
+  "Qwen/Qwen3.5-9B",
+]
+modes = ["constrained_direct", "unconstrained", "unconstrained_cleaned"]

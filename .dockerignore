@@ -1,0 +1,13 @@
+.git/
+.pytest_cache/
+__pycache__/
+*.pyc
+.env
+benchmarks/out/
+backup/
+dist/
+evals/
+final/
+p7.egg-info/
+unified/
+vast_model_matrix/

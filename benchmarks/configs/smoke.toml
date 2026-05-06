@@ -33,4 +33,4 @@ env_file = ".env"
 name = "local-smoke"
 backend = "local"
 models = ["gpt2"]
-modes = ["constrained_direct", "unconstrained_raw", "unconstrained"]
+modes = ["constrained_direct", "unconstrained", "unconstrained_cleaned"]

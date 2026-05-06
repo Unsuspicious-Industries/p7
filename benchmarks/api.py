@@ -343,7 +343,7 @@ def build_prompt(
     if language_rule:
         lines.append(language_rule)
 
-    if mode in {"mixed", "constrained_mixed"}:
+    if mode == "constrained_mixed":
         lines.extend(
             [
                 "Workflow: think briefly, then write the final answer in the formal block.",
@@ -351,7 +351,7 @@ def build_prompt(
                 "Stop as soon as the formal program satisfies the task.",
             ]
         )
-    elif mode in {"constrained", "constrained_direct", "outlines"}:
+    elif mode in {"constrained_direct", "outlines"}:
         lines.extend(
             [
                 "Direct constrained generation: write the program continuation immediately.",
@@ -409,7 +409,7 @@ def build_interaction(task: BenchmarkTask, mode: str) -> BenchmarkInteraction:
             gname,
             task.prompt,
             mode=mode,
-            initial=task.initial if mode not in {"mixed", "constrained_mixed"} else "",
+            initial=task.initial if mode != "constrained_mixed" else "",
         ),
         initial=task.initial,
         max_tokens=task.max_tokens,
@@ -508,9 +508,15 @@ def classify(
     complete: bool,
     parse_error: str = "",
     semantic_ok: Optional[bool] = None,
+    *,
+    mode: str = "",
 ) -> str:
     if not parse_ok:
         if "no parse found" in parse_error.lower():
+            if mode in {"constrained_direct", "constrained_mixed", "outlines"}:
+                raise AssertionError(
+                    f"Constrained decoding produced a non-completable output in mode={mode}"
+                )
             return "non_completable"
         return "parse_error"
     if not complete:
@@ -545,23 +551,22 @@ def run_interaction(
     started_at = time.time()
     mixed_extra: dict[str, Any] = {}
     try:
-        if mode in {"mixed", "constrained_mixed"}:
+        if mode == "constrained_mixed":
             result, mixed_extra = run_mixed_generation(
                 model,
                 interaction,
                 think_budget=think_budget,
                 seed=seed,
             )
-        elif mode in {"constrained", "constrained_direct", "outlines"}:
+        elif mode in {"constrained_direct", "outlines"}:
             result = model.generate_constrained(
                 prompt=interaction.prompt,
                 initial=interaction.initial,
                 max_tokens=interaction.max_tokens,
                 grammar_name=interaction.grammar_name,
-                stop_on_complete=True,
                 seed=seed,
             )
-        elif mode in {"unconstrained", "unconstrained_raw"}:
+        elif mode in {"unconstrained", "unconstrained_cleaned"}:
             result = model.generate_unconstrained(
                 prompt=interaction.prompt,
                 initial=interaction.initial,
@@ -622,7 +627,7 @@ def run_interaction(
     raw_output = result.text
     output = raw_output
     output_extracted = False
-    if mode == "unconstrained":
+    if mode == "unconstrained_cleaned":
         output, output_extracted = extract_program_output(
             spec,
             interaction.grammar_name,
@@ -635,7 +640,14 @@ def run_interaction(
     if parse_ok and parse_complete:
         resolution_result = check_resolution(task, output)
     semantic_ok = resolution_result.ok if resolution_result is not None else None
-    error = classify(exact, parse_ok, parse_complete, parse_error, semantic_ok)
+    error = classify(
+        exact,
+        parse_ok,
+        parse_complete,
+        parse_error,
+        semantic_ok,
+        mode=mode,
+    )
     record = {
         "task_id": task.task_id,
         "language": task.language,
@@ -673,8 +685,6 @@ def run_interaction(
             result.tokens_generated
             if mode
             in {
-                "constrained",
-                "mixed",
                 "constrained_direct",
                 "constrained_mixed",
                 "outlines",

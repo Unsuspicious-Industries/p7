@@ -171,7 +171,6 @@ class ReasoningEnvironment:
         think_budget: int = 200,
         formal_budget: int = 100,
         system_prompt: Optional[str] = None,
-        stop_on_complete: bool = True,
     ):
         """
         Initialize the reasoning environment.
@@ -187,7 +186,6 @@ class ReasoningEnvironment:
         self.grammar_name = grammar_name
         self.think_budget = think_budget
         self.formal_budget = formal_budget
-        self.stop_on_complete = stop_on_complete
 
         self.THINK_OPEN = self.model.think_open()
         self.THINK_CLOSE = self.model.think_close()

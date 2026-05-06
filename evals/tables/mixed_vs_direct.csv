@@ -1,0 +1,8 @@
+model,direct,mixed,delta
+Qwen/Qwen3.5-0.8B,15.15,18.18,+3.03
+Qwen/Qwen3.5-2B,30.30,45.45,+15.15
+Qwen/Qwen3.5-4B,27.27,90.91,+63.64
+Qwen/Qwen3.5-4B-Base,54.55,87.88,+33.33
+Qwen/Qwen3.5-9B,12.12,96.97,+84.85
+Qwen/Qwen3.5-9B-Base,72.73,96.97,+24.24
+microsoft/Phi-4-mini-instruct,18.18,27.27,+9.09

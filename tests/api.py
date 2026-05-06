@@ -70,7 +70,6 @@ def test_proposition7_alias_exports_public_api():
     import proposition7
 
     assert proposition7.ConstrainedModel is p7.ConstrainedModel
-    assert proposition7.ModalDeployment is p7.ModalDeployment
 
 
 def test_synthesizer_set_input_and_feed_round_trip():

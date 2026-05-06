@@ -100,21 +100,13 @@ def generate(
         initial: Partial output to continue.
         max_tokens: Max tokens to generate.
         reason: Enable chain-of-thought before constrained output.
-        remote: Run on Modal GPU instead of locally.
-        gpu: Modal GPU type (T4/A100/H100).
+        remote: Deprecated remote path. Use `scripts/modal_sandbox_run.py` instead.
+        gpu: Reserved for remote container launchers.
     """
     if remote:
-        from .modal_deployment import generate_remote
-
-        return generate_remote(
-            prompt,
-            model=model,
-            grammar=grammar,
-            initial=initial,
-            max_tokens=max_tokens,
-            reason=reason,
-            gpu=gpu,
-            **kwargs,
+        raise NotImplementedError(
+            "Remote generation is no longer exposed through the Python API. "
+            "Use scripts/modal_sandbox_run.py for container-based Modal runs."
         )
     think_budget = kwargs.pop("think_budget", 200)
     if "device" not in kwargs and "device_map" not in kwargs:
