@@ -36,11 +36,12 @@ jobs:
           docker push "$IMAGE_TAG"
           docker push "$IMAGE_NAME"
 
-      - name: Create source bundle and manifest
+      - name: Create source bundle, manifest and checksums
         run: |
           mv dist/proposition7-review-bundle.tar.gz dist/sas26_reproduction.source.tar.gz
           sed -i "s|image_name=.*|image_name=ghcr.io/${{ github.repository }}/sas26-reproduction:${{ github.ref_name }}|" dist/proposition7-review-manifest.txt
           mv dist/proposition7-review-manifest.txt dist/sas26_reproduction.manifest.txt
+          sha256sum dist/sas26_reproduction.source.tar.gz dist/sas26_reproduction.manifest.txt > dist/sas26_reproduction.checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -61,5 +62,6 @@ jobs:
           files: |
             dist/sas26_reproduction.source.tar.gz
             dist/sas26_reproduction.manifest.txt
+            dist/sas26_reproduction.checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
