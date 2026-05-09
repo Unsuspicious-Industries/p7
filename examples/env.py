@@ -14,8 +14,8 @@ import os
 import sys
 
 # Ensure the local `src/` package is importable when running examples
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import src as p7
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+import proposition7
 
 
 # Tasks for the environment to solve
@@ -54,7 +54,7 @@ def print_header(text: str, char: str = "=", width: int = 80):
     print(char * width)
 
 
-def run_environment_demo(env: p7.ReasoningEnvironment):
+def run_environment_demo(env: proposition7.ReasoningEnvironment):
     """Run the ReasoningEnvironment demo with all tasks."""
     
     results = []
@@ -96,7 +96,7 @@ def run_environment_demo(env: p7.ReasoningEnvironment):
 
 
 def main():
-    print_header("P7 ReasoningEnvironment Demo with Phi-3.5-mini", "#", 80)
+    print_header("proposition7 ReasoningEnvironment Demo with Phi-3.5-mini", "#", 80)
     
     model_name = "Qwen/Qwen3.5-9B"
     grammar_name = "stlc"
@@ -106,15 +106,15 @@ def main():
     print()
     
     # Show the auto-generated system prompt
-    system_prompt = p7.build_system_prompt(grammar_name)
+    system_prompt = proposition7.build_system_prompt(grammar_name)
     print_header("Auto-generated System Prompt", "-", 60)
     print(system_prompt)
     print()
     
     # Load model
-    model = p7.ConstrainedModel.from_pretrained(
+    model = proposition7.ConstrainedModel.from_pretrained(
         model_name,
-        grammar=p7.get_grammar(grammar_name),
+        grammar=proposition7.get_grammar(grammar_name),
         device_map="auto",
         torch_dtype="auto",
         trust_remote_code=True,
@@ -122,7 +122,7 @@ def main():
     print()
     
     # Create reasoning environment
-    env = p7.ReasoningEnvironment(
+    env = proposition7.ReasoningEnvironment(
         model=model,
         grammar_name=grammar_name,
         think_budget=1024,

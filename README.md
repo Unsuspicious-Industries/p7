@@ -1,7 +1,6 @@
 # proposition7
 
-Type-aware constrained generation for language models. The package is exported as
-`proposition7` and keeps `p7` as a compatibility import.
+Type-aware constrained generation for language models. Install and import the package as `proposition7`.
 
 ## Install
 
@@ -14,11 +13,11 @@ pip install -e ".[modal]"         # Modal sandbox launcher
 ## Local Generation
 
 ```python
-import proposition7 as p7
+import proposition7
 
-model = p7.ConstrainedModel.from_pretrained(
+model = proposition7.ConstrainedModel.from_pretrained(
     "gpt2",
-    grammar=p7.get_grammar("fun"),
+    grammar=proposition7.get_grammar("fun"),
     device="cpu",
 )
 
@@ -46,7 +45,7 @@ result = model.generate_unconstrained(
 The high-level helper remains available:
 
 ```python
-result = p7.generate(
+result = proposition7.generate(
     "identity function",
     model="gpt2",
     grammar="stlc",
@@ -61,27 +60,37 @@ Modal supports container-based execution directly from the artifact Dockerfile.
 This repository uses `modal.Image.from_dockerfile(...)` plus `modal.Sandbox.create(...)`
 instead of a custom Modal app/function wrapper.
 
-After `modal setup`, launch the small Qwen smoke suite on one A10G with:
+After `modal setup`, launch the full small-Qwen benchmark suite on one A10G with:
 
 ```bash
-python scripts/modal_sandbox_run.py --config benchmarks/configs/modal_qwen_smoke.toml
+python scripts/modal_sandbox_run.py --config benchmarks/configs/modal_qwen_full.toml
 ```
 
 That script copies `raw.jsonl` and `results.json` back to a local output directory.
 
 ## Benchmarks
 
-Build the artifact Docker image tarball:
+Build the artifact container bundle through the unified Makefile:
 
 ```bash
-./scripts/build_artifact_image.sh
+make artifact
 ```
 
-Run the containerized smoke suite:
+On Singularity-style servers, run the exported `.sif` with:
 
 ```bash
-docker load -i dist/p7-benchmark-artifact.tar
-docker run --rm -v "$PWD/artifact-output:/workspace/benchmarks/out" p7-benchmark-artifact:latest smoke
+make sif-paper
+```
+
+If the server lacks `apptainer` / `singularity` but has `nix`, the scripts automatically bootstrap `apptainer` via `nix shell`.
+
+Common targets:
+
+```bash
+make docker
+make sif
+make test
+make modal-full
 ```
 
 Run the paper suite on a GPU host:
@@ -90,14 +99,14 @@ Run the paper suite on a GPU host:
 docker run --rm --gpus all \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
   -v "$PWD/.env:/workspace/.env:ro" \
-  p7-benchmark-artifact:latest paper --resume
+  proposition7-benchmark-artifact:latest paper --resume
 ```
 
 Run directly from a source checkout:
 
 ```bash
-python benchmarks/run.py --config benchmarks/configs/smoke.toml --dry-run
-python benchmarks/run.py --config benchmarks/configs/smoke.toml
+python benchmarks/run.py --config benchmarks/configs/paper.toml --dry-run
+python benchmarks/run.py --config benchmarks/configs/paper.toml
 ```
 
 The runner creates a dedicated run directory, keeps the append-only `raw.jsonl`
@@ -106,6 +115,12 @@ artifact for reproducibility. Resume an interrupted run with:
 
 ```bash
 python benchmarks/run.py --config path/to/benchmark.toml --resume
+```
+
+Process a completed run into CSV summaries with:
+
+```bash
+python benchmarks/agg.py --in benchmarks/out/paper/raw.jsonl --out-dir benchmarks/out/paper/processed
 ```
 
 Benchmark tasks are one TOML file per task in `benchmarks/data/`; benchmark run
@@ -137,29 +152,29 @@ Pass a grammar name through high-level APIs, or pass a raw grammar spec to
 
 ```text
 src/
-  __init__.py              # p7 compatibility package
-  api.py                   # high-level generate() and Session
-  llm.py                   # ConstrainedModel
-  sampler.py               # typed token sampler
-  inference.py             # low-level constrained loop
-  environment.py           # optional reasoning environment
-  grammars/                # bundled .auf grammar specs
-  models/                  # model-specific adapters
-  proposition7/            # exported proposition7 alias package
+  proposition7/            # published Python package
+    __init__.py            # public API exports
+    api.py                 # high-level generate() and Session
+    llm.py                 # ConstrainedModel
+    inference.py           # low-level constrained loop
+    environment.py         # optional reasoning environment
+    grammars/              # bundled .auf grammar specs
+    models/                # model-specific adapters
 benchmarks/
   api.py                   # backend-neutral benchmark interaction API
   run.py                   # TOML-driven benchmark artifact runner
-  configs/                 # smoke and paper benchmark configs
+  configs/                 # benchmark configs
   agg.py                   # result aggregation
-artifact/                   # Docker artifact image files
+artifact/                  # Docker artifact image files
 scripts/
-  build_artifact_image.sh   # builds dist/p7-benchmark-artifact.tar
-  modal_sandbox_run.py      # launches artifact container on Modal A10G
+  build_artifact_image.sh  # builds dist/proposition7-benchmark-artifact.tar
+  modal_sandbox_run.py     # launches artifact container on Modal A10G
 tests/                     # pytest suite
 ```
 
 ## Test
 
 ```bash
-pytest -q
+nix develop path:. -c make build
+nix develop path:. -c make test
 ```

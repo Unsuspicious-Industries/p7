@@ -5,8 +5,8 @@ import argparse
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import src as p7
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+import proposition7
 
 
 def parse_args() -> argparse.Namespace:
@@ -14,7 +14,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--grammar",
         default="stlc",
-        choices=p7.list_grammars(),
+        choices=proposition7.list_grammars(),
         help="Built-in grammar to use for constrained decoding",
     )
     parser.add_argument("--prompt", default=None, help="Override prompt text")
@@ -40,9 +40,9 @@ def main():
     print("=" * 60)
 
     print(f"\nLoading {args.model}...")
-    model = p7.ConstrainedModel.from_pretrained(
+    model = proposition7.ConstrainedModel.from_pretrained(
         args.model,
-        grammar=p7.get_grammar(args.grammar),
+        grammar=proposition7.get_grammar(args.grammar),
     )
     print(f"Grammar: {args.grammar}")
 

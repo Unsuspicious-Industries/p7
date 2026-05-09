@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-import p7
+import proposition7
 import pytest
 import benchmarks.run as bench_run
 
@@ -15,24 +15,25 @@ from benchmarks.api import (
     check_parse,
     classify,
     extract_program_output,
+    FatalBenchmarkInvariantError,
     grammar_name,
     load_tasks,
     stable_hash,
 )
 from benchmarks.agg import dedupe_rows, delta_rows
 from benchmarks.oracles import check_resolution, stlc_type_of
-from benchmarks.providers import OUTLINES_LARK
+from benchmarks.providers import OpenRouterModel, OUTLINES_LARK
 from benchmarks.run import (
     Job,
-    auto_parallel_tasks,
+    auto_model_concurrency,
     clean_hf_model_cache,
     group_jobs_by_model,
     hf_model_cache_name,
     model_param_billions,
-    parse_parallel_tasks,
-    run_parallel_by_model,
+    parse_model_concurrency,
+    run_model_concurrency,
     selected_modes,
-    split_jobs,
+    split_model_jobs,
     read_existing_record_keys,
 )
 
@@ -101,9 +102,35 @@ def test_mixed_prompt_does_not_put_initial_before_thinking():
     assert "let square: Int -> Int =" not in prompt
 
 
+def test_outlines_mixed_prompt_does_not_put_initial_before_thinking():
+    prompt = build_prompt(
+        "fun",
+        "Write a square function.",
+        mode="outlines_mixed",
+        initial="let square: Int -> Int =",
+    )
+
+    assert "Workflow: think briefly" in prompt
+    assert "formal block" in prompt
+    assert "let square: Int -> Int =" not in prompt
+
+
+def test_unconstrained_thinking_prompt_does_not_put_initial_before_thinking():
+    prompt = build_prompt(
+        "fun",
+        "Write a square function.",
+        mode="unconstrained_thinking",
+        initial="let square: Int -> Int =",
+    )
+
+    assert "Workflow: think briefly" in prompt
+    assert "formal block uses the task token budget" in prompt
+    assert "let square: Int -> Int =" not in prompt
+
+
 def test_grammar_summaries_are_compact_for_benchmark_prompts():
-    for name in p7.list_grammars():
-        summary = p7.get_grammar_summary(name)
+    for name in proposition7.list_grammars():
+        summary = proposition7.get_grammar_summary(name)
         assert summary.strip(), name
         assert len(summary.split()) <= 256, name
 
@@ -169,7 +196,7 @@ def test_fun_multiply_sum_structure_assertion():
 def test_toml_expected_outputs_parse_and_pass_resolution():
     for row in load_tasks(["all"]):
         parse_ok, complete, error = check_parse(
-            p7.get_grammar(grammar_name(row.grammar)), row.expected
+            proposition7.get_grammar(grammar_name(row.grammar)), row.expected
         )
 
         assert parse_ok, (row.task_id, error)
@@ -178,7 +205,7 @@ def test_toml_expected_outputs_parse_and_pass_resolution():
 
 
 def test_unconstrained_output_extraction_strips_markdown_and_prose():
-    spec = p7.get_grammar("stlc")
+    spec = proposition7.get_grammar("stlc")
     output, extracted = extract_program_output(
         spec,
         "stlc",
@@ -190,7 +217,7 @@ def test_unconstrained_output_extraction_strips_markdown_and_prose():
 
 
 def test_unconstrained_output_extraction_preserves_initial_prefix():
-    spec = p7.get_grammar("stlc")
+    spec = proposition7.get_grammar("stlc")
     initial = "λf:(Int->Int)."
     output, extracted = extract_program_output(
         spec,
@@ -232,7 +259,7 @@ def test_build_token_log_records_cumulative_prefixes():
         task,
         "constrained_direct",
         "prompt",
-        p7.get_grammar("toy"),
+        proposition7.get_grammar("toy"),
         [{"step": 0, "token": "beep"}, {"step": 1, "token": ":Fizz"}],
         record,
     )
@@ -316,13 +343,13 @@ def test_release_cached_models_clears_cache_without_forcing_gc(monkeypatch):
     assert empty_cache_calls == [True]
 
 
-def test_parallel_task_setting_parses_manual_and_auto_values():
-    assert parse_parallel_tasks("auto") == "auto"
-    assert parse_parallel_tasks("4") == 4
+def test_model_concurrency_setting_parses_manual_and_auto_values():
+    assert parse_model_concurrency("auto") == "auto"
+    assert parse_model_concurrency("4") == 4
     with pytest.raises(SystemExit):
-        parse_parallel_tasks("0")
+        parse_model_concurrency("0")
     with pytest.raises(SystemExit):
-        parse_parallel_tasks("many")
+        parse_model_concurrency("many")
 
 
 def test_model_size_parsing_supports_common_hf_names():
@@ -332,38 +359,52 @@ def test_model_size_parsing_supports_common_hf_names():
     assert model_param_billions("google/gemma-4-E4B-it") == pytest.approx(4.0)
 
 
-def test_auto_parallel_tasks_scales_with_model_size(monkeypatch):
+def test_auto_model_concurrency_scales_with_model_size(monkeypatch):
     args = SimpleNamespace(device="cuda", torch_dtype="auto")
     monkeypatch.setattr(bench_run, "gpu_vram_gib", lambda _args: 24.0)
 
-    assert auto_parallel_tasks(args, "gpt2", 20) == 20
-    assert auto_parallel_tasks(args, "google/gemma-4-E4B-it", 10) == 1
-    assert auto_parallel_tasks(args, "Qwen/Qwen3.5-9B", 10) == 1
+    assert auto_model_concurrency(args, "gpt2", 20) == 20
+    assert auto_model_concurrency(args, "google/gemma-4-E4B-it", 10) == 1
+    assert auto_model_concurrency(args, "Qwen/Qwen3.5-9B", 10) == 1
 
 
 def test_default_model_matrix_excludes_gated_llama_and_keeps_current_open_models(monkeypatch):
     args = SimpleNamespace(device="cuda", torch_dtype="auto")
     monkeypatch.setattr(bench_run, "gpu_vram_gib", lambda _args: 48.0)
 
-    assert auto_parallel_tasks(args, "Qwen/Qwen3.5-9B", 32) >= 2
+    assert auto_model_concurrency(args, "Qwen/Qwen3.5-9B", 32) >= 2
 
 
 def test_selected_modes_accepts_raw_and_cleaned_unconstrained_modes():
     local = selected_modes(
         SimpleNamespace(
-            modes="constrained_direct,unconstrained,unconstrained_cleaned",
+            modes=(
+                "constrained_direct,outlines,outlines_mixed,unconstrained,"
+                "unconstrained_cleaned,unconstrained_thinking"
+            ),
             backend="local",
         )
     )
     remote = selected_modes(
         SimpleNamespace(
-            modes="unconstrained,unconstrained_cleaned",
+            modes="unconstrained,unconstrained_cleaned,unconstrained_thinking",
             backend="openrouter",
         )
     )
 
-    assert local == ["constrained_direct", "unconstrained", "unconstrained_cleaned"]
-    assert remote == ["unconstrained", "unconstrained_cleaned"]
+    assert local == [
+        "constrained_direct",
+        "outlines",
+        "outlines_mixed",
+        "unconstrained",
+        "unconstrained_cleaned",
+        "unconstrained_thinking",
+    ]
+    assert remote == [
+        "unconstrained",
+        "unconstrained_cleaned",
+        "unconstrained_thinking",
+    ]
 
 
 def test_selected_modes_rejects_removed_aliases():
@@ -373,6 +414,152 @@ def test_selected_modes_rejects_removed_aliases():
         selected_modes(SimpleNamespace(modes="unconstrained_raw", backend="local"))
     with pytest.raises(SystemExit):
         selected_modes(SimpleNamespace(modes="constrained_direct", backend="openrouter"))
+    with pytest.raises(SystemExit):
+        selected_modes(SimpleNamespace(modes="outlines_mixed", backend="openrouter"))
+
+
+def test_openrouter_unconstrained_payload_preserves_prefix_contract(monkeypatch):
+    model = OpenRouterModel("closed/model", api_key="test-key", env_path=None)
+    payloads = []
+
+    def fake_chat(payload):
+        payloads.append(payload)
+        return "Fizz", 3, "stop"
+
+    monkeypatch.setattr(model, "_chat", fake_chat)
+
+    result = model.generate_unconstrained(
+        "Prompt text",
+        initial="beep:",
+        max_tokens=12,
+        top_k=50,
+        temperature=0.8,
+        grammar_name="toy",
+        seed=11,
+    )
+
+    assert result.text == "beep:Fizz"
+    assert result.tokens_generated == 3
+    assert result.stopped_reason == "stop"
+    assert payloads == [
+        {
+            "model": "closed/model",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        "Prompt text\n\n"
+                        "Continue this exact prefix. Return only the completed program text, including the prefix.\n"
+                        "Prefix:\nbeep:"
+                    ),
+                }
+            ],
+            "max_tokens": 12,
+            "temperature": 0.8,
+            "seed": 11,
+        }
+    ]
+
+
+def test_make_model_uses_openrouter_adapter_without_local_model_load(
+    tmp_path, monkeypatch
+):
+    env_path = tmp_path / ".env"
+    env_path.write_text("OPENROUTER_API_KEY=from-file\n", encoding="utf-8")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+
+    def fail_local_load(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("OpenRouter mode should not load a local HF model")
+
+    monkeypatch.setattr(bench_run.proposition7, "get_model_class", fail_local_load)
+    args = SimpleNamespace(
+        backend="openrouter",
+        device="cpu",
+        torch_dtype="none",
+        device_map="",
+        model_kwargs={},
+        model_kwargs_json="",
+        openrouter_env=str(env_path),
+    )
+
+    model = bench_run.make_model(args, "openai/example", "toy", "unconstrained")
+
+    assert isinstance(model, OpenRouterModel)
+    assert model.model_name == "openai/example"
+    assert model.api_key == "from-file"
+
+
+def test_outlines_mixed_uses_reasoning_environment_formal_constraint():
+    task = make_task(grammar="toy", expected="beep:Fizz", max_tokens=8)
+
+    class FakeModel:
+        def think_open(self):
+            return "<think>"
+
+        def think_close(self):
+            return "</think>"
+
+        def allow_system_prompt(self):
+            return True
+
+        def start_tokens_unconstrained(self, grammar_name=None):
+            del grammar_name
+            return []
+
+        def stop_tokens_unconstrained(self, grammar_name=None):
+            del grammar_name
+            return ["</think>"]
+
+        def generate_unconstrained(self, **kwargs):
+            del kwargs
+            return proposition7.GenerationResult("<think>plan", False, 1, "stop")
+
+        def generate_constrained(self, **kwargs):
+            assert kwargs["initial"] == ""
+            assert kwargs["grammar_name"] == "toy"
+            return proposition7.GenerationResult("beep:Fizz", True, 1, "complete")
+
+    record = bench_run.run_interaction(
+        FakeModel(), task, "outlines_mixed", seed=7, think_budget=1
+    )
+
+    assert record["mode"] == "outlines_mixed"
+    assert record["passed"] is True
+    assert record["thoughts"] == "plan"
+    assert record["formal_tokens"] == 1
+
+
+def test_make_model_uses_outlines_wrapper_for_outlines_modes(monkeypatch):
+    calls = []
+
+    class FakeOutlinesModel:
+        def __init__(self, model_name, **kwargs):
+            calls.append((model_name, kwargs))
+
+    monkeypatch.setattr(bench_run, "OutlinesSyntaxModel", FakeOutlinesModel)
+    args = SimpleNamespace(
+        backend="local",
+        device="cpu",
+        torch_dtype="none",
+        device_map="",
+        model_kwargs={"local_files_only": True},
+        model_kwargs_json="",
+    )
+
+    bench_run.make_model(args, "gpt2", "toy", "outlines")
+    bench_run.make_model(args, "gpt2", "toy", "outlines_mixed")
+
+    assert calls == [
+        (
+            "gpt2",
+            {"grammar_name": "toy", "device": "cpu", "local_files_only": True},
+        ),
+        (
+            "gpt2",
+            {"grammar_name": "toy", "device": "cpu", "local_files_only": True},
+        ),
+    ]
 
 
 def test_parallel_jobs_are_grouped_by_model_before_chunking():
@@ -399,7 +586,7 @@ def test_parallel_jobs_are_grouped_by_model_before_chunking():
     ]
 
 
-def test_parallel_runner_does_not_mix_models_in_one_group(tmp_path, monkeypatch):
+def test_model_concurrency_runner_does_not_mix_models_in_one_group(tmp_path, monkeypatch):
     task = SimpleNamespace(
         task_id="t",
         task_hash="h",
@@ -422,21 +609,21 @@ def test_parallel_runner_does_not_mix_models_in_one_group(tmp_path, monkeypatch)
 
     monkeypatch.setattr(bench_run, "run_worker_chunk", fake_worker)
     args = SimpleNamespace(
-        parallel_tasks=2,
+        model_concurrency=2,
         timeout=0,
         low_space=False,
         backend="local",
         _test_inline_workers=True,
     )
 
-    run_parallel_by_model(args, jobs, tmp_path / "raw.jsonl", None)
+    run_model_concurrency(args, jobs, tmp_path / "raw.jsonl", None)
 
     first_m2 = next(i for i, chunk in enumerate(calls) if chunk[0] == "m2")
     assert all(set(chunk) == {"m1"} for chunk in calls[:first_m2])
     assert all(set(chunk) == {"m2"} for chunk in calls[first_m2:])
 
 
-def test_parallel_low_space_cleans_once_per_model(tmp_path, monkeypatch):
+def test_model_concurrency_low_space_cleans_once_per_model(tmp_path, monkeypatch):
     task = SimpleNamespace(
         task_id="t",
         task_hash="h",
@@ -458,19 +645,19 @@ def test_parallel_low_space_cleans_once_per_model(tmp_path, monkeypatch):
     monkeypatch.setattr(bench_run, "run_worker_chunk", fake_worker)
     monkeypatch.setattr(bench_run, "clean_hf_model_cache", lambda name: cleaned.append(name))
     args = SimpleNamespace(
-        parallel_tasks=2,
+        model_concurrency=2,
         timeout=0,
         low_space=True,
         backend="local",
         _test_inline_workers=True,
     )
 
-    run_parallel_by_model(args, jobs, tmp_path / "raw.jsonl", None)
+    run_model_concurrency(args, jobs, tmp_path / "raw.jsonl", None)
 
     assert cleaned == ["m1", "m2"]
 
 
-def test_parallel_runner_allows_timeout_with_process_workers(tmp_path, monkeypatch):
+def test_model_concurrency_runner_allows_timeout_with_process_workers(tmp_path, monkeypatch):
     task = SimpleNamespace(
         task_id="t",
         task_hash="h",
@@ -479,7 +666,7 @@ def test_parallel_runner_allows_timeout_with_process_workers(tmp_path, monkeypat
         language="toy",
     )
     args = SimpleNamespace(
-        parallel_tasks=2,
+        model_concurrency=2,
         timeout=1,
         low_space=False,
         backend="local",
@@ -493,7 +680,7 @@ def test_parallel_runner_allows_timeout_with_process_workers(tmp_path, monkeypat
         return []
 
     monkeypatch.setattr(bench_run, "run_worker_chunk", fake_worker)
-    run_parallel_by_model(
+    run_model_concurrency(
         args,
         [Job("m1", "toy", task, "unconstrained", 0)],
         tmp_path / "raw.jsonl",
@@ -541,11 +728,11 @@ def test_process_worker_enforces_per_job_timeout(monkeypatch):
     assert record["stop_reason"] == "timeout"
 
 
-def test_split_jobs_distributes_work_without_empty_chunks():
+def test_split_model_jobs_distributes_work_without_empty_chunks():
     jobs = list(range(5))
 
-    assert split_jobs(jobs, 2) == [[0, 2, 4], [1, 3]]
-    assert split_jobs(jobs, 10) == [[0], [1], [2], [3], [4]]
+    assert split_model_jobs(jobs, 2) == [[0, 2, 4], [1, 3]]
+    assert split_model_jobs(jobs, 10) == [[0], [1], [2], [3], [4]]
 
 
 def test_aggregation_dedupes_by_hash_aware_benchmark_job_key():
@@ -630,21 +817,7 @@ def test_delta_rows_prefers_raw_unconstrained_when_available():
     assert row["parse_error_delta"] == 45.0
 
 
-def test_non_completable_is_disallowed_for_constrained_modes():
-    for mode in ["constrained_direct", "constrained_mixed", "outlines"]:
-        with pytest.raises(
-            AssertionError,
-            match="Constrained decoding produced a non-completable output",
-        ):
-            classify(
-                False,
-                False,
-                False,
-                "Parse error: no parse found at input length 7",
-                None,
-                mode=mode,
-            )
-
+def test_classify_returns_non_completable_for_dead_prefixes():
     assert (
         classify(
             False,
@@ -652,10 +825,34 @@ def test_non_completable_is_disallowed_for_constrained_modes():
             False,
             "Parse error: no parse found at input length 7",
             None,
-            mode="unconstrained",
         )
         == "non_completable"
     )
+
+
+def test_run_interaction_raises_fatal_on_constrained_non_completable(monkeypatch):
+    task = make_task(
+        grammar="fun",
+        expected="let times2: Int -> Int = (x: Int) => x * 2; times2",
+        resolution={"mode": "samples", "samples": [{"x": 7, "v": 14}]},
+    )
+
+    class FakeResult:
+        text = "let times2: Int -> Int =\ntimes2(x) = x * 2;\n; return times2"
+        tokens_generated = 16
+        stopped_reason = "max_tokens"
+        diagnostics = {}
+
+    class FakeModel:
+        def generate_constrained(self, **kwargs):
+            del kwargs
+            return FakeResult()
+
+    with pytest.raises(
+        FatalBenchmarkInvariantError,
+        match="Constrained decoding produced a non-completable output",
+    ):
+        bench_run.run_interaction(FakeModel(), task, "constrained_direct", seed=7)
 
 
 def test_aggregator_handles_missing_input_and_tracks_timeout_rates(tmp_path):
@@ -711,7 +908,7 @@ def test_benchmark_config_parses_toml_matrix(tmp_path):
 schema_version = 1
 
 [run]
-name = "smoke"
+name = "example"
 output_root = "benchmarks/out"
 
 [tasks]
@@ -720,7 +917,7 @@ max_tasks = 1
 
 [execution]
 tries = 1
-parallel_tasks = "auto"
+model_concurrency = "auto"
 low_space = true
 
 [local]
@@ -734,7 +931,7 @@ device_map = ""
 env_file = ".env"
 
 [[matrix]]
-name = "local-smoke"
+name = "local-example"
 backend = "local"
 models = ["gpt2"]
 modes = ["unconstrained"]
@@ -745,10 +942,10 @@ modes = ["unconstrained"]
 
     config = bench_run.load_benchmark_config(config_path)
 
-    assert config.run_name == "smoke"
-    assert config.parallel_tasks == "auto"
+    assert config.run_name == "example"
+    assert config.model_concurrency == "auto"
     assert config.low_space is True
-    assert config.matrices[0].name == "local-smoke"
+    assert config.matrices[0].name == "local-example"
     assert config.matrices[0].models == ["gpt2"]
 
 
@@ -763,6 +960,42 @@ def test_resolve_run_paths_avoids_overwriting_existing_run_dir(tmp_path):
     assert first.run_dir == tmp_path / "artifact"
     assert second.run_dir != first.run_dir
     assert resumed.run_dir == first.run_dir
+
+
+def test_benchmark_config_rejects_legacy_parallel_tasks_key(tmp_path):
+    config_path = tmp_path / "benchmark.toml"
+    config_path.write_text(
+        """
+schema_version = 1
+
+[run]
+name = "example"
+
+[tasks]
+selectors = ["stlc"]
+
+[execution]
+parallel_tasks = "auto"
+
+[local]
+device = "cpu"
+torch_dtype = "none"
+device_map = ""
+
+[local.model_kwargs]
+
+[[matrix]]
+name = "local-example"
+backend = "local"
+models = ["gpt2"]
+modes = ["unconstrained"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit, match="execution\\.parallel_tasks was renamed"):
+        bench_run.load_benchmark_config(config_path)
 
 
 def test_results_artifact_keeps_raw_jsonl_and_dedupes_rows(tmp_path):
@@ -792,7 +1025,7 @@ device_map = ""
 [local.model_kwargs]
 
 [[matrix]]
-name = "local-smoke"
+name = "local-example"
 backend = "local"
 models = ["gpt2"]
 modes = ["unconstrained"]
@@ -842,7 +1075,7 @@ modes = ["unconstrained"]
         config,
         paths,
         config.matrices,
-        {"local-smoke": 1},
+        {"local-example": 1},
         status="running",
         total_jobs=1,
     )
@@ -868,6 +1101,89 @@ def test_paper_config_parses_and_stays_within_model_cap():
     assert len(unique_models) <= 31
     assert any(matrix.backend == "openrouter" for matrix in config.matrices)
     assert any("constrained_mixed" in matrix.modes for matrix in config.matrices)
+    assert all(
+        set(matrix.modes) <= {"unconstrained", "unconstrained_cleaned"}
+        for matrix in config.matrices
+        if matrix.backend == "openrouter"
+    )
+
+
+def test_sas26_reproduction_config_matches_pdf_mode_split():
+    config = bench_run.load_benchmark_config(
+        Path("benchmarks/configs/sas26_reproduction.toml")
+    )
+    matrices = {matrix.name: matrix for matrix in config.matrices}
+
+    assert config.run_name == "sas26-reproduction"
+    assert matrices["fig3-core-local"].modes == [
+        "constrained_direct",
+        "constrained_mixed",
+        "unconstrained",
+    ]
+    assert matrices["fig7-frontier-constrained"].modes == [
+        "constrained_mixed"
+    ]
+    assert matrices["fig7-openrouter-raw"].modes == ["unconstrained"]
+    assert "openai/gpt-5.4-mini" in matrices["fig7-openrouter-raw"].models
+    assert all(
+        "unconstrained_cleaned" not in matrix.modes
+        and "outlines" not in matrix.modes
+        and "outlines_mixed" not in matrix.modes
+        for matrix in config.matrices
+    )
+
+
+def test_openrouter_closed_config_is_deployable_with_unconstrained_modes():
+    config = bench_run.load_benchmark_config(
+        Path("benchmarks/configs/openrouter_closed.toml")
+    )
+
+    assert config.run_name == "openrouter-closed"
+    assert config.model_concurrency == "8"
+    assert len(config.matrices) == 1
+    matrix = config.matrices[0]
+    assert matrix.backend == "openrouter"
+    assert matrix.modes == ["unconstrained", "unconstrained_cleaned"]
+
+
+def test_deploy_constrained_config_keeps_gpu_modes_constrained_only():
+    config = bench_run.load_benchmark_config(
+        Path("benchmarks/configs/deploy_constrained.toml")
+    )
+
+    assert config.run_name == "deploy-constrained"
+    assert config.device == "cuda"
+    assert len(config.matrices) == 1
+    matrix = config.matrices[0]
+    assert matrix.backend == "local"
+    assert set(matrix.modes) == {
+        "constrained_direct",
+        "constrained_mixed",
+        "outlines",
+        "outlines_mixed",
+    }
+    assert "unconstrained" not in matrix.modes
+    assert "unconstrained_cleaned" not in matrix.modes
+
+
+def test_vast_preferred_config_documents_evaluator_split():
+    config = bench_run.load_benchmark_config(
+        Path("benchmarks/configs/vast_preferred.toml")
+    )
+    by_backend = {matrix.backend: matrix for matrix in config.matrices}
+
+    assert config.run_name == "vast-preferred"
+    assert set(by_backend) == {"local", "openrouter"}
+    assert set(by_backend["local"].modes) == {
+        "constrained_direct",
+        "constrained_mixed",
+        "outlines",
+        "outlines_mixed",
+    }
+    assert by_backend["openrouter"].modes == [
+        "unconstrained",
+        "unconstrained_cleaned",
+    ]
 
 
 def test_run_script_dry_run_accepts_config(tmp_path):
@@ -880,7 +1196,7 @@ def test_run_script_dry_run_accepts_config(tmp_path):
 schema_version = 1
 
 [run]
-name = "smoke"
+name = "example"
 output_root = "benchmarks/out"
 
 [tasks]
@@ -889,7 +1205,7 @@ max_tasks = 1
 
 [execution]
 tries = 1
-parallel_tasks = "auto"
+model_concurrency = "auto"
 
 [local]
 device = "cpu"
@@ -899,7 +1215,7 @@ device_map = ""
 [local.model_kwargs]
 
 [[matrix]]
-name = "local-smoke"
+name = "local-example"
 backend = "local"
 models = ["gpt2"]
 modes = ["unconstrained"]
@@ -929,7 +1245,7 @@ modes = ["unconstrained"]
 
 
 def test_outlines_has_syntax_adapters_for_every_builtin_grammar():
-    assert set(p7.list_grammars()) <= set(OUTLINES_LARK)
+    assert set(proposition7.list_grammars()) <= set(OUTLINES_LARK)
 
 
 def test_fun_samples_hidden_cases_catch_sample_overfitting():

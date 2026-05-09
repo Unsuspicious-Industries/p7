@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import torch
 
-import p7
+import proposition7
 
 
 class FakeTokenizer:
@@ -70,7 +70,7 @@ class FakeModel:
 
 
 def make_model(token_ids, grammar="start ::= 'x' 'y'"):
-    return p7.ConstrainedModel(
+    return proposition7.ConstrainedModel(
         FakeModel(token_ids),
         FakeTokenizer(),
         grammar,
@@ -90,32 +90,29 @@ def test_constrained_generation_stops_on_eos_token_id():
     result = make_model([3], grammar="start ::= 'x'").generate_constrained(
         initial="x",
         max_tokens=3,
-        stop_on_complete=False,
     )
 
     assert result.text == "x"
     assert result.is_complete is True
     assert result.tokens_generated == 0
-    assert result.stopped_reason == "stop_token:<eos>"
+    assert result.stopped_reason == "complete"
 
 
 def test_constrained_generation_stops_on_generation_config_eog_token_id():
     result = make_model([4], grammar="start ::= 'x'").generate_constrained(
         initial="x",
         max_tokens=3,
-        stop_on_complete=False,
     )
 
     assert result.text == "x"
     assert result.is_complete is True
     assert result.tokens_generated == 0
-    assert result.stopped_reason == "stop_token:<eog>"
+    assert result.stopped_reason == "complete"
 
 
 def test_constrained_generation_stops_on_role_token_before_parse_complete():
     result = make_model([5], grammar="start ::= 'x'").generate_constrained(
         max_tokens=3,
-        stop_on_complete=False,
     )
 
     assert result.text == ""

@@ -1,0 +1,118 @@
+# Reproduction config for `sas26-paper45.pdf`.
+#
+# Extracted from Section 6 and Figures 3-8 of the PDF in this repository.
+# This is intentionally *not* the later broad benchmark matrix: it contains only
+# the modes needed to reproduce the paper figures.
+#
+# Mode mapping used by the paper:
+#   - Raw / Unconstr.       => `unconstrained`
+#   - Direct / Constrained => `constrained_direct`
+#   - Mixed / Constrained  => `constrained_mixed`
+#
+# Important: `unconstrained_cleaned` is not part of the PDF figures. In
+# particular, GPT-5.4-mini in Figure 7 is the raw `unconstrained` OpenRouter run,
+# not cleaned extraction.
+#
+# Extracted Figure 3 targets, pass rate %: Direct / Mixed / Raw
+#   Qwen 0.8B     9.8 / 11.7 /  9.0
+#   Qwen 2B      28.4 / 30.8 /  9.6
+#   Qwen 4B      32.8 / 55.8 / 15.8
+#   Qwen 4B Base 40.1 / 46.9 / 13.6
+#   Qwen 9B      20.6 / 69.8 / 53.9
+#   Qwen 9B Base 51.8 / 53.0 / 26.7
+#   Phi-4 mini   30.7 / 26.0 /  9.3
+#
+# Extracted Figure 4 aggregate targets:
+#   Mixed 42.0%, Direct 30.6%, Unconstr. 22.9%
+#
+# Extracted Figure 7 leaderboard targets:
+#   Qwen 27B constrained      100.0%
+#   GPT-5.4 mini unconstr.     79.8%
+#   GPT-OSS 20B constrained    76.8%
+#   Gemma 31B unconstr.        75.4%
+#   Gemma 26B unconstr.        75.3%
+#   Qwen 9B constrained        69.8%
+#   Gemma 26B constrained      63.2%
+#   Gemma E4B constrained      58.4%
+#   Qwen 4B constrained        55.8%
+#   Qwen 9B unconstr.          53.9%
+#
+# Run directly on a GPU host with an `.env` containing OPENROUTER_API_KEY:
+#
+#   python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
+
+schema_version = 1
+
+[run]
+name = "sas26-reproduction"
+output_root = "benchmarks/out"
+save_traces = false
+
+[tasks]
+selectors = ["all"]
+ids = []
+max_tasks = 0
+max_tokens_override = 0
+
+[execution]
+tries = 1
+seed = 7
+timeout = 300.0
+think_budget = 2048
+# Concurrent runs are only for one model at a time. Models and matrices stay sequential.
+model_concurrency = "auto"
+low_space = true
+
+[local]
+device = "cuda"
+torch_dtype = "auto"
+device_map = "auto"
+
+[local.model_kwargs]
+
+[openrouter]
+env_file = ".env"
+
+[[matrix]]
+name = "fig3-core-local"
+backend = "local"
+models = [
+  "Qwen/Qwen3.5-0.8B",
+  "Qwen/Qwen3.5-2B",
+  "Qwen/Qwen3.5-4B",
+  "Qwen/Qwen3.5-4B-Base",
+  "Qwen/Qwen3.5-9B",
+  "Qwen/Qwen3.5-9B-Base",
+  "microsoft/Phi-4-mini-instruct",
+]
+modes = ["constrained_direct", "constrained_mixed", "unconstrained"]
+
+[[matrix]]
+name = "fig7-frontier-constrained"
+backend = "local"
+models = [
+  "Qwen/Qwen3.6-27B",
+  "openai/gpt-oss-20b",
+  "google/gemma-4-26B-A4B-it",
+  "google/gemma-4-E4B-it",
+]
+modes = ["constrained_mixed"]
+
+[[matrix]]
+name = "fig7-openrouter-raw"
+backend = "openrouter"
+models = [
+  "openai/gpt-5.4-mini",
+  "google/gemma-4-31b-it",
+  "google/gemma-4-26b-a4b-it",
+]
+modes = ["unconstrained"]
+
+[[matrix]]
+name = "text-reference-openrouter-raw"
+backend = "openrouter"
+models = [
+  # Section 6 notes GPT-5.3 reached 100% as a reference point.
+  "openai/gpt-5.3-codex",
+]
+modes = ["unconstrained"]

@@ -1,5 +1,0 @@
-mode,attempts,pass_rate,parse_error_rate,semantic_mismatch_rate,incomplete_rate,non_completable_rate,timeout_rate,other_error_rate
-constrained_direct,658,31.0,0.15,36.63,32.22,0.0,0.0,0.0
-constrained_mixed,942,50.32,0.0,31.85,17.83,0.0,0.0,0.0
-unconstrained,1316,31.46,2.66,15.27,1.52,49.09,0.0,0.0
-unconstrained_raw,1128,32.09,0.0,8.16,3.37,56.38,0.0,0.0

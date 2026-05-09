@@ -4,7 +4,7 @@ import sys
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-import p7
+import proposition7
 from benchmarks.api import load_tasks, run_interaction
 
 
@@ -27,9 +27,9 @@ def main() -> int:
     print(f"Fun task {fun_task.task_id} initial={fun_task.initial!r}")
     print(f"STLC task {stlc_task.task_id} initial={stlc_task.initial!r}")
 
-    model = p7.get_model_class(model_name).from_pretrained(
+    model = proposition7.get_model_class(model_name).from_pretrained(
         model_name,
-        grammar=p7.get_grammar(fun_task.grammar),
+        grammar=proposition7.get_grammar(fun_task.grammar),
         device=device,
         torch_dtype="float16" if device == "cuda" else "float32",
         device_map=device,
@@ -37,7 +37,7 @@ def main() -> int:
 
     records = []
     for task in [fun_task, stlc_task]:
-        model.grammar = p7.get_grammar(task.grammar)
+        model.grammar = proposition7.get_grammar(task.grammar)
         record = run_interaction(
             model,
             task,

@@ -1,0 +1,62 @@
+# Preferred constrained evaluator for deploy/Vast GPU runs.
+#
+# Run this at the same time as the OpenRouter unconstrained config; they write
+# to separate run directories and therefore do not contend on raw.jsonl:
+#
+#   docker run --rm --gpus all \
+#     -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+#     proposition7-benchmark-artifact:latest deploy --resume
+#
+#   docker run --rm \
+#     -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+#     -v "$PWD/.env:/workspace/.env:ro" \
+#     proposition7-benchmark-artifact:latest openrouter --resume
+#
+# Use OpenRouter for unconstrained closed-model baselines; do not spend GPU time
+# running local unconstrained modes unless you explicitly need open-model parity.
+
+schema_version = 1
+
+[run]
+name = "deploy-constrained"
+output_root = "benchmarks/out"
+save_traces = false
+gpu_ram_min = 20
+
+[tasks]
+selectors = ["all"]
+ids = []
+max_tasks = 0
+max_tokens_override = 0
+
+[execution]
+tries = 1
+seed = 7
+timeout = 300.0
+think_budget = 2048
+# Concurrent runs are only for one model at a time. Models and matrices stay sequential.
+model_concurrency = "auto"
+low_space = true
+
+[local]
+device = "cuda"
+torch_dtype = "auto"
+device_map = "auto"
+
+[local.model_kwargs]
+
+[[matrix]]
+name = "deploy-constrained"
+backend = "local"
+models = [
+  "Qwen/Qwen3.5-0.8B",
+  "Qwen/Qwen3.5-2B",
+  "Qwen/Qwen3.5-4B",
+  "Qwen/Qwen3.5-9B",
+]
+modes = [
+  "constrained_direct",
+  "constrained_mixed",
+  "outlines",
+  "outlines_mixed",
+]

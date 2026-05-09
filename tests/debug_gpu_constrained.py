@@ -14,7 +14,7 @@ def main() -> int:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    import p7
+    import proposition7
 
     print(f"Python {sys.version.split()[0]}")
     print(f"PyTorch {torch.__version__}")
@@ -56,7 +56,7 @@ def main() -> int:
     print(f"Logits shape: {out2.logits.shape}")
 
     print("\n=== Test 3: ConstrainedModel generate_constrained ===")
-    cm = p7.ConstrainedModel(
+    cm = proposition7.ConstrainedModel(
         model,
         tokenizer,
         grammar="start ::= 'a' 'b'",
@@ -76,7 +76,6 @@ def main() -> int:
             prompt="Complete: ",
             initial="",
             max_tokens=3,
-            stop_on_complete=False,
         )
         signal.alarm(0)
         print(f"Result text: {result.text!r}")

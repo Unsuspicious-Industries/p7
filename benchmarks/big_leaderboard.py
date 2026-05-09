@@ -46,6 +46,8 @@ def compute_stats(records: list[dict]) -> dict:
 
         if mode in ("constrained_direct", "constrained_mixed"):
             entry = f"{model} (constrained)"
+        elif mode in ("outlines", "outlines_mixed"):
+            entry = f"{model} (outlines)"
         elif mode == "unconstrained":
             entry = f"{model} (unconstrained)"
         elif mode == "unconstrained_cleaned":

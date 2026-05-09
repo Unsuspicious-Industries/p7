@@ -1,4 +1,4 @@
-import p7
+import proposition7
 
 
 class FakeReasoningModel:
@@ -20,7 +20,7 @@ class FakeReasoningModel:
 
     def generate_unconstrained(self, prompt, **kwargs):
         self.think_prompts.append((prompt, kwargs))
-        return p7.GenerationResult(
+        return proposition7.GenerationResult(
             text="I will solve it",
             is_complete=False,
             tokens_generated=3,
@@ -29,24 +29,21 @@ class FakeReasoningModel:
 
     def generate_constrained(self, prompt, initial="", **kwargs):
         self.formal_calls.append((prompt, initial, kwargs))
-        return p7.GenerationResult(
+        return proposition7.GenerationResult(
             text=initial + "x",
-            is_complete=bool(kwargs.get("stop_on_complete", False)),
+            is_complete=True,
             tokens_generated=1,
-            stopped_reason=(
-                "complete" if kwargs.get("stop_on_complete", False) else "max_tokens"
-            ),
+            stopped_reason="complete",
         )
 
 
 def test_reasoning_environment_uses_one_think_and_one_formal_block():
     model = FakeReasoningModel()
-    env = p7.ReasoningEnvironment(
+    env = proposition7.ReasoningEnvironment(
         model,
         grammar_name="stlc",
         think_budget=8,
         formal_budget=8,
-        stop_on_complete=True,
     )
 
     result = env.generate("task", initial="λx:Int.")
@@ -76,11 +73,10 @@ def test_reasoning_environment_uses_model_think_start_token_once():
         return model.start_tokens
 
     model.start_tokens_unconstrained = start_tokens_unconstrained
-    env = p7.ReasoningEnvironment(
+    env = proposition7.ReasoningEnvironment(
         model,
         grammar_name="stlc",
         formal_budget=8,
-        stop_on_complete=True,
     )
 
     result = env.generate("task", initial="λx:Int.")

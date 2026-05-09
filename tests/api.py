@@ -1,7 +1,7 @@
 """Tests for public API pieces that do not require an HF model."""
 
-import p7
-from p7.api import Result, _resolve_grammar
+import proposition7
+from proposition7.api import Result, _resolve_grammar
 
 
 def test_result_dataclass():
@@ -19,25 +19,25 @@ def test_resolve_grammar_raw_spec():
 
 
 def test_all_grammars_parseable():
-    for name in p7.list_grammars():
-        synthesizer = p7.Synthesizer(p7.get_grammar(name), "")
+    for name in proposition7.list_grammars():
+        synthesizer = proposition7.Synthesizer(proposition7.get_grammar(name), "")
         synthesizer.parse()
 
 
 def test_lamb_grammar_accepts_basic_program():
-    synthesizer = p7.Synthesizer(p7.get_grammar("lamb"), "")
+    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
     synthesizer.set_input("@main = λx.x")
     assert synthesizer.is_complete()
 
 
 def test_lamb_grammar_accepts_sequential_references():
-    synthesizer = p7.Synthesizer(p7.get_grammar("lamb"), "")
+    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
     synthesizer.set_input("@id = λx.x @main = @id")
     assert synthesizer.is_complete()
 
 
 def test_lamb_grammar_rejects_forward_references_for_lamb_globals():
-    synthesizer = p7.Synthesizer(p7.get_grammar("lamb"), "")
+    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
     synthesizer.set_input("@main = @id @id = λx.x")
 
     try:
@@ -49,7 +49,7 @@ def test_lamb_grammar_rejects_forward_references_for_lamb_globals():
 
 
 def test_lamb_grammar_rejects_recursive_definition():
-    synthesizer = p7.Synthesizer(p7.get_grammar("lamb"), "")
+    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
     synthesizer.set_input("@loop = @loop")
 
     try:
@@ -61,19 +61,18 @@ def test_lamb_grammar_rejects_recursive_definition():
 
 
 def test_lamb_grammar_accepts_shadowed_lambda_variables():
-    synthesizer = p7.Synthesizer(p7.get_grammar("lamb"), "")
+    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
     synthesizer.set_input("@main = λx.λx.x")
     assert synthesizer.is_complete()
 
 
-def test_proposition7_alias_exports_public_api():
-    import proposition7
-
-    assert proposition7.ConstrainedModel is p7.ConstrainedModel
+def test_proposition7_exports_public_api():
+    assert proposition7.ConstrainedModel is not None
+    assert proposition7.generate is not None
 
 
 def test_synthesizer_set_input_and_feed_round_trip():
-    synthesizer = p7.Synthesizer("start ::= 'x' 'y'", "")
+    synthesizer = proposition7.Synthesizer("start ::= 'x' 'y'", "")
 
     assert not synthesizer.is_complete()
     synthesizer.feed("x")
@@ -90,7 +89,7 @@ def test_synthesizer_set_input_and_feed_round_trip():
 
 
 def test_latest_aufbau_requires_parse_for_dead_prefixes():
-    synthesizer = p7.Synthesizer("start ::= 'x' 'y'", "")
+    synthesizer = proposition7.Synthesizer("start ::= 'x' 'y'", "")
     synthesizer.set_input("x z")
 
     try:

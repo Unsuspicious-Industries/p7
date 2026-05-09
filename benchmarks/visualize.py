@@ -14,6 +14,8 @@ sns.set_style("whitegrid")
 MODES = [
     "constrained_direct",
     "constrained_mixed",
+    "outlines",
+    "outlines_mixed",
     "unconstrained",
     "unconstrained_cleaned",
 ]
@@ -21,6 +23,8 @@ MODES = [
 MODE_LABELS = {
     "constrained_direct": "Constrained (Direct)",
     "constrained_mixed": "Constrained (Mixed)",
+    "outlines": "Outlines (Direct)",
+    "outlines_mixed": "Outlines (Mixed)",
     "unconstrained": "Unconstrained",
     "unconstrained_cleaned": "Unconstrained (Cleaned)",
 }
@@ -39,6 +43,8 @@ def make_entry_name(row: pd.Series) -> str:
     model = row["model"]
     if mode in ("constrained_direct", "constrained_mixed"):
         return f"{model} (constrained)"
+    elif mode in ("outlines", "outlines_mixed"):
+        return f"{model} (outlines)"
     elif mode == "unconstrained":
         return f"{model} (unconstrained)"
     else:
@@ -49,13 +55,27 @@ def plot_model_mode_heatmap(df: pd.DataFrame, out_dir: Path, metric: str = "pass
     data = filter_modes(df)
     data["entry"] = data.apply(make_entry_name, axis=1)
 
-    constrained = data[data["mode"].isin(["constrained_direct", "constrained_mixed"])]
+    constrained = data[
+        data["mode"].isin(
+            ["constrained_direct", "constrained_mixed", "outlines", "outlines_mixed"]
+        )
+    ]
     unconstrained = data[data["mode"] == "unconstrained"]
 
     constrained_pivot = constrained.pivot_table(
         values=metric, index="model", columns="mode", aggfunc="mean"
     )
-    constrained_pivot = constrained_pivot[["constrained_direct", "constrained_mixed"]]
+    constrained_columns = [
+        mode
+        for mode in [
+            "constrained_direct",
+            "constrained_mixed",
+            "outlines",
+            "outlines_mixed",
+        ]
+        if mode in constrained_pivot.columns
+    ]
+    constrained_pivot = constrained_pivot[constrained_columns]
 
     unconstrained_pivot = unconstrained.pivot_table(
         values=metric, index="model", columns="mode", aggfunc="mean"
@@ -140,7 +160,12 @@ def plot_global_ranking(df: pd.DataFrame, out_dir: Path, metric: str = "pass_rat
 def plot_mode_ranking(df: pd.DataFrame, out_dir: Path, metric: str = "pass_rate"):
     data = filter_modes(df)
 
-    constrained_modes = ["constrained_direct", "constrained_mixed"]
+    constrained_modes = [
+        "constrained_direct",
+        "constrained_mixed",
+        "outlines",
+        "outlines_mixed",
+    ]
     unconstrained_modes = ["unconstrained"]
 
     fig, axes = plt.subplots(1, 2, figsize=(14, max(6, data["model"].nunique() * 0.4)))

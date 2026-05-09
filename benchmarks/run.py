@@ -28,10 +28,17 @@ except ImportError:  # pragma: no cover - Python < 3.11
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "out"
 sys.path.insert(0, str(ROOT.parent))
+sys.path.insert(0, str(ROOT.parent / "src"))
 
-import p7
+import proposition7
 from benchmarks.agg import dedupe_rows, delta_rows, load_rows, summarize
-from benchmarks.api import append_jsonl, load_tasks, grammar_name, run_interaction
+from benchmarks.api import (
+    FatalBenchmarkInvariantError,
+    append_jsonl,
+    load_tasks,
+    grammar_name,
+    run_interaction,
+)
 from benchmarks.providers import OpenRouterModel, OutlinesSyntaxModel
 
 
@@ -60,6 +67,7 @@ class Job:
 
 class JobTimeoutError(TimeoutError):
     pass
+
 
 VRAM = None
 
@@ -99,7 +107,7 @@ class BenchmarkConfig:
     seed: int
     timeout: float
     think_budget: int
-    parallel_tasks: str
+    model_concurrency: str
     low_space: bool
     device: str
     torch_dtype: str
@@ -117,9 +125,10 @@ class RunPaths:
     traces_jsonl: Path
     results_json: Path
 
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Run the reproducible p7 benchmark artifact from a TOML config."
+        description="Run the reproducible proposition7 benchmark artifact from a TOML config."
     )
     p.add_argument("--config", required=True, help="Benchmark config TOML path")
     p.add_argument(
@@ -217,9 +226,7 @@ def load_benchmark_config(path: Path) -> BenchmarkConfig:
         name = _as_str(entry.get("name"), f"matrix[{index}].name", f"matrix-{index}")
         backend = _as_str(entry.get("backend"), f"matrix[{index}].backend", "local")
         if backend not in {"local", "openrouter"}:
-            raise SystemExit(
-                f"matrix[{index}].backend must be 'local' or 'openrouter'"
-            )
+            raise SystemExit(f"matrix[{index}].backend must be 'local' or 'openrouter'")
         models = _as_list(entry.get("models"), f"matrix[{index}].models")
         modes = _as_list(entry.get("modes"), f"matrix[{index}].modes")
         if not models:
@@ -238,13 +245,20 @@ def load_benchmark_config(path: Path) -> BenchmarkConfig:
                         f"backend={backend} model={model_name} mode={mode}"
                     )
                 seen_matrix_jobs.add(key)
-        matrices.append(BenchmarkMatrix(name=name, backend=backend, models=models, modes=modes))
+        matrices.append(
+            BenchmarkMatrix(name=name, backend=backend, models=models, modes=modes)
+        )
 
     model_kwargs = local.get("model_kwargs")
     if model_kwargs is None:
         model_kwargs = {}
     if not isinstance(model_kwargs, dict):
         raise SystemExit("local.model_kwargs must be a TOML table")
+
+    if "parallel_tasks" in execution:
+        raise SystemExit(
+            "execution.parallel_tasks was renamed to execution.model_concurrency"
+        )
 
     return BenchmarkConfig(
         source_path=path,
@@ -265,15 +279,17 @@ def load_benchmark_config(path: Path) -> BenchmarkConfig:
         think_budget=_as_int(
             execution.get("think_budget"), "execution.think_budget", 128
         ),
-        parallel_tasks=_as_str(
-            execution.get("parallel_tasks"), "execution.parallel_tasks", "1"
+        model_concurrency=_as_str(
+            execution.get("model_concurrency"), "execution.model_concurrency", "1"
         ),
         low_space=_as_bool(execution.get("low_space"), "execution.low_space", False),
         device=_as_str(local.get("device"), "local.device", "cpu"),
         torch_dtype=_as_str(local.get("torch_dtype"), "local.torch_dtype", "auto"),
         device_map=_as_str(local.get("device_map"), "local.device_map", ""),
         model_kwargs=dict(model_kwargs),
-        openrouter_env=_as_str(openrouter.get("env_file"), "openrouter.env_file", ".env"),
+        openrouter_env=_as_str(
+            openrouter.get("env_file"), "openrouter.env_file", ".env"
+        ),
         matrices=matrices,
     )
 
@@ -329,7 +345,9 @@ def ensure_run_directory(
     if paths.config_copy.exists():
         with paths.config_copy.open("rb") as handle:
             existing = tomllib.load(handle)
-        if json.dumps(existing, sort_keys=True) != json.dumps(config.raw, sort_keys=True):
+        if json.dumps(existing, sort_keys=True) != json.dumps(
+            config.raw, sort_keys=True
+        ):
             raise SystemExit(
                 "Refusing to mix different configs in the same run directory: "
                 f"{paths.run_dir}"
@@ -353,15 +371,20 @@ def normalize_modes(raw_modes: list[str], backend: str) -> list[str]:
         "constrained_direct",
         "constrained_mixed",
         "outlines",
+        "outlines_mixed",
         "unconstrained",
         "unconstrained_cleaned",
+        "unconstrained_thinking",
     }
     unknown = set(modes) - valid_modes
     if unknown:
         raise SystemExit(f"Unknown modes: {', '.join(sorted(unknown))}")
     if backend == "openrouter":
         unsupported = [
-            mode for mode in modes if mode not in {"unconstrained", "unconstrained_cleaned"}
+            mode
+            for mode in modes
+            if mode
+            not in {"unconstrained", "unconstrained_cleaned", "unconstrained_thinking"}
         ]
         if unsupported:
             raise SystemExit(
@@ -408,7 +431,7 @@ def matrix_args(config: BenchmarkConfig, matrix: BenchmarkMatrix) -> argparse.Na
         model_kwargs=config.model_kwargs,
         model_kwargs_json="",
         low_space=config.low_space,
-        parallel_tasks=parse_parallel_tasks(config.parallel_tasks),
+        model_concurrency=parse_model_concurrency(config.model_concurrency),
         openrouter_env=config.openrouter_env,
         matrix_name=matrix.name,
     )
@@ -523,7 +546,9 @@ def write_results_artifact(
     )
 
 
-def build_jobs(tasks: list[Any], models: list[str], modes: list[str], tries: int) -> list[Job]:
+def build_jobs(
+    tasks: list[Any], models: list[str], modes: list[str], tries: int
+) -> list[Job]:
     jobs: list[Job] = []
     for model_name in models:
         for task in tasks:
@@ -562,26 +587,24 @@ def model_kwargs_from_args(args: argparse.Namespace) -> dict[str, Any]:
     return kwargs
 
 
-def parse_parallel_tasks(value: Any) -> int | str:
+def parse_model_concurrency(value: Any) -> int | str:
     text = str(value).strip().lower()
     if text == "auto":
         return "auto"
     try:
-        workers = int(text)
+        concurrent_runs = int(text)
     except ValueError as error:
-        raise SystemExit("--parallel-tasks must be a positive integer or 'auto'") from error
-    if workers < 1:
-        raise SystemExit("--parallel-tasks must be >= 1 or 'auto'")
-    return workers
+        raise SystemExit(
+            "model_concurrency must be a positive integer or 'auto'"
+        ) from error
+    if concurrent_runs < 1:
+        raise SystemExit("model_concurrency must be >= 1 or 'auto'")
+    return concurrent_runs
 
 
 def model_param_billions(model_name: str) -> Optional[float]:
     lower = model_name.lower()
-    known = {
-        "gpt2": 0.124,
-        "distilgpt2": 0.082,
-        "Qwen/Qwen3.5-0.8" : 0.8
-    }
+    known = {"gpt2": 0.124, "distilgpt2": 0.082, "Qwen/Qwen3.5-0.8": 0.8}
     if lower in known:
         return known[lower]
 
@@ -614,15 +637,17 @@ def gpu_vram_gib(args: argparse.Namespace) -> Optional[float]:
         if not torch.cuda.is_available():
             return None
         device_index = torch.cuda.current_device()
-        return torch.cuda.get_device_properties(device_index).total_memory / (1024 ** 3)
+        return torch.cuda.get_device_properties(device_index).total_memory / (1024**3)
     except Exception:
         return None
 
 
-def auto_parallel_tasks(args: argparse.Namespace, model_name: str, job_count: int) -> int:
+def auto_model_concurrency(
+    args: argparse.Namespace, model_name: str, job_count: int
+) -> int:
     if "gemma" in model_name.lower():
         print(
-            f"[parallel] auto model={model_name} workers=1 reason=gemma_memory_cap",
+            f"[model-concurrency] auto model={model_name} concurrent_runs=1 reason=gemma_memory_cap",
             flush=True,
         )
         return 1
@@ -632,51 +657,56 @@ def auto_parallel_tasks(args: argparse.Namespace, model_name: str, job_count: in
     print(f" VRAM: {vram_gib}GB | PARAMS: {params_b}B")
     if vram_gib is None or params_b is None:
         print(
-            f"[parallel] auto model={model_name} workers=1 reason=unknown_vram_or_model_size",
+            f"[model-concurrency] auto model={model_name} concurrent_runs=1 reason=unknown_vram_or_model_size",
             flush=True,
         )
         return 1
 
     bytes_per_param = dtype_bytes(args)
-    weight_gib = params_b * bytes_per_param * (1_000_000_000 / (1024 ** 3))
+    weight_gib = params_b * bytes_per_param * (1_000_000_000 / (1024**3))
     per_worker_gib = max(0.5, weight_gib + 0.15)
-    usable_vram_gib = max(0.0, vram_gib * 0.98)
-    workers = max(1, int(usable_vram_gib // per_worker_gib))
-    workers = max(1,int(min(workers, 32, job_count) / 1.5))
+    usable_vram_gib = max(0.0, vram_gib * 0.75)
+    concurrent_runs = max(1, int(usable_vram_gib // per_worker_gib))
+    concurrent_runs = max(1, min(concurrent_runs, 32, job_count))
     print(
-        f"[parallel] auto model={model_name} params={params_b:.3g}B vram={vram_gib:.1f}GiB per_worker≈{per_worker_gib:.1f}GiB workers={workers}",
+        f"[model-concurrency] auto model={model_name} params={params_b:.3g}B vram={vram_gib:.1f}GiB usable≈{usable_vram_gib:.1f}GiB safety=1.33x per_run≈{per_worker_gib:.1f}GiB concurrent_runs={concurrent_runs}",
         flush=True,
     )
-    return workers
+    return concurrent_runs
 
 
-def parallel_workers_for_model(
+def concurrent_runs_for_model(
     args: argparse.Namespace,
     model_name: str,
     job_count: int,
 ) -> int:
-    configured = parse_parallel_tasks(args.parallel_tasks)
+    configured = parse_model_concurrency(args.model_concurrency)
     if configured == "auto":
-        return auto_parallel_tasks(args, model_name, job_count)
+        return auto_model_concurrency(args, model_name, job_count)
     return min(int(configured), job_count)
 
 
 def make_model(args: argparse.Namespace, model_name: str, gname: str, mode: str) -> Any:
     model_kwargs = model_kwargs_from_args(args)
-    if mode == "outlines":
-        return OutlinesSyntaxModel(model_name, grammar_name=gname, device=args.device)
+    if mode in {"outlines", "outlines_mixed"}:
+        return OutlinesSyntaxModel(
+            model_name,
+            grammar_name=gname,
+            device=args.device,
+            **model_kwargs,
+        )
     if args.backend == "openrouter":
         return OpenRouterModel(model_name, env_path=args.openrouter_env)
-    return p7.get_model_class(model_name).from_pretrained(
+    return proposition7.get_model_class(model_name).from_pretrained(
         model_name,
-        grammar=p7.get_grammar(gname),
+        grammar=proposition7.get_grammar(gname),
         device=args.device,
         **model_kwargs,
     )
 
 
 def model_cache_key(args: argparse.Namespace, job: Job) -> tuple[str, ...]:
-    if job.mode == "outlines":
+    if job.mode in {"outlines", "outlines_mixed"}:
         return ("outlines", job.model_name, job.grammar_name)
     if args.backend in {"local", "openrouter"}:
         return (args.backend, job.model_name)
@@ -738,14 +768,16 @@ def clean_hf_model_cache(keep_model_name: str) -> None:
         after_free = shutil.disk_usage(hub).free
     except OSError:
         after_free = before_free
-    freed_gb = max(0, after_free - before_free) / (1024 ** 3)
+    freed_gb = max(0, after_free - before_free) / (1024**3)
     print(
         f"[low-space] kept {keep_model_name}; removed {removed} cached HF model dirs; freed {freed_gb:.2f} GiB",
         flush=True,
     )
 
 
-def error_record(job: Job, args: argparse.Namespace, error: Exception) -> dict[str, Any]:
+def error_record(
+    job: Job, args: argparse.Namespace, error: Exception
+) -> dict[str, Any]:
     return {
         "task_id": job.task.task_id,
         "language": job.task.language,
@@ -777,7 +809,9 @@ def error_record(job: Job, args: argparse.Namespace, error: Exception) -> dict[s
     }
 
 
-def timeout_record(job: Job, args: argparse.Namespace, seconds: float) -> dict[str, Any]:
+def timeout_record(
+    job: Job, args: argparse.Namespace, seconds: float
+) -> dict[str, Any]:
     return {
         "task_id": job.task.task_id,
         "language": job.task.language,
@@ -809,7 +843,9 @@ def timeout_record(job: Job, args: argparse.Namespace, seconds: float) -> dict[s
     }
 
 
-def read_existing_record_keys(path: Path, backend: str) -> set[tuple[str, str, str, str, str, str, int]]:
+def read_existing_record_keys(
+    path: Path, backend: str
+) -> set[tuple[str, str, str, str, str, str, int]]:
     if not path.exists() or path.is_dir():
         return set()
     keys: set[tuple[str, str, str, str, str, str, int]] = set()
@@ -836,11 +872,23 @@ def read_existing_record_keys(path: Path, backend: str) -> set[tuple[str, str, s
                 attempt = int(row.get("try", 0))
             except (TypeError, ValueError):
                 attempt = 0
-            keys.add((backend, str(model), str(task_id), task_hash, resolution_hash, str(mode), attempt))
+            keys.add(
+                (
+                    backend,
+                    str(model),
+                    str(task_id),
+                    task_hash,
+                    resolution_hash,
+                    str(mode),
+                    attempt,
+                )
+            )
     return keys
 
 
-def run_with_timeout(seconds: float, fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+def run_with_timeout(
+    seconds: float, fn: Callable[[], dict[str, Any]]
+) -> dict[str, Any]:
     if seconds <= 0 or threading.current_thread() is not threading.main_thread():
         return fn()
 
@@ -880,6 +928,8 @@ def run_job(
 
     try:
         record = run_with_timeout(args.timeout, execute)
+    except FatalBenchmarkInvariantError:
+        raise
     except JobTimeoutError:
         record = timeout_record(job, args, args.timeout)
     except Exception as error:
@@ -915,8 +965,11 @@ def cached_model(
     key = model_cache_key(args, job)
     if key not in cache:
         cache[key] = make_model(args, job.model_name, job.grammar_name, job.mode)
-    elif args.backend == "local" and job.mode != "outlines":
-        cache[key].grammar = p7.get_grammar(job.grammar_name)
+    elif args.backend == "local" and job.mode not in {
+        "outlines",
+        "outlines_mixed",
+    }:
+        cache[key].grammar = proposition7.get_grammar(job.grammar_name)
     return cache[key]
 
 
@@ -962,7 +1015,10 @@ def run_sequential(
             else:
                 record, traces = run_job(args, job, trace_enabled, model=model)
         write_outputs(out_path, trace_path, record, traces)
-        print(f"[done] {job.label()} error={record['error']} seconds={time.monotonic() - started:.1f}", flush=True)
+        print(
+            f"[done] {job.label()} error={record['error']} seconds={time.monotonic() - started:.1f}",
+            flush=True,
+        )
     model = None
     release_cached_models(cache)
 
@@ -978,8 +1034,8 @@ def group_jobs_by_model(jobs: list[Job]) -> list[tuple[str, list[Job]]]:
     return [(model_name, groups[model_name]) for model_name in order]
 
 
-def split_jobs(jobs: list[Job], workers: int) -> list[list[Job]]:
-    chunks: list[list[Job]] = [[] for _ in range(max(1, workers))]
+def split_model_jobs(jobs: list[Job], concurrent_runs: int) -> list[list[Job]]:
+    chunks: list[list[Job]] = [[] for _ in range(max(1, concurrent_runs))]
     for index, job in enumerate(jobs):
         chunks[index % len(chunks)].append(job)
     return [chunk for chunk in chunks if chunk]
@@ -1025,6 +1081,7 @@ def run_worker_chunk(
             if out_path is None:
                 outputs.append((record, traces))
             else:
+
                 def _write() -> None:
                     write_outputs(
                         Path(out_path),
@@ -1048,7 +1105,7 @@ def run_worker_chunk(
     return outputs
 
 
-def run_parallel_by_model(
+def run_model_concurrency(
     args: argparse.Namespace,
     jobs: list[Job],
     out_path: Path,
@@ -1059,22 +1116,31 @@ def run_parallel_by_model(
         if args.low_space and args.backend == "local":
             print(f"[low-space] preparing model {model_name}", flush=True)
             clean_hf_model_cache(model_name)
-        group_workers = parallel_workers_for_model(args, model_name, len(model_jobs))
+        model_concurrency = concurrent_runs_for_model(args, model_name, len(model_jobs))
         print(
-            f"[parallel] model={model_name} jobs={len(model_jobs)} workers={group_workers}",
+            f"[model-concurrency] model={model_name} jobs={len(model_jobs)} concurrent_runs={model_concurrency}",
             flush=True,
         )
-        chunks = split_jobs(model_jobs, group_workers)
+        chunks = split_model_jobs(model_jobs, model_concurrency)
+        for chunk in chunks:
+            if any(job.model_name != model_name for job in chunk):
+                raise FatalBenchmarkInvariantError(
+                    f"model concurrency mixed jobs from multiple models for {model_name}"
+                )
         if getattr(args, "_test_inline_workers", False):
             for index, chunk in enumerate(chunks):
-                for record, traces in run_worker_chunk(index, args, chunk, trace_enabled):
+                for record, traces in run_worker_chunk(
+                    index, args, chunk, trace_enabled
+                ):
                     write_outputs(out_path, trace_path, record, traces)
             release_cached_models({})
             continue
         mp_context = multiprocessing.get_context("spawn")
         manager = multiprocessing.Manager()
         write_lock = manager.Lock()
-        with ProcessPoolExecutor(max_workers=group_workers, mp_context=mp_context) as executor:
+        with ProcessPoolExecutor(
+            max_workers=model_concurrency, mp_context=mp_context
+        ) as executor:
             futures = [
                 executor.submit(
                     run_worker_chunk,
@@ -1132,13 +1198,13 @@ def run_matrix(
 
     trace_path = paths.traces_jsonl if config.save_traces else None
     print(
-        f"[run] matrix={matrix.name} jobs={len(jobs)} parallel_tasks={args.parallel_tasks}",
+        f"[run] matrix={matrix.name} jobs={len(jobs)} model_concurrency={args.model_concurrency}",
         flush=True,
     )
-    if args.parallel_tasks == 1:
+    if args.model_concurrency == 1:
         run_sequential(args, jobs, paths.raw_jsonl, trace_path)
     else:
-        run_parallel_by_model(args, jobs, paths.raw_jsonl, trace_path)
+        run_model_concurrency(args, jobs, paths.raw_jsonl, trace_path)
     return planned_jobs, 0
 
 

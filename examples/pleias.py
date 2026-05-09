@@ -32,9 +32,9 @@ import time
 import os
 
 # Ensure the local `src/` package is importable when running examples
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import src as p7
-from src.models import PleiasConstrainedModel
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+import proposition7
+from proposition7.models import PleiasConstrainedModel
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ def load_model(model_name: str, grammar_name: str) -> "PleiasConstrainedModel":
     t0 = time.perf_counter()
     model = PleiasConstrainedModel.from_pretrained(  # type: ignore[return-value]
         model_name,
-        grammar=p7.get_grammar(grammar_name),
+        grammar=proposition7.get_grammar(grammar_name),
     )
     elapsed = time.perf_counter() - t0
     print(f"Loaded in {elapsed:.1f}s")
@@ -142,7 +142,7 @@ def run_reasoning(model: PleiasConstrainedModel, grammar_name: str) -> None:
     print_header(f"ReasoningEnvironment  [{grammar_name}]  (CoT + grammar)", "=")
 
     # Show the auto-generated system prompt once, using the model's actual think tokens
-    system_prompt = p7.build_system_prompt(
+    system_prompt = proposition7.build_system_prompt(
         grammar_name,
         think_open=model.think_open(),
         think_close=model.think_close(),
@@ -151,7 +151,7 @@ def run_reasoning(model: PleiasConstrainedModel, grammar_name: str) -> None:
     print(system_prompt)
     print()
 
-    env = p7.ReasoningEnvironment(
+    env = proposition7.ReasoningEnvironment(
         model=model,
         grammar_name=grammar_name,
         think_budget=100,
@@ -217,7 +217,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--grammar",
         default="stlc",
-        choices=list(p7.list_grammars()),
+        choices=list(proposition7.list_grammars()),
         help="Grammar for constrained generation (default: stlc)",
     )
     parser.add_argument(

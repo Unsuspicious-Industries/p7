@@ -14,7 +14,7 @@ try:
 except ImportError:  # pragma: no cover - Python < 3.11
     import tomli as tomllib  # type: ignore[no-redef]
 
-import p7
+import proposition7
 from benchmarks.oracles import (
     check_resolution,
     validate_fun_samples_schema,
@@ -293,9 +293,9 @@ def load_tasks(names: Iterable[str]) -> list[BenchmarkTask]:
 
 
 def grammar_name(task_grammar: str) -> str:
-    if task_grammar in p7.list_grammars():
+    if task_grammar in proposition7.list_grammars():
         return task_grammar
-    if task_grammar == "stlc_union" and "stlc" in p7.list_grammars():
+    if task_grammar == "stlc_union" and "stlc" in proposition7.list_grammars():
         return "stlc"
     return task_grammar
 
@@ -307,7 +307,7 @@ def build_prompt(
     mode: str = "constrained_direct",
     initial: str = "",
 ) -> str:
-    info = p7.get_grammar_info(gname)
+    info = proposition7.get_grammar_info(gname)
     summary = str(info.get("summary") or info.get("description") or gname)
 
     language_rule = ""
@@ -343,7 +343,7 @@ def build_prompt(
     if language_rule:
         lines.append(language_rule)
 
-    if mode == "constrained_mixed":
+    if mode in {"constrained_mixed", "outlines_mixed"}:
         lines.extend(
             [
                 "Workflow: think briefly, then write the final answer in the formal block.",
@@ -378,6 +378,15 @@ def build_prompt(
                     lines.append(
                         f"After the right-hand side, finish with `; {name}` as the final expression."
                     )
+    elif mode == "unconstrained_thinking":
+        lines.extend(
+            [
+                "Workflow: think briefly, then write the final program text directly.",
+                "The formal block uses the task token budget, but the output remains unconstrained.",
+                "Output only program text: no explanation, markdown, labels, or lead-in words.",
+                "Stop as soon as the complete program satisfies the task.",
+            ]
+        )
     else:
         lines.extend(
             [
@@ -409,7 +418,9 @@ def build_interaction(task: BenchmarkTask, mode: str) -> BenchmarkInteraction:
             gname,
             task.prompt,
             mode=mode,
-            initial=task.initial if mode != "constrained_mixed" else "",
+            initial=task.initial
+            if mode not in {"constrained_mixed", "outlines_mixed"}
+            else "",
         ),
         initial=task.initial,
         max_tokens=task.max_tokens,
@@ -423,7 +434,7 @@ def normalize(text: str) -> str:
 
 def check_parse(spec: str, text: str) -> tuple[bool, bool, str]:
     try:
-        synthesizer = p7.Synthesizer(spec, "")
+        synthesizer = proposition7.Synthesizer(spec, "")
         synthesizer.set_input(text)
         synthesizer.parse()
         return True, bool(synthesizer.is_complete()), ""
@@ -502,21 +513,19 @@ def extract_program_output(
     return text, False
 
 
+class FatalBenchmarkInvariantError(RuntimeError):
+    pass
+
+
 def classify(
     exact: bool,
     parse_ok: bool,
     complete: bool,
     parse_error: str = "",
     semantic_ok: Optional[bool] = None,
-    *,
-    mode: str = "",
 ) -> str:
     if not parse_ok:
         if "no parse found" in parse_error.lower():
-            if mode in {"constrained_direct", "constrained_mixed", "outlines"}:
-                raise AssertionError(
-                    f"Constrained decoding produced a non-completable output in mode={mode}"
-                )
             return "non_completable"
         return "parse_error"
     if not complete:
@@ -546,13 +555,20 @@ def run_interaction(
     token_trace: list[dict[str, Any]] = []
     think_trace: list[dict[str, Any]] = []
     mode_switches: list[dict[str, Any]] = []
-    spec = p7.get_grammar(interaction.grammar_name)
+    spec = proposition7.get_grammar(interaction.grammar_name)
 
     started_at = time.time()
     mixed_extra: dict[str, Any] = {}
     try:
-        if mode == "constrained_mixed":
+        if mode in {"constrained_mixed", "outlines_mixed"}:
             result, mixed_extra = run_mixed_generation(
+                model,
+                interaction,
+                think_budget=think_budget,
+                seed=seed,
+            )
+        elif mode == "unconstrained_thinking":
+            result, mixed_extra = run_unconstrained_thinking_generation(
                 model,
                 interaction,
                 think_budget=think_budget,
@@ -640,14 +656,17 @@ def run_interaction(
     if parse_ok and parse_complete:
         resolution_result = check_resolution(task, output)
     semantic_ok = resolution_result.ok if resolution_result is not None else None
-    error = classify(
-        exact,
-        parse_ok,
-        parse_complete,
-        parse_error,
-        semantic_ok,
-        mode=mode,
-    )
+    error = classify(exact, parse_ok, parse_complete, parse_error, semantic_ok)
+    if error == "non_completable" and mode in {
+        "constrained_direct",
+        "constrained_mixed",
+        "outlines",
+        "outlines_mixed",
+    }:
+        raise FatalBenchmarkInvariantError(
+            "Constrained decoding produced a non-completable output: "
+            f"mode={mode} task_id={task.task_id} model_output={output!r}"
+        )
     record = {
         "task_id": task.task_id,
         "language": task.language,
@@ -687,7 +706,9 @@ def run_interaction(
             in {
                 "constrained_direct",
                 "constrained_mixed",
+                "unconstrained_thinking",
                 "outlines",
+                "outlines_mixed",
             }
             else 0,
         ),
@@ -722,12 +743,11 @@ def run_mixed_generation(
     seed: Optional[int],
 ) -> tuple[Any, dict[str, Any]]:
 
-    env = p7.ReasoningEnvironment(
+    env = proposition7.ReasoningEnvironment(
         model,
         interaction.grammar_name,
         think_budget=think_budget,
         formal_budget=interaction.max_tokens,
-        stop_on_complete=True,
     )
     env_result = env.generate(
         interaction.prompt,
@@ -735,7 +755,7 @@ def run_mixed_generation(
         think_temperature=0.8,
     )
     final = env_result.final_output
-    result = p7.GenerationResult(
+    result = proposition7.GenerationResult(
         text=final.content if final is not None else "",
         is_complete=env_result.is_complete,
         tokens_generated=env_result.total_tokens,
@@ -747,6 +767,63 @@ def run_mixed_generation(
         "think_tokens": env_result.think_tokens,
         "formal_tokens": env_result.formal_tokens,
         "reasoning_blocks": [str(block) for block in env_result.blocks],
+    }
+
+
+def run_unconstrained_thinking_generation(
+    model: Any,
+    interaction: BenchmarkInteraction,
+    *,
+    think_budget: int,
+    seed: Optional[int],
+) -> tuple[Any, dict[str, Any]]:
+    think_prompt = (
+        interaction.prompt
+        + "\n\nThink briefly before writing the final program. Do not write the final program in this phase."
+    )
+    think_result = model.generate_unconstrained(
+        prompt=think_prompt,
+        initial="",
+        max_tokens=think_budget,
+        top_k=50,
+        temperature=0.8,
+        grammar_name=interaction.grammar_name,
+        seed=seed,
+    )
+    thoughts = think_result.text.strip()
+
+    formal_prompt = (
+        build_prompt(
+            interaction.grammar_name,
+            interaction.task.prompt,
+            mode="unconstrained_thinking",
+            initial=interaction.initial,
+        )
+        + "\n\nPrior reasoning:\n"
+        + thoughts
+        + "\n\nNow write only the final program text."
+    )
+    formal_result = model.generate_unconstrained(
+        prompt=formal_prompt,
+        initial=interaction.initial,
+        max_tokens=interaction.max_tokens,
+        top_k=50,
+        temperature=0.8,
+        grammar_name=interaction.grammar_name,
+        seed=seed,
+    )
+    result = proposition7.GenerationResult(
+        text=formal_result.text,
+        is_complete=formal_result.is_complete,
+        tokens_generated=think_result.tokens_generated + formal_result.tokens_generated,
+        stopped_reason=formal_result.stopped_reason,
+        diagnostics={},
+    )
+    return result, {
+        "thoughts": thoughts,
+        "think_tokens": think_result.tokens_generated,
+        "formal_tokens": formal_result.tokens_generated,
+        "reasoning_blocks": [thoughts] if thoughts else [],
     }
 
 

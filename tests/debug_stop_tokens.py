@@ -22,7 +22,9 @@ def coerce_token_ids(value: Any) -> list[int]:
 
 def dedupe(ids: list[int]) -> list[int]:
     seen = set()
-    return [token_id for token_id in ids if not (token_id in seen or seen.add(token_id))]
+    return [
+        token_id for token_id in ids if not (token_id in seen or seen.add(token_id))
+    ]
 
 
 def token_label(tokenizer: Any, token_id: int) -> str:
@@ -72,7 +74,7 @@ def main() -> None:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    import p7
+    import proposition7
 
     dtype = {
         "float16": torch.float16,
@@ -98,10 +100,10 @@ def main() -> None:
     model.eval()
 
     device = str(next(model.parameters()).device)
-    cm = p7.ConstrainedModel(
+    cm = proposition7.ConstrainedModel(
         model,
         tokenizer,
-        p7.get_grammar("toy"),
+        proposition7.get_grammar("toy"),
         device=device,
         model_name=args.model,
     )
@@ -173,7 +175,6 @@ def main() -> None:
             prompt="Stop-token smoke test. Output only a valid toy expression.",
             initial=initial,
             max_tokens=3,
-            stop_on_complete=False,
             logit_filter=force_token(token_id),
         )
         print(

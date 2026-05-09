@@ -2,9 +2,6 @@
 .venv/
 .venv-nix/
 
-# Nix
-flake.lock
-
 # Build artifacts
 target/
 *.so
@@ -27,4 +24,3 @@ benchmarks/out
 .idea/
 .vscode/
 *.swp
-
