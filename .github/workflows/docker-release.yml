@@ -1,0 +1,43 @@
+name: Docker Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  docker:
+    name: Build and release Docker image
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: make docker
+
+      - name: Rename files for release
+        run: |
+          mv dist/proposition7-benchmark-artifact.tar dist/sas26_reproduction.docker.tar.gz
+          mv dist/proposition7-review-bundle.tar.gz dist/sas26_reproduction.source.tar.gz
+          mv dist/proposition7-review-manifest.txt dist/sas26_reproduction.manifest.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/sas26_reproduction.docker.tar.gz
+            dist/sas26_reproduction.source.tar.gz
+            dist/sas26_reproduction.manifest.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
