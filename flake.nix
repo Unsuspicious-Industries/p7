@@ -106,7 +106,7 @@
                     python -m ensurepip --upgrade >/dev/null 2>&1 || true
                 fi
                 python -m pip install --quiet --upgrade pip 'setuptools<82' wheel build
-                python -m pip install --quiet 'aufbau-rs>=0.1.2' modal 'outlines[llguidance]>=1.2.0'
+                python -m pip install --quiet 'aufbau-rs>=0.1.2' 'outlines[llguidance]>=1.2.0'
                 python -m pip install --quiet --no-deps -e "$PWD"
             }
 

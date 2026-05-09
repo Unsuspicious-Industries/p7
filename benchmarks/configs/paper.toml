@@ -37,15 +37,8 @@ env_file = ".env"
 name = "local-complete"
 backend = "local"
 models = [
-  "gpt2",
-  "gpt2-medium",
-  "EleutherAI/pythia-160m",
-  "EleutherAI/pythia-410m",
-  "EleutherAI/pythia-1.4b",
   "EleutherAI/pythia-2.8b",
   "EleutherAI/pythia-6.9b",
-  "Qwen/Qwen3.5-0.5B",
-  "Qwen/Qwen3.5-0.8B",
   "Qwen/Qwen3.5-2B",
   "Qwen/Qwen3.5-4B",
   "Qwen/Qwen3.5-4B-Base",
@@ -62,6 +55,8 @@ models = [
   "moonshotai/Moonlight-16B-A3B",
   "THUDM/GLM-4.7-Flash",
   "Qwen/Qwen3.6-27B",
+  "Qwen/Qwen3.6-35B-A3B",
+  "google/gemma-4-31b-it"
 ]
 modes = [
   "constrained_direct",
@@ -81,7 +76,5 @@ models = [
   "openai/gpt-5.3-codex",
   "anthropic/claude-4.5-haiku",
   "google/gemini-3.0-flash-latest",
-  "qwen/qwen3.5-35b-a3b",
-  "google/gemma-4-31b-it",
 ]
 modes = ["unconstrained", "unconstrained_thinking"]

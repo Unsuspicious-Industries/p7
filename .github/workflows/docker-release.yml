@@ -9,11 +9,11 @@ jobs:
   docker:
     name: Build and push Docker image to GHCR
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
       packages: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,44 +30,55 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          set -x
-          REPO_LOWER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          set -euxo pipefail
+
+          REPO_LOWER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           IMAGE_TAG="ghcr.io/${REPO_LOWER}/p7-container:${{ github.ref_name }}"
-          echo "Building image: $IMAGE_TAG"
-          make docker IMAGE_NAME="$IMAGE_TAG"
+          IMAGE_LATEST="ghcr.io/${REPO_LOWER}/p7-container:latest"
+
+          echo "Building image: ${IMAGE_TAG}"
+          make docker IMAGE_NAME="${IMAGE_TAG}"
+
           echo "Loading image from tar..."
           docker load -i dist/proposition7-benchmark-artifact.tar
+
+          echo "Ensuring loaded image is tagged correctly..."
+          if ! docker image inspect "${IMAGE_TAG}" >/dev/null 2>&1; then
+            LOADED_IMAGE="$(docker images --format '{{.Repository}}:{{.Tag}}' | head -n 1)"
+            docker tag "${LOADED_IMAGE}" "${IMAGE_TAG}"
+          fi
+
           echo "Pushing to GHCR..."
-          docker push "$IMAGE_TAG" || { echo "Push failed!"; exit 1; }
+          docker push "${IMAGE_TAG}"
+
           echo "Tagging as latest..."
-          docker tag "$IMAGE_TAG" "ghcr.io/${REPO_LOWER}/p7-container:latest"
-          docker push "ghcr.io/${REPO_LOWER}/p7-container:latest" || { echo "Push failed!"; exit 1; }
+          docker tag "${IMAGE_TAG}" "${IMAGE_LATEST}"
+          docker push "${IMAGE_LATEST}"
+
           echo "Verifying push..."
-          docker manifest inspect "$IMAGE_TAG" || { echo "Verification failed!"; exit 1; }
+          docker manifest inspect "${IMAGE_TAG}"
+
           echo "Done!"
 
       - name: Create source bundle, manifest and checksums
         run: |
-          REPO_LOWER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          set -euxo pipefail
+
+          REPO_LOWER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          IMAGE_TAG="ghcr.io/${REPO_LOWER}/p7-container:${{ github.ref_name }}"
+
+          test -f dist/proposition7-review-bundle.tar.gz
+          test -f dist/proposition7-review-manifest.txt
+
           mv dist/proposition7-review-bundle.tar.gz dist/sas26_reproduction.source.tar.gz
-          sed -i "s|image_name=.*|image_name=ghcr.io/${REPO_LOWER}/p7-container:${{ github.ref_name }}|" dist/proposition7-review-manifest.txt
+
+          sed -i "s|image_name=.*|image_name=${IMAGE_TAG}|" dist/proposition7-review-manifest.txt
           mv dist/proposition7-review-manifest.txt dist/sas26_reproduction.manifest.txt
-          sha256sum dist/sas26_reproduction.source.tar.gz dist/sas26_reproduction.manifest.txt > dist/sas26_reproduction.checksums.txt
-          cat > dist/release_body.md <<'EOF'
-## Paper Reproduction Artifact
 
-This release contains the Docker artifact for reproducing the SAS'26 paper experiments.
-
-### Docker Image
-docker pull ghcr.io/${REPO_LOWER}/p7-container:${{ github.ref_name }}
-
-### Source Bundle
-Contains the source code used to build the artifact.
-
-### Running
-See README.md
-EOF
-
+          sha256sum \
+            dist/sas26_reproduction.source.tar.gz \
+            dist/sas26_reproduction.manifest.txt \
+            > dist/sas26_reproduction.checksums.txt 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:

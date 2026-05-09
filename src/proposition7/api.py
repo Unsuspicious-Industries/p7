@@ -100,13 +100,12 @@ def generate(
         initial: Partial output to continue.
         max_tokens: Max tokens to generate.
         reason: Enable chain-of-thought before constrained output.
-        remote: Deprecated remote path. Use `scripts/modal_sandbox_run.py` instead.
+        remote: Deprecated remote path.
         gpu: Reserved for remote container launchers.
     """
     if remote:
         raise NotImplementedError(
-            "Remote generation is no longer exposed through the Python API. "
-            "Use scripts/modal_sandbox_run.py for container-based Modal runs."
+            "Remote generation is no longer exposed through the Python API."
         )
     think_budget = kwargs.pop("think_budget", 200)
     if "device" not in kwargs and "device_map" not in kwargs:

@@ -32,7 +32,6 @@ Homepage = "https://unsuspicious.org/blog/proposition-7"
 
 [project.optional-dependencies]
 transformers = ["transformers>=4.30.0", "torch>=2.0.0", "accelerate", "tiktoken"]
-modal = ["modal>=0.64.0", "transformers>=4.30.0", "torch>=2.0.0", "accelerate"]
 outlines = ["outlines[llguidance]>=1.2.0", "transformers>=4.30.0", "torch>=2.0.0", "accelerate"]
 dev = ["pytest", "numpy", "flask>=2.3.0", "flask-cors>=4.0.0"]
 

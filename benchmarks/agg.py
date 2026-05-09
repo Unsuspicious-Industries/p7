@@ -253,12 +253,19 @@ def delta_rows(summary: list[dict], dimensions: tuple[str, ...]) -> list[dict]:
 
     rows = []
     for key, vals in sorted(pair.items()):
-        constrained = [val for val in vals if val["mode"] == "constrained_direct"]
-        raw_unconstrained = [val for val in vals if val["mode"] == "unconstrained"]
-        assisted_unconstrained = [
-            val for val in vals if val["mode"] == "unconstrained_cleaned"
-        ]
-        unconstrained = raw_unconstrained or assisted_unconstrained
+        try:
+            constrained = [
+                val for val in vals if val.get("mode") == "constrained_direct"
+            ]
+            raw_unconstrained = [
+                val for val in vals if val.get("mode") == "unconstrained"
+            ]
+            assisted_unconstrained = [
+                val for val in vals if val.get("mode") == "unconstrained_cleaned"
+            ]
+            unconstrained = raw_unconstrained or assisted_unconstrained
+        except KeyError:
+            continue
         if not constrained or not unconstrained:
             continue
         c = constrained[0]
@@ -298,8 +305,11 @@ def mode_pair_rows(
 
     rows = []
     for key, vals in sorted(pair.items()):
-        primary = [val for val in vals if val["mode"] == primary_mode]
-        baseline = [val for val in vals if val["mode"] == baseline_mode]
+        try:
+            primary = [val for val in vals if val.get("mode") == primary_mode]
+            baseline = [val for val in vals if val.get("mode") == baseline_mode]
+        except KeyError:
+            continue
         if not primary or not baseline:
             continue
         left = primary[0]
@@ -483,6 +493,27 @@ def main() -> None:
         "try",
         "task_hash",
         "resolution_hash",
+        "grammar",
+        "expected",
+        "output",
+        "output_extracted",
+        "semantic_ok",
+        "resolution_error",
+        "resolution_observed",
+        "resolution_expected",
+        "parse_error",
+        "stop_reason",
+        "diagnostics",
+        "thoughts",
+        "think_tokens",
+        "formal_tokens",
+        "reasoning_blocks",
+        "seed",
+        "raw_output",
+        "_source",
+        "task_type",
+        "char_count",
+        "token_count",
     ]
     write_csv(out_dir / "benchmark_records.csv", rows, benchmark_record_columns)
     write_jsonl(out_dir / "cleaned_raw.jsonl", rows)
