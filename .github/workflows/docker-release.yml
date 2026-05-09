@@ -53,15 +53,15 @@ jobs:
           sed -i "s|image_name=.*|image_name=ghcr.io/${REPO_LOWER}/p7-container:${{ github.ref_name }}|" dist/proposition7-review-manifest.txt
           mv dist/proposition7-review-manifest.txt dist/sas26_reproduction.manifest.txt
           sha256sum dist/sas26_reproduction.source.tar.gz dist/sas26_reproduction.manifest.txt > dist/sas26_reproduction.checksums.txt
-cat > dist/release_body.md <<EOF
+          cat > dist/release_body.md <<'EOF'
 ## Paper Reproduction Artifact
 
 This release contains the Docker artifact for reproducing the SAS'26 paper experiments.
 
 ### Docker Image
-\`\`\`
+```
 docker pull ghcr.io/${REPO_LOWER}/p7-container:${{ github.ref_name }}
-\`\`\`
+```
 
 ### Source Bundle
 Contains the source code used to build the artifact.
