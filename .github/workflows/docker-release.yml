@@ -59,9 +59,7 @@ jobs:
 This release contains the Docker artifact for reproducing the SAS'26 paper experiments.
 
 ### Docker Image
-```
 docker pull ghcr.io/${REPO_LOWER}/p7-container:${{ github.ref_name }}
-```
 
 ### Source Bundle
 Contains the source code used to build the artifact.
