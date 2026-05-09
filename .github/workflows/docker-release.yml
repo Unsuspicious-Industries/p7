@@ -30,8 +30,8 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          IMAGE_NAME="ghcr.io/${{ github.repository }}/sas26-reproduction:latest"
-          IMAGE_TAG="ghcr.io/${{ github.repository }}/sas26-reproduction:${{ github.ref_name }}"
+          IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/sas26-reproduction:latest"
+          IMAGE_TAG="ghcr.io/${{ github.repository_owner }}/sas26-reproduction:${{ github.ref_name }}"
           make docker IMAGE_NAME="$IMAGE_NAME"
           docker push "$IMAGE_TAG"
           docker push "$IMAGE_NAME"
@@ -39,7 +39,7 @@ jobs:
       - name: Create source bundle, manifest and checksums
         run: |
           mv dist/proposition7-review-bundle.tar.gz dist/sas26_reproduction.source.tar.gz
-          sed -i "s|image_name=.*|image_name=ghcr.io/${{ github.repository }}/sas26-reproduction:${{ github.ref_name }}|" dist/proposition7-review-manifest.txt
+          sed -i "s|image_name=.*|image_name=ghcr.io/${{ github.repository_owner }}/sas26-reproduction:${{ github.ref_name }}|" dist/proposition7-review-manifest.txt
           mv dist/proposition7-review-manifest.txt dist/sas26_reproduction.manifest.txt
           sha256sum dist/sas26_reproduction.source.tar.gz dist/sas26_reproduction.manifest.txt > dist/sas26_reproduction.checksums.txt
 
@@ -51,7 +51,7 @@ jobs:
           body: |
             ## Docker Image
             ```
-            docker pull ghcr.io/${{ github.repository }}/sas26-reproduction:${{ github.ref_name }}
+            docker pull ghcr.io/${{ github.repository_owner }}/sas26-reproduction:${{ github.ref_name }}
             ```
 
             ## Source Bundle
