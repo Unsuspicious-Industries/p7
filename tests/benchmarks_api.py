@@ -1102,7 +1102,8 @@ def test_paper_config_parses_and_stays_within_model_cap():
     assert any(matrix.backend == "openrouter" for matrix in config.matrices)
     assert any("constrained_mixed" in matrix.modes for matrix in config.matrices)
     assert all(
-        set(matrix.modes) <= {"unconstrained", "unconstrained_cleaned"}
+        set(matrix.modes)
+        <= {"unconstrained", "unconstrained_cleaned", "unconstrained_thinking"}
         for matrix in config.matrices
         if matrix.backend == "openrouter"
     )

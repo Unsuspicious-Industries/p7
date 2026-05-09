@@ -8,13 +8,16 @@
 # deployment workflow, launch the split configs at the same time instead:
 #
 #   docker run --rm --gpus all \
+#     -v "$PWD/hf-cache:/cache/huggingface" \
 #     -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-#     proposition7-benchmark-artifact:latest deploy --resume
+#     proposition7-benchmark-artifact:latest \
+#     python benchmarks/run.py --config benchmarks/configs/deploy_constrained.toml --resume
 #
 #   docker run --rm \
+#     --env-file .env \
 #     -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-#     -v "$PWD/.env:/workspace/.env:ro" \
-#     proposition7-benchmark-artifact:latest openrouter --resume
+#     proposition7-benchmark-artifact:latest \
+#     python benchmarks/run.py --config benchmarks/configs/openrouter_closed.toml --resume
 #
 # The split runs use different run.name values (`deploy-constrained` and
 # `openrouter-closed`), so their raw JSONL files are independent and safe to

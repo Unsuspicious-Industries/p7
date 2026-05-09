@@ -1,159 +1,122 @@
-# Artifact Container
+# Artifact Docker
 
-Build artifacts through the unified Makefile:
+The reviewer artifact is Docker-first. The image contains the full repository
+snapshot needed to run the SAS 2026 reproduction and any benchmark config present
+under `benchmarks/configs/` at build time. It installs the Python dependencies
+during the image build, but it does not include API keys, Hugging Face/model caches,
+model weights, benchmark outputs, or `backup/`.
+
+## Build Outputs
+
+Build everything needed for review:
 
 ```bash
 make artifact
 ```
 
-For conference artifact evaluation, prefer a job-specific image. It bakes the
-exact benchmark config path into the image metadata and makes the selected job
-the default container command. Dependencies are installed from `uv.lock` during
-the image build:
-
-```bash
-make job-image JOB_CONFIG=benchmarks/configs/sas26_reproduction.toml
-```
-
-This writes a Docker archive, manifest, and dry-run log under `dist/`, for
-example:
+This writes:
 
 ```text
-dist/sas26_reproduction.docker.tar
-dist/sas26_reproduction.dry-run.txt
-dist/sas26_reproduction.git-status.txt
-dist/sas26_reproduction.manifest.txt
-dist/sas26_reproduction.source-diff.patch
+dist/proposition7-benchmark-artifact.tar
+dist/proposition7-review-bundle.tar.gz
+dist/proposition7-review-manifest.txt
+dist/proposition7-review.git-status.txt
+dist/proposition7-review.source-diff.patch
 ```
 
-Reviewer execution is then just:
+The Docker archive is the runnable environment. The source bundle is included so
+reviewers can inspect the exact tree, copy/edit configs, and mount an edited tree
+over `/workspace` if they want additional experiments.
+
+## Quick Checks
+
+Load the image:
 
 ```bash
-docker load -i dist/sas26_reproduction.docker.tar
-docker run --rm --gpus all \
-  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-  -v "$PWD/.env:/workspace/.env:ro" \
-  proposition7-benchmark-sas26_reproduction:latest
+docker load -i dist/proposition7-benchmark-artifact.tar
 ```
 
-The image does not contain secrets. The mounted `.env` must define
-`OPENROUTER_API_KEY` for OpenRouter rows. Reviewers can validate the baked job
-without a GPU or API key using:
+Dry-run the SAS reproduction config without GPU or API access:
 
 ```bash
-docker run --rm proposition7-benchmark-sas26_reproduction:latest job --dry-run
+docker run --rm proposition7-benchmark-artifact:latest \
+  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
 ```
 
-The manifest records the image name, baked config path, config SHA-256,
-`uv.lock` SHA-256, Dockerfile SHA-256, git commit, base image, dry-run log path,
-and paths to the captured git status and source diff.
-
-Force SIF export and fail if Apptainer/Singularity is missing:
+List included configs:
 
 ```bash
-make sif
+docker run --rm proposition7-benchmark-artifact:latest \
+  python -c 'from pathlib import Path; print("\n".join(str(p) for p in sorted(Path("benchmarks/configs").glob("*.toml"))))'
 ```
 
-Run the full paper config on a GPU host:
+## Full SAS Run
+
+The SAS reproduction config includes local GPU rows and OpenRouter rows. Create a
+local `.env` file before the full run:
 
 ```bash
-make paper
+printf 'OPENROUTER_API_KEY=...\n' > .env
+mkdir -p artifact-output hf-cache
 ```
 
-The container writes `raw.jsonl` and `results.json` under the mounted output directory.
-
-Run the preferred deployment split at the same time in separate containers. Use
-Vast/GPU for constrained local generation:
+Run the reproduction:
 
 ```bash
 docker run --rm --gpus all \
+  --env-file .env \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-  proposition7-benchmark-artifact:latest deploy --resume
+  -v "$PWD/hf-cache:/cache/huggingface" \
+  proposition7-benchmark-artifact:latest \
+  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
 ```
 
-### Vast.ai deployment (artifact image)
-
-Deploy on Vast.ai using the pre-built artifact image:
-
-```bash
-# Build the artifact image (if not already built)
-make artifact
-
-# Deploy to Vast.ai (uses artifact image by default)
-./scripts/run_on_vast.sh benchmarks/configs/deploy_constrained.toml
-
-# Deploy with a different config
-./scripts/run_on_vast.sh benchmarks/configs/vast_preferred.toml
-
-# Dry run to see the plan
-./scripts/run_on_vast.sh benchmarks/configs/deploy_constrained.toml --dry-run
-
-# Disable artifact mode (clone repo and install on the instance)
-./scripts/run_on_vast.sh benchmarks/configs/deploy_constrained.toml --no-artifact
-```
-
-The Vast.ai workflow loads the artifact Docker image on the instance and runs
-the same container command as a local Docker run, keeping behavior aligned.
-
-Run closed-model unconstrained baselines through OpenRouter at the same time:
-
-```bash
-docker run --rm \
-  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-  -v "$PWD/.env:/workspace/.env:ro" \
-  proposition7-benchmark-artifact:latest openrouter --resume
-```
-
-The mounted `.env` must define `OPENROUTER_API_KEY`.
-
-The two commands write separate run directories, so OpenRouter API work can run
-while the GPU is busy with constrained decoding. Inside one container, the
-runner only uses concurrency for multiple runs of one model at a time.
-
-## Apptainer / Singularity
-
-When `apptainer` or `singularity` is installed on the build host, or when `nix` is available to bootstrap `apptainer`, the artifact workflow also writes:
+Expected outputs:
 
 ```text
-dist/proposition7-benchmark-artifact.sif
+artifact-output/sas26-reproduction/config.toml
+artifact-output/sas26-reproduction/raw.jsonl
+artifact-output/sas26-reproduction/results.json
 ```
 
-Run the paper suite on a GPU host:
+Models are downloaded at run time into the mounted `hf-cache/` directory. Keeping
+that cache outside the image prevents the Docker archive from containing model
+weights while still allowing resumed/repeated runs to reuse downloads.
+
+## Other Experiments
+
+Run any included config by changing `--config`:
 
 ```bash
-make sif-paper
+docker run --rm --gpus all \
+  --env-file .env \
+  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+  -v "$PWD/hf-cache:/cache/huggingface" \
+  proposition7-benchmark-artifact:latest \
+  python benchmarks/run.py --config benchmarks/configs/paper.toml --resume
 ```
 
-The SIF is built from the Docker archive output using `apptainer build ... docker-archive:<tar>` so the Docker and Singularity artifacts stay aligned.
+For local-only configs, omit `--env-file .env`. For OpenRouter-only configs,
+omit `--gpus all`.
 
-If the server does not already provide `apptainer` or `singularity`, both scripts fall back to:
+To run an edited source tree or edited configs, unpack the source bundle and
+mount it over `/workspace`:
 
 ```bash
-nix shell nixpkgs#apptainer
+tar -xzf dist/proposition7-review-bundle.tar.gz -C /tmp
+docker run --rm --gpus all \
+  --env-file .env \
+  -v "/tmp/p7:/workspace:ro" \
+  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+  -v "$PWD/hf-cache:/cache/huggingface" \
+  proposition7-benchmark-artifact:latest \
+  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
 ```
 
-so long as `nix` is installed.
+## Bundle Hygiene
 
-The wrapper uses server-friendly defaults for Singularity-style environments:
-
-- `--cleanenv`
-- `--containall`
-- `--writable-tmpfs`
-- `--nv`
-
-This keeps the root filesystem ephemeral while persisting benchmark outputs through the bound `artifact-output/` directory.
-
-## Modal A10G
-
-Modal supports custom containers via `modal.Image.from_dockerfile(...)` and runtime
-container execution via `modal.Sandbox.create(...)`.
-
-Run the full small-Qwen benchmark suite on an A10G:
-
-```bash
-pip install -e ".[modal]"
-modal setup
-make modal-full
-```
-
-The launcher copies `raw.jsonl` and `results.json` back to `dist/modal-qwen-full/`.
+`.dockerignore` and the source-bundle step exclude local state that should not be
+submitted or baked into the image: `.env`, virtualenvs, `dist/`, benchmark output
+directories, `backup/`, Hugging Face/model caches, and common model-weight file
+extensions such as `.safetensors`, `.bin`, `.pt`, `.pth`, `.ckpt`, `.gguf`, and
+`.onnx`.

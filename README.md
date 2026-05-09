@@ -7,7 +7,6 @@ Type-aware constrained generation for language models. Install and import the pa
 ```bash
 pip install -e .
 pip install -e ".[transformers]"  # local Hugging Face generation
-pip install -e ".[modal]"         # Modal sandbox launcher
 ```
 
 ## Local Generation
@@ -54,78 +53,50 @@ result = proposition7.generate(
 )
 ```
 
-## Modal Sandbox Runs
-
-Modal supports container-based execution directly from the artifact Dockerfile.
-This repository uses `modal.Image.from_dockerfile(...)` plus `modal.Sandbox.create(...)`
-instead of a custom Modal app/function wrapper.
-
-After `modal setup`, launch the full small-Qwen benchmark suite on one A10G with:
-
-```bash
-python scripts/modal_sandbox_run.py --config benchmarks/configs/modal_qwen_full.toml
-```
-
-That script copies `raw.jsonl` and `results.json` back to a local output directory.
-
 ## Benchmarks
 
-Build the artifact container bundle through the unified Makefile:
+Build the review artifact through the unified Makefile:
 
 ```bash
 make artifact
 ```
 
-On Singularity-style servers, run the exported `.sif` with:
+This produces a reusable Docker image tarball, a source bundle, and a manifest
+under `dist/`. The image contains the repository snapshot, all benchmark configs,
+and Python dependencies, but it does not contain API keys, model weights, model
+caches, benchmark outputs, or `backup/`.
+
+The image has no config-specific entrypoint. Run the benchmark command you want
+explicitly with `python benchmarks/run.py --config ...`.
+
+Dry-run the SAS 2026 paper-reproduction config without GPU or API access:
 
 ```bash
-make sif-paper
+docker load -i dist/proposition7-benchmark-artifact.tar
+docker run --rm proposition7-benchmark-artifact:latest \
+  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
 ```
 
-If the server lacks `apptainer` / `singularity` but has `nix`, the scripts automatically bootstrap `apptainer` via `nix shell`.
-
-Common targets:
+Run the SAS 2026 paper-reproduction config on a GPU host:
 
 ```bash
-make docker
-make sif
-make test
-make modal-full
-```
-
-Run the paper suite on a GPU host:
-
-```bash
+docker load -i dist/proposition7-benchmark-artifact.tar
+mkdir -p artifact-output hf-cache
 docker run --rm --gpus all \
+  --env-file .env \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-  -v "$PWD/.env:/workspace/.env:ro" \
-  proposition7-benchmark-artifact:latest paper --resume
+  -v "$PWD/hf-cache:/cache/huggingface" \
+  proposition7-benchmark-artifact:latest \
+  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
 ```
 
-Run directly from a source checkout:
+Create `.env` with `OPENROUTER_API_KEY=...` before running configs that include
+OpenRouter rows. Hugging Face models are downloaded at run time into the mounted
+`hf-cache/` directory, not baked into the Docker image.
 
-```bash
-python benchmarks/run.py --config benchmarks/configs/paper.toml --dry-run
-python benchmarks/run.py --config benchmarks/configs/paper.toml
-```
-
-The runner creates a dedicated run directory, keeps the append-only `raw.jsonl`
-format unchanged for compatibility, and writes a standardized `results.json`
-artifact for reproducibility. Resume an interrupted run with:
-
-```bash
-python benchmarks/run.py --config path/to/benchmark.toml --resume
-```
-
-Process a completed run into CSV summaries with:
-
-```bash
-python benchmarks/agg.py --in benchmarks/out/paper/raw.jsonl --out-dir benchmarks/out/paper/processed
-```
-
-Benchmark tasks are one TOML file per task in `benchmarks/data/`; benchmark run
-parameters live in the run config TOML. See `benchmarks/README.md` for the full
-config schema and output layout.
+Run any other included config by changing only `--config`. To test an edited
+config or source checkout, mount it over `/workspace` and keep the output/cache
+mounts.
 
 ## Grammars
 
@@ -168,7 +139,6 @@ benchmarks/
 artifact/                  # Docker artifact image files
 scripts/
   build_artifact_image.sh  # builds dist/proposition7-benchmark-artifact.tar
-  modal_sandbox_run.py     # launches artifact container on Modal A10G
 tests/                     # pytest suite
 ```
 

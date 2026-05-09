@@ -1,13 +1,14 @@
 # Preferred unconstrained evaluator for closed models through OpenRouter.
 #
-# Run this in parallel with `benchmarks/configs/deploy_constrained.toml` on a
+# Run this at the same time as `benchmarks/configs/deploy_constrained.toml` on a
 # GPU/Vast host. This job does not need `--gpus all` and only requires `.env`
 # with OPENROUTER_API_KEY mounted into the container.
 #
 #   docker run --rm \
+#     --env-file .env \
 #     -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-#     -v "$PWD/.env:/workspace/.env:ro" \
-#     proposition7-benchmark-artifact:latest openrouter --resume
+#     proposition7-benchmark-artifact:latest \
+#     python benchmarks/run.py --config benchmarks/configs/openrouter_closed.toml --resume
 #
 # Closed models cannot run constrained generation because OpenRouter does not
 # expose token-level logits. Keep this config unconstrained-only.

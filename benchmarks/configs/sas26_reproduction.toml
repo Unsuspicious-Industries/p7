@@ -1,17 +1,10 @@
-# Reproduction config for `sas26-paper45.pdf`.
-#
-# Extracted from Section 6 and Figures 3-8 of the PDF in this repository.
-# This is intentionally *not* the later broad benchmark matrix: it contains only
-# the modes needed to reproduce the paper figures.
+# Reproduction config for SAS Paper 45
 #
 # Mode mapping used by the paper:
 #   - Raw / Unconstr.       => `unconstrained`
 #   - Direct / Constrained => `constrained_direct`
 #   - Mixed / Constrained  => `constrained_mixed`
 #
-# Important: `unconstrained_cleaned` is not part of the PDF figures. In
-# particular, GPT-5.4-mini in Figure 7 is the raw `unconstrained` OpenRouter run,
-# not cleaned extraction.
 #
 # Extracted Figure 3 targets, pass rate %: Direct / Mixed / Raw
 #   Qwen 0.8B     9.8 / 11.7 /  9.0
@@ -40,6 +33,7 @@
 # Run directly on a GPU host with an `.env` containing OPENROUTER_API_KEY:
 #
 #   python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
+#
 
 schema_version = 1
 

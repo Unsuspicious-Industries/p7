@@ -4,13 +4,16 @@
 # to separate run directories and therefore do not contend on raw.jsonl:
 #
 #   docker run --rm --gpus all \
+#     -v "$PWD/hf-cache:/cache/huggingface" \
 #     -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-#     proposition7-benchmark-artifact:latest deploy --resume
+#     proposition7-benchmark-artifact:latest \
+#     python benchmarks/run.py --config benchmarks/configs/deploy_constrained.toml --resume
 #
 #   docker run --rm \
+#     --env-file .env \
 #     -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-#     -v "$PWD/.env:/workspace/.env:ro" \
-#     proposition7-benchmark-artifact:latest openrouter --resume
+#     proposition7-benchmark-artifact:latest \
+#     python benchmarks/run.py --config benchmarks/configs/openrouter_closed.toml --resume
 #
 # Use OpenRouter for unconstrained closed-model baselines; do not spend GPU time
 # running local unconstrained modes unless you explicitly need open-model parity.

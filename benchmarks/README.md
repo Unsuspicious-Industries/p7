@@ -1,6 +1,6 @@
 # proposition7 Benchmark Suite
 
-This suite is built for reproducible local/OpenRouter benchmark runs from one TOML config. The artifact submission path is the Docker image built by `scripts/build_artifact_image.sh`. Modal is not part of the benchmark path.
+This suite is built for reproducible local/OpenRouter benchmark runs from one TOML config. The artifact Docker image contains this runner, every config under `benchmarks/configs/` at build time, and all Python dependencies, but not model weights or local benchmark outputs.
 
 ## Task Format
 
@@ -47,69 +47,51 @@ Benchmark modes are code-owned, not task-owned.
 
 - `unconstrained`: plain generation evaluated exactly as emitted.
 - `unconstrained_cleaned`: plain generation followed by post-hoc program extraction before evaluation.
-- `unconstrained_thinking`: same two-phase reasoning structure as `constrained_mixed`, but the formal output block remains unconstrained.
+
 - `constrained_direct`: proposition7/Aufbau direct constrained generation.
 - `constrained_mixed`: proposition7 reasoning environment plus constrained formal generation.
+
 - `outlines`: direct constrained generation using the Outlines CFG backend. This intentionally drops Aufbau type/context rules.
 - `outlines_mixed`: same two-phase reasoning structure as `constrained_mixed`, but the formal block uses the Outlines CFG backend.
 - OpenRouter models use the same runner through `backend = "openrouter"` matrix entries.
 
 Outlines modes are constraint engine modes, not benchmark backends. The benchmark backend remains `local` for open models.
 
-## Artifact Container
+## Artifact Docker
 
-Build the reviewable Docker image tarball:
+Build the reviewable Docker image tarball and source bundle:
 
 ```bash
-./scripts/build_artifact_image.sh
+make artifact
 ```
 
-Run the full paper suite on a GPU host:
+The image has no config-specific entrypoint. Invoke the runner explicitly:
 
 ```bash
+docker load -i dist/proposition7-benchmark-artifact.tar
+docker run --rm proposition7-benchmark-artifact:latest \
+  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
+```
+
+Run the SAS reproduction on a GPU host with output and model-cache mounts:
+
+```bash
+printf 'OPENROUTER_API_KEY=...\n' > .env
+mkdir -p artifact-output hf-cache
 docker run --rm --gpus all \
+  --env-file .env \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-  -v "$PWD/.env:/workspace/.env:ro" \
-  proposition7-benchmark-artifact:latest paper --resume
+  -v "$PWD/hf-cache:/cache/huggingface" \
+  proposition7-benchmark-artifact:latest \
+  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
 ```
 
-Mount `.env` only if the config includes an OpenRouter matrix. It must define `OPENROUTER_API_KEY`.
+Hugging Face models are downloaded into the mounted `hf-cache/` directory at run
+time. They are intentionally not baked into the Docker image.
 
-Run the preferred deploy split at the same time in separate containers:
-constrained modes on the GPU host, and closed-model unconstrained baselines
-through OpenRouter. These commands use separate run directories, so they do not
-share output files.
+Run any included config by changing `--config`. For local-only configs, omit
+`--env-file .env`; for OpenRouter-only configs, omit `--gpus all`.
 
-```bash
-docker run --rm --gpus all \
-  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-  proposition7-benchmark-artifact:latest deploy --resume
-```
-
-```bash
-docker run --rm \
-  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-  -v "$PWD/.env:/workspace/.env:ro" \
-  proposition7-benchmark-artifact:latest openrouter --resume
-```
-
-`benchmarks/configs/vast_preferred.toml` records both halves of this intended
-evaluation matrix and includes the same instructions in comments. Running that
-combined config directly is valid, but matrices execute sequentially; use the
-split `deploy` and `openrouter` entrypoints above when you want two containers
-running at the same time.
-
-The OpenRouter path uses the same task prompts, output extraction, parsing, and semantic resolution as local unconstrained benchmark modes. It does not run constrained or Outlines modes because closed models do not expose token-level logits.
-
-Run the full small-Qwen Modal A10G benchmark using the same artifact container definition:
-
-```bash
-pip install -e ".[modal]"
-modal setup
-python scripts/modal_sandbox_run.py --config benchmarks/configs/modal_qwen_full.toml
-```
-
-That launcher copies `raw.jsonl` and `results.json` back to `dist/modal-qwen-full/`.
 
 ## Source Runner
 
@@ -210,24 +192,6 @@ The resume key is hash-aware:
 ```
 
 Changing a TOML task or resolution will not reuse stale rows. The raw JSONL line format is unchanged, and aggregation keeps the latest duplicate record for the same key.
-
-## Output
-
-- `<run>/config.toml`: exact copied config used for the run.
-- `<run>/raw.jsonl`: append-only benchmark ledger. Record format is unchanged.
-- `<run>/results.json`: canonical artifact with metadata, config, summaries, and deduped records.
-- `<run>/traces.jsonl`: optional token traces when `run.save_traces = true`.
-- `<processed>/cleaned_raw.jsonl`: cleaned and deduped benchmark records.
-- `<processed>/benchmark_records.csv`: one row per cleaned benchmark attempt.
-- `<processed>/summary_overall.csv`: overall benchmark metrics.
-- `<processed>/summary_by_mode.csv`: pass/error rates by mode.
-- `<processed>/summary_by_task_type.csv`: pass/error rates by task type.
-- `<processed>/summary_by_mode_task_type.csv`: mode-by-task-type summaries.
-- `<processed>/summary_by_task.csv`: per-task benchmark summaries.
-- `<processed>/comparison_mixed_vs_unconstrained_thinking_by_model_language.csv`: constrained-vs-unconstrained formal block comparison for the reasoning modes.
-- `<processed>/comparison_mixed_vs_unconstrained_thinking_by_task_type.csv`: same comparison grouped by task type.
-
-The processing pipeline is CSV-first. No LaTeX/table generation is part of the tracked benchmark workflow.
 
 ## Validation
 
