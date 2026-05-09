@@ -33,7 +33,7 @@ jobs:
           python -m pip install --upgrade pip
           git clone --depth 1 https://github.com/Unsuspicious-Industries/aufbau.git /tmp/aufbau
           python -m pip install /tmp/aufbau
-          python -m pip install -e '.[dev]'
+          python -m pip install -e '.[dev,transformers]'
 
       - name: Run Python tests (unit)
         run: pytest -q
