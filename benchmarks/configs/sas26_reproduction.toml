@@ -49,7 +49,7 @@ max_tasks = 0
 max_tokens_override = 0
 
 [execution]
-tries = 1
+tries = 3
 seed = 7
 timeout = 300.0
 think_budget = 2048
