@@ -232,6 +232,8 @@ class ConstrainedModel:
                         tokens.append(token)
                 except Exception:
                     pass
+        # Add think close token (same as unconstrained)
+        tokens.append(self.think_close())
         # Add common generation ending tags
         extra = ["<role>", "</s>", "<|end|>", "<|eot_id|>"]
         tokens.extend(extra)
@@ -437,7 +439,7 @@ class ConstrainedModel:
                 break
 
             if token is None:
-                stopped_reason = "complete" if synthesizer.is_complete() else "no_valid"
+                stopped_reason = "no_valid"
                 break
 
             if is_stop:
