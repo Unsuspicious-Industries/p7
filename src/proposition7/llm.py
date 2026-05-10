@@ -440,12 +440,9 @@ class ConstrainedModel:
 
             if token is None:
                 # Grammar can't have "no valid" positions except when complete
-                # If grammar is complete, we naturally can't sample more tokens - treat as max_tokens
-                # If not complete, it's a real error
+                # If grammar is complete, report "complete" - not max_tokens
                 if synthesizer.is_complete():
-                    stopped_reason = (
-                        "max_tokens"  # Grammar complete, loop naturally ends
-                    )
+                    stopped_reason = "complete"
                 else:
                     stopped_reason = "no_valid"
                 break
@@ -463,7 +460,7 @@ class ConstrainedModel:
             if not fed:
                 # If feed fails, check if grammar is complete
                 if synthesizer.is_complete():
-                    stopped_reason = "max_tokens"  # Grammar complete
+                    stopped_reason = "complete"
                 else:
                     stopped_reason = "no_valid"
                 break
