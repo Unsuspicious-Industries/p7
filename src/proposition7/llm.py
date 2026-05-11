@@ -49,6 +49,26 @@ def set_generation_seed(seed: Optional[int]) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
+def _masked_entropy_bits(masked_logits: torch.Tensor) -> float:
+    """Shannon entropy of the post-mask distribution, in bits.
+
+    H = -∑ p_i · log₂(p_i)   where p_i = softmax(masked_logits)[i]
+
+    masked_logits has -inf at grammar-invalid positions; softmax maps those
+    to p=0.  We select only finite entries before computing the log to avoid
+    log₂(0) = -inf.  Returns 0.0 for a fully masked or single-token
+    distribution.
+    """
+    finite_mask = torch.isfinite(masked_logits)
+    if not finite_mask.any():
+        return 0.0
+    probs = torch.softmax(masked_logits.float(), dim=-1)
+    valid_probs = probs[finite_mask]
+    # Clamp avoids log₂(0) from numerical underflow near 0.
+    log_probs = torch.log2(valid_probs.clamp(min=1e-40))
+    return -(valid_probs * log_probs).sum().item()
+
+
 class ConstrainedModel:
     def __init__(
         self,
@@ -325,79 +345,136 @@ class ConstrainedModel:
     def _constrained_sample_with_masking(
         self,
         logits: torch.Tensor,
-        synthesizer: Any,
+        accumulated_input: str,
+        grammar_spec: str,
         stop_tokens: set[str],
         stop_token_ids: set[int],
         greedy=False,
         max_retries=2048,
-        temperature=1.0,
-    ) -> tuple[Optional[int], Optional[str], bool]:
+        temperature=0.0,
+    ) -> tuple[Optional[int], Optional[str], bool, str, float, float, int]:
+        """Sample the next token under grammar constraints.
+
+        Returns (token_id, token, is_stop, new_accumulated, pre_entropy, post_entropy, retries).
+
+        new_accumulated: accumulated_input with the accepted token_content appended.
+            token_content is the canonical form: the raw decoded string if it is a
+            valid grammar prefix, or the lstrip()-ed version as a fallback (see
+            SPACING WORKAROUND below).  Equals accumulated_input unchanged when
+            token is None or is_stop is True.
+
+        pre_entropy: Shannon entropy H (bits) of the model's raw distribution,
+            before any grammar masking.
+            H = -∑ p_i · log₂(p_i)  over all tokens with finite logits.
+            This is computed once at the start, before the retry loop, so it
+            is independent of how many candidates were tried.
+
+        post_entropy: Shannon entropy H (bits) over valid_logits at acceptance
+            time — the distribution after grammar masking and retry exclusions.
+            H = -∑ p_i · log₂(p_i)  over grammar-valid tokens only.
+            For zero-retry steps this equals the true grammar-valid entropy.
+            For steps with retries, rejected tokens are absent (masked to -inf),
+            so this is a lower bound on the true grammar-valid entropy.
+            Temperature is NOT applied; H is always at T=1.
+
+        retries: grammar-rejected candidates before the accepted token was found.
+            High values indicate grammatically sparse positions in the lattice.
+        """
+        # JANK: aufbau uses regex-based tokenization on the raw character string.
+        # try_feed() treats its argument as a whitespace-delimited unit, so feeding
+        # an LM sub-word token like ' 3' after '4' would produce '4 3' (two grammar
+        # tokens) instead of '43' (one integer terminal). We therefore use parse()
+        # on the full accumulated string instead of try_feed().
+        #
+        # SPACING WORKAROUND: LM tokenizers prefix most tokens with a leading space
+        # (e.g. ' x', ' +', ' 3'). aufbau's regex terminals require that the full
+        # character sequence match — e.g. '4 3' fails because the integer regex
+        # sees two separate tokens. Strategy: try the raw token first (preserves
+        # keyword/identifier boundaries like 'let' + ' x' → 'let x'), then fall back
+        # to the lstripped version (handles digit continuation '4' + ' 3' → '43').
+        import aufbau
 
         finite = torch.isfinite(logits)
         valid_mask = finite.clone()
 
+        # Pre-mask entropy: model's raw uncertainty before grammar filtering.
+        # Computed once here so it is independent of the retry loop.
+        pre_entropy = _masked_entropy_bits(logits)
+
         stop_token_ids = set(stop_token_ids)
+        # Single reusable synthesizer — set_input fully resets state each call.
+        test_synth = aufbau.Synthesizer(grammar_spec, "")
+        retries = 0
 
         for _ in range(max_retries):
             if not valid_mask.any():
-                return None, None, False
+                return None, None, False, accumulated_input, pre_entropy, 0.0, retries
 
-            valid_logits = logits.clone()
-            valid_logits = valid_logits.masked_fill(~valid_mask, float("-inf"))
+            # --- sample from the masked distribution ----------------------------
+            # Zero-out invalid logits with -inf so softmax assigns them p=0.
+            valid_logits = logits.masked_fill(~valid_mask, float("-inf"))
 
-            if greedy:
+            if greedy or temperature == 0.0:
                 token_id = torch.argmax(valid_logits).item()
             else:
-                probs = torch.softmax(valid_logits / max(temperature, 1e-6), dim=-1)
-
+                # Scale by temperature, then re-normalise.
+                # p_i = exp(l_i / T) / Z  (valid tokens only)
+                probs = torch.softmax(valid_logits.float() / max(temperature, 1e-6), dim=-1)
                 if not torch.isfinite(probs).any():
-                    return None, None, False
-
+                    return None, None, False, accumulated_input, pre_entropy, 0.0, retries
                 token_id = torch.multinomial(probs, num_samples=1).item()
 
             token = self._decode_token_id(token_id)
             if not token:
                 valid_mask[token_id] = False
+                retries += 1
                 continue
 
             if token.strip() == "":
                 valid_mask[token_id] = False
+                retries += 1
                 continue
 
-            stripped = token.lstrip()
-            if stripped and stripped != token:
+            # Stop tokens (EOS, </s>, <|im_end|>, etc.) must be checked BEFORE
+            # grammar validation: they won't form a valid grammar prefix, so they
+            # would be masked otherwise and the model could never emit its natural
+            # stop signal.
+            if (
+                token_id in stop_token_ids
+                or token in stop_tokens
+                or any(text in stop_tokens for text in self._token_texts(token_id))
+            ):
+                post_entropy = _masked_entropy_bits(valid_logits)
+                return token_id, token, True, accumulated_input, pre_entropy, post_entropy, retries
+
+            # Try token as-is first, then lstripped as fallback.
+            # as-is preserves keyword/id boundaries ("let x" not "letx").
+            # stripped fixes digit continuation ("43" not "4 3").
+            token_content = None
+            for candidate in (token, token.lstrip()):
+                if not candidate:
+                    continue
+                test_synth.set_input(accumulated_input + candidate)
                 try:
-                    synthesizer.try_feed(stripped)
-                    if (
-                        token_id in stop_token_ids
-                        or token in stop_tokens
-                        or any(
-                            text in stop_tokens for text in self._token_texts(token_id)
-                        )
-                    ):
-                        return (
-                            token_id,
-                            self._stop_token_label(token_id, stripped),
-                            True,
-                        )
-                    return token_id, stripped, False
+                    test_synth.parse()
+                    token_content = candidate
+                    break
                 except RuntimeError:
                     pass
 
-            try:
-                synthesizer.try_feed(token)
-                if (
-                    token_id in stop_token_ids
-                    or token in stop_tokens
-                    or any(text in stop_tokens for text in self._token_texts(token_id))
-                ):
-                    return token_id, self._stop_token_label(token_id, token), True
-                return token_id, token, False
-            except RuntimeError:
+            if token_content is None:
+                # Neither form is a valid grammar prefix; exclude from future samples.
                 valid_mask[token_id] = False
+                retries += 1
                 continue
 
-        return None, None, False
+            # Valid grammar token accepted — compute post-mask entropy at this
+            # point (grammar-valid tokens only, minus retry-excluded tokens).
+            post_entropy = _masked_entropy_bits(valid_logits)
+            return token_id, token, False, accumulated_input + token_content, pre_entropy, post_entropy, retries
+
+        # Exhausted all retries — no valid token found.
+        return None, None, False, accumulated_input, pre_entropy, 0.0, retries
 
     def generate_constrained(
         self,
@@ -406,14 +483,20 @@ class ConstrainedModel:
         max_tokens: int = 50,
         grammar_name: Optional[str] = None,
         seed: Optional[int] = None,
+        temperature: float = 0.0,
+        top_k: Optional[int] = None,
     ) -> GenerationResult:
+        if top_k is not None:
+            pass
         import aufbau
 
         set_generation_seed(seed)
         self._set_prompt(prompt, initial, self.start_tokens_constrained(grammar_name))
         stop_tokens = set(self.stop_tokens_constrained(grammar_name))
         stop_token_ids = set(self._stop_token_ids(list(stop_tokens)))
-        synthesizer = aufbau.Synthesizer(self.grammar, "")
+        from proposition7 import get_grammar
+        grammar_spec = get_grammar(grammar_name)
+        synthesizer = aufbau.Synthesizer(grammar_spec, "")
 
         if initial:
             try:
@@ -422,17 +505,32 @@ class ConstrainedModel:
             except Exception as error:
                 return GenerationResult(initial, False, 0, f"type_error: {error}")
 
+        # accumulated_input: the canonical grammar-prefix string built during decoding.
+        # Starts as `initial`; grows by token_content at each accepted step.
+        # token_content may be the lstripped form of the decoded token (SPACING
+        # WORKAROUND in _constrained_sample_with_masking), so accumulated_input
+        # can diverge from tokenizer.decode(all_generated_ids).
+        # It is what aufbau validates and is returned as result.text.
+        accumulated_input = initial
         tokens_generated = 0
         stopped_reason = "max_tokens"
+        step_token_ids: list[int] = []
+        step_pre_entropies: list[float] = []
+        step_entropies: list[float] = []
+        step_retries: list[int] = []
 
         for _ in range(max_tokens):
             try:
                 logits = self._get_logits_tensor()
-                token_id, token, is_stop = self._constrained_sample_with_masking(
-                    logits,
-                    synthesizer,
-                    stop_tokens,
-                    stop_token_ids,
+                token_id, token, is_stop, accumulated_input, pre_entropy, post_entropy, retries = (
+                    self._constrained_sample_with_masking(
+                        logits,
+                        accumulated_input,
+                        grammar_spec,
+                        stop_tokens,
+                        stop_token_ids,
+                        temperature=temperature,
+                    )
                 )
             except Exception as error:
                 stopped_reason = f"type_error: {error}"
@@ -452,36 +550,61 @@ class ConstrainedModel:
                 stopped_reason = f"stop_token:{token}"
                 break
 
+            # Use set_input + parse instead of deprecated feed() to keep synthesizer
+            # in sync with accumulated_input (our parse() based validation state)
             try:
-                synthesizer.feed(token)
+                synthesizer.set_input(accumulated_input)
+                synthesizer.parse()
                 fed = True
             except RuntimeError:
                 fed = False
             if not fed:
-                # If feed fails, check if grammar is complete
-                if synthesizer.is_complete():
+                # Check if accumulated_input is complete using fresh synthesizer state
+                check_synth = aufbau.Synthesizer(grammar_spec, "")
+                check_synth.set_input(accumulated_input)
+                try:
+                    check_synth.parse()
+                    is_complete = check_synth.is_complete()
+                except:
+                    is_complete = False
+                if is_complete:
                     stopped_reason = "complete"
                 else:
                     stopped_reason = "no_valid"
                 break
 
+            step_token_ids.append(token_id)
+            step_pre_entropies.append(pre_entropy)
+            step_entropies.append(post_entropy)
+            step_retries.append(retries)
             tokens_generated += 1
             self._append_token_id(token_id)
 
+        # Final is_complete check on accumulated_input
+        final_synth = aufbau.Synthesizer(grammar_spec, "")
+        final_synth.set_input(accumulated_input)
+        try:
+            final_synth.parse()
+            final_is_complete = final_synth.is_complete()
+        except:
+            final_is_complete = False
+
         return GenerationResult(
-            text=synthesizer.input(),
-            is_complete=synthesizer.is_complete(),
+            text=accumulated_input,
+            is_complete=final_is_complete,
             tokens_generated=tokens_generated,
             stopped_reason=stopped_reason,
+            step_token_ids=step_token_ids,
+            step_pre_entropies=step_pre_entropies,
+            step_entropies=step_entropies,
+            step_retries=step_retries,
         )
 
-    def _sample_unconstrained(self, top_k: Optional[int], temperature: float) -> int:
+    def _sample_unconstrained(self, temperature: float) -> int:
         logits = self._get_logits_tensor().float()
+        if temperature == 0.0:
+            return torch.argmax(logits).item()
         logits = logits / max(temperature, 1e-6)
-        if top_k is not None and 0 < top_k < logits.shape[0]:
-            values, indices = torch.topk(logits, top_k)
-            probs = torch.softmax(values, dim=-1)
-            return indices[torch.multinomial(probs, num_samples=1).item()].item()
         probs = torch.softmax(logits, dim=-1)
         return torch.multinomial(probs, num_samples=1).item()
 
@@ -490,15 +613,17 @@ class ConstrainedModel:
         prompt: str = "",
         initial: str = "",
         max_tokens: int = 50,
-        top_k: Optional[int] = None,
-        temperature: float = 1.0,
+        temperature: float = 0.0,
         stop_tokens: Optional[List[str]] = None,
         grammar_name: Optional[str] = None,
         seed: Optional[int] = None,
+        top_k: Optional[int] = None,
     ) -> GenerationResult:
+        if top_k is not None:
+            pass
         set_generation_seed(seed)
         stop_tokens = stop_tokens or self.stop_tokens_unconstrained(grammar_name)
-        stop_token_ids = set(self._stop_token_ids(stop_tokens))
+        stop_token_ids = set(self._stop_token_ids(list(stop_tokens)))
         self._set_prompt(prompt, initial, self.start_tokens_unconstrained(grammar_name))
 
         generated_ids: List[int] = []
@@ -506,7 +631,7 @@ class ConstrainedModel:
         stopped_reason = "max_tokens"
 
         for _ in range(max_tokens):
-            sampled = self._sample_unconstrained(top_k, temperature)
+            sampled = self._sample_unconstrained(temperature)
             if sampled in stop_token_ids:
                 stopped_reason = f"stop_token:{self._stop_token_label(sampled, None)}"
                 break

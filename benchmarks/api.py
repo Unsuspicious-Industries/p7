@@ -15,6 +15,7 @@ except ImportError:  # pragma: no cover - Python < 3.11
     import tomli as tomllib  # type: ignore[no-redef]
 
 import proposition7
+from proposition7 import build_task_prompt
 from benchmarks.oracles import (
     check_resolution,
     validate_fun_samples_schema,
@@ -300,6 +301,8 @@ def grammar_name(task_grammar: str) -> str:
     return task_grammar
 
 
+# build_prompt is kept as an alias so existing callers keep working.
+# The canonical implementation lives in proposition7.build_task_prompt.
 def build_prompt(
     gname: str,
     instruction: str,
@@ -307,105 +310,7 @@ def build_prompt(
     mode: str = "constrained_direct",
     initial: str = "",
 ) -> str:
-    info = proposition7.get_grammar_info(gname)
-    summary = str(info.get("summary") or info.get("description") or gname)
-
-    language_rule = ""
-    if gname == "fun":
-        language_rule = (
-            "Fun rule: if the prefix is a let binding ending with `=`, write the "
-            "right-hand-side value immediately, then `;` and the requested final expression. "
-            "Usually that right-hand side is a lambda `(x: Type) => ...`, literal, or expression; "
-            "do not start it with another `let` unless the task explicitly needs a local helper. "
-            "After the semicolon, return the bound name itself, not a second copy of the value."
-        )
-    elif gname == "stlc":
-        language_rule = (
-            "STLC rule: produce one lambda term; if the prefix ends after a lambda dot, "
-            "continue with that lambda body immediately. If the task says the term takes "
-            "more arguments, add lambdas for those arguments before writing the body. "
-            "If the task says apply a function twice, use nested application like `(f (f x))`, not `(f x)`."
-        )
-    elif gname == "imp":
-        language_rule = (
-            "Imp rule: produce one `{ ... }` program; if the prefix is inside a `let` "
-            "initializer, write the initializer value immediately, then `;` and the remaining "
-            "statements. Declare requested result variables with `let name: Type = expr;`; "
-            "do not write bare identifiers as statements. Prefer simple integer literals for "
-            "initializers unless the task explicitly asks for a computed initializer."
-        )
-
-    lines = [
-        f"Language: {gname}",
-        f"Language summary:\n{summary}",
-        f"Task: {instruction}",
-    ]
-    if language_rule:
-        lines.append(language_rule)
-
-    if mode in {"constrained_mixed", "outlines_mixed"}:
-        lines.extend(
-            [
-                "Workflow: think briefly, then write the final answer in the formal block.",
-                "The formal block must contain only valid program text, no prose or markdown.",
-                "Stop as soon as the formal program satisfies the task.",
-            ]
-        )
-    elif mode in {"constrained_direct", "outlines"}:
-        lines.extend(
-            [
-                "Direct constrained generation: write the program continuation immediately.",
-                "If a prefix is already in the decoder, do not repeat it; "
-                "continue exactly after it.",
-                "If the prefix ends at `=` or after a lambda dot, the next "
-                "generated text should be the value, expression, or body that completes it.",
-                "Output only program text: no explanation, markdown, labels, or lead-in words.",
-                "Stop as soon as the complete program satisfies the task.",
-            ]
-        )
-        if initial:
-            lines.extend(
-                [
-                    "Decoder prefix already present:",
-                    initial,
-                    "Begin your generated continuation immediately after this prefix.",
-                ]
-            )
-            if gname == "fun":
-                match = re.match(r"\s*let\s+([A-Za-z_][A-Za-z0-9_]*)\s*:", initial)
-                if match:
-                    name = match.group(1)
-                    lines.append(
-                        f"After the right-hand side, finish with `; {name}` as the final expression."
-                    )
-    elif mode == "unconstrained_thinking":
-        lines.extend(
-            [
-                "Workflow: think briefly, then write the final program text directly.",
-                "The formal block uses the task token budget, but the output remains unconstrained.",
-                "Output only program text: no explanation, markdown, labels, or lead-in words.",
-                "Stop as soon as the complete program satisfies the task.",
-            ]
-        )
-    else:
-        lines.extend(
-            [
-                "Unconstrained generation: write the completed program directly.",
-                "Output only program text: no explanation, markdown, labels, or lead-in words.",
-                "If a prefix is already in the decoder, continue exactly after it and do not repeat it.",
-                "Stop as soon as the complete program satisfies the task.",
-            ]
-        )
-        if initial:
-            lines.extend(
-                [
-                    "Decoder prefix already present:",
-                    initial,
-                    "Begin your generated continuation immediately after this prefix.",
-                ]
-            )
-
-    return "\n".join(lines)
+    return build_task_prompt(gname, instruction, mode=mode, initial=initial)
 
 
 def build_interaction(task: BenchmarkTask, mode: str) -> BenchmarkInteraction:
@@ -418,9 +323,7 @@ def build_interaction(task: BenchmarkTask, mode: str) -> BenchmarkInteraction:
             gname,
             task.prompt,
             mode=mode,
-            initial=task.initial
-            if mode not in {"constrained_mixed", "outlines_mixed"}
-            else "",
+            initial=task.initial,
         ),
         initial=task.initial,
         max_tokens=task.max_tokens,
@@ -531,10 +434,10 @@ def classify(
     if not complete:
         return "incomplete"
     if semantic_ok is not None:
-        return "ok" if semantic_ok else "semantic_mismatch"
+        return "ok" if semantic_ok else "task_failed"
     if exact:
         return "ok"
-    return "semantic_mismatch"
+    return "task_failed"
 
 
 def result_diagnostics(result: Any) -> dict[str, Any]:
@@ -549,6 +452,7 @@ def run_interaction(
     *,
     seed: Optional[int] = None,
     think_budget: int = 128,
+    temperature: float = 0.0,
     trace: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
     interaction = build_interaction(task, mode)
@@ -565,6 +469,7 @@ def run_interaction(
                 model,
                 interaction,
                 think_budget=think_budget,
+                temperature=temperature,
                 seed=seed,
             )
         elif mode == "unconstrained_thinking":
@@ -572,6 +477,7 @@ def run_interaction(
                 model,
                 interaction,
                 think_budget=think_budget,
+                temperature=temperature,
                 seed=seed,
             )
         elif mode in {"constrained_direct", "outlines"}:
@@ -581,14 +487,14 @@ def run_interaction(
                 max_tokens=interaction.max_tokens,
                 grammar_name=interaction.grammar_name,
                 seed=seed,
+                temperature=temperature,
             )
         elif mode in {"unconstrained", "unconstrained_cleaned"}:
             result = model.generate_unconstrained(
                 prompt=interaction.prompt,
                 initial=interaction.initial,
                 max_tokens=interaction.max_tokens,
-                top_k=50,
-                temperature=0.8,
+                temperature=temperature,
                 grammar_name=interaction.grammar_name,
                 seed=seed,
             )
@@ -615,6 +521,10 @@ def run_interaction(
             "parse_error": str(error),
             "stop_reason": "model_error",
             "tokens": 0,
+            "step_token_ids": [],
+            "step_pre_entropies": [],
+            "step_entropies": [],
+            "step_retries": [],
             "diagnostics": {},
             "thoughts": "",
             "think_tokens": 0,
@@ -696,6 +606,14 @@ def run_interaction(
         "parse_error": parse_error,
         "stop_reason": result.stopped_reason,
         "tokens": result.tokens_generated,
+        # Per-step arrays (parallel, length == tokens): constrained modes only.
+        # step_pre_entropies: H before grammar masking (model's raw distribution).
+        # step_entropies: H after grammar masking (grammar-valid tokens only).
+        # Difference (pre − post) measures how much the grammar mask shapes each step.
+        "step_token_ids": result.step_token_ids,
+        "step_pre_entropies": result.step_pre_entropies,
+        "step_entropies": result.step_entropies,
+        "step_retries": result.step_retries,
         "diagnostics": result_diagnostics(result),
         "thoughts": mixed_extra.get("thoughts", ""),
         "think_tokens": mixed_extra.get("think_tokens", 0),
@@ -740,6 +658,7 @@ def run_mixed_generation(
     interaction: BenchmarkInteraction,
     *,
     think_budget: int,
+    temperature: float,
     seed: Optional[int],
 ) -> tuple[Any, dict[str, Any]]:
 
@@ -748,11 +667,11 @@ def run_mixed_generation(
         interaction.grammar_name,
         think_budget=think_budget,
         formal_budget=interaction.max_tokens,
+        temperature=temperature,
     )
     env_result = env.generate(
         interaction.prompt,
         initial=interaction.initial,
-        think_temperature=0.8,
     )
     final = env_result.final_output
     result = proposition7.GenerationResult(
@@ -775,22 +694,46 @@ def run_unconstrained_thinking_generation(
     interaction: BenchmarkInteraction,
     *,
     think_budget: int,
+    temperature: float,
     seed: Optional[int],
 ) -> tuple[Any, dict[str, Any]]:
+    think_open: str = model.think_open() if hasattr(model, "think_open") else "<think>"
+    think_close: str = model.think_close() if hasattr(model, "think_close") else "</think>"
+
+    # Use think_open as the think-phase initial so _set_prompt can strip the
+    # pre-closed think block injected by enable_thinking=False and open a clean
+    # think block.  For models where start_tokens_unconstrained already includes
+    # think_open (i.e. the template adds it automatically), use "" to avoid
+    # injecting a duplicate tag.
+    think_initial = think_open
+    start_fn = getattr(model, "start_tokens_unconstrained", None)
+    if callable(start_fn):
+        try:
+            toks = start_fn(interaction.grammar_name)
+            if any(str(t).rstrip() == think_open.rstrip() for t in toks):
+                think_initial = ""
+        except Exception:
+            pass
+
     think_prompt = (
         interaction.prompt
         + "\n\nThink briefly before writing the final program. Do not write the final program in this phase."
     )
     think_result = model.generate_unconstrained(
         prompt=think_prompt,
-        initial="",
+        initial=think_initial,
         max_tokens=think_budget,
-        top_k=50,
-        temperature=0.8,
+        temperature=temperature,
         grammar_name=interaction.grammar_name,
         seed=seed,
     )
     thoughts = think_result.text.strip()
+    # Strip the injected think_open tag and any trailing think_close that
+    # wasn't consumed as a stop token.
+    if thoughts.startswith(think_open):
+        thoughts = thoughts[len(think_open):].lstrip("\n")
+    if thoughts.endswith(think_close):
+        thoughts = thoughts[: -len(think_close)].rstrip()
 
     formal_prompt = (
         build_prompt(
@@ -807,8 +750,7 @@ def run_unconstrained_thinking_generation(
         prompt=formal_prompt,
         initial=interaction.initial,
         max_tokens=interaction.max_tokens,
-        top_k=50,
-        temperature=0.8,
+        temperature=temperature,
         grammar_name=interaction.grammar_name,
         seed=seed,
     )
@@ -920,8 +862,8 @@ def summarize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "incomplete_rate": round(
                     100.0 * counts.get("incomplete", 0) / max(attempts, 1), 2
                 ),
-                "semantic_mismatch_rate": round(
-                    100.0 * counts.get("semantic_mismatch", 0) / max(attempts, 1), 2
+                "task_failed_rate": round(
+                    100.0 * counts.get("task_failed", 0) / max(attempts, 1), 2
                 ),
                 "avg_tokens": round(avg_tokens, 2),
                 "avg_seconds": round(avg_seconds, 2),

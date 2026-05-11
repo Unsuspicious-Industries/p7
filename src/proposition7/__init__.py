@@ -27,7 +27,9 @@ from .environment import (
     FormalBlock,
     GrammarBlock,
     Mode,
+    BENCHMARK_MODES,
     build_system_prompt,
+    build_task_prompt,
 )
 
 # High-level API
@@ -53,7 +55,9 @@ __all__ = [
     "FormalBlock",
     "GrammarBlock",
     "Mode",
+    "BENCHMARK_MODES",
     "build_system_prompt",
+    "build_task_prompt",
     "GRAMMARS",
     "list_grammars",
     "get_grammar",

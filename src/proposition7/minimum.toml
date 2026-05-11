@@ -1,0 +1,39 @@
+schema_version = 1
+
+[run]
+name = "outlines-compare"
+output_root = "benchmarks/out"
+save_traces = false
+
+[tasks]
+selectors = ["all"]
+ids = []
+max_tasks = 0
+max_tokens_override = 0
+
+[execution]
+tries = 3
+seed = 7
+timeout = 300.0
+think_budget = 512
+model_concurrency = "auto"
+low_space = true
+temperature = 0.0
+
+[local]
+device = "cuda"
+torch_dtype = "auto"
+device_map = "auto"
+
+[local.model_kwargs]
+
+[openrouter]
+env_file = ".env"
+
+[[matrix]]
+name = "minimum"
+backend = "local"
+models = [
+  "Qwen/Qwen3.5-0.8B",
+]
+modes = ["unconstrained", "constrained_direct", "constrained_mixed", "unconstrained_thinking"]

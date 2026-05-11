@@ -24,27 +24,7 @@ TASKS = [
         "name": "identity",
         "task": "Create the identity function for Int",
         "description": "Should produce λx:Int.x",
-    },
-    {
-        "name": "const_K",
-        "task": "Create the K combinator (constant function) that takes an Int, then a Bool, and returns the Int",
-        "description": "Should produce λx:Int.λy:Bool.x",
-    },
-    {
-        "name": "apply",
-        "task": "Create a function that applies a function f:(Int->Bool) to an argument x:Int",
-        "description": "Should produce λf:(Int->Bool).λx:Int.(f x)",
-    },
-    {
-        "name": "compose",
-        "task": "Create the B combinator (function composition) for f:(Int->Bool) and g:(Bool->Int)",
-        "description": "Should produce something like λf:(Int->Bool).λg:(Bool->Int).λx:Bool.(f (g x))",
-    },
-    {
-        "name": "twice",
-        "task": "Create a function that applies f:(Int->Int) twice to x:Int",
-        "description": "Should produce λf:(Int->Int).λx:Int.(f (f x))",
-    },
+    }
 ]
 
 
@@ -96,9 +76,9 @@ def run_environment_demo(env: proposition7.ReasoningEnvironment):
 
 
 def main():
-    print_header("proposition7 ReasoningEnvironment Demo with Phi-3.5-mini", "#", 80)
+    print_header("proposition7 ReasoningEnvironment Demo", "#", 80)
     
-    model_name = "Qwen/Qwen3.5-9B"
+    model_name = "Qwen/Qwen3.5-4B"
     grammar_name = "stlc"
     
     print(f"\nLoading {model_name}...")

@@ -1,7 +1,7 @@
 schema_version = 1
 
 [run]
-name = "outlines-compare"
+name = "mini-4b"
 output_root = "benchmarks/out"
 save_traces = false
 
@@ -12,12 +12,13 @@ max_tasks = 0
 max_tokens_override = 0
 
 [execution]
-tries = 3
+tries = 1
 seed = 7
 timeout = 300.0
 think_budget = 512
 model_concurrency = "auto"
 low_space = true
+temperature = 0.0
 
 [local]
 device = "cuda"
@@ -33,6 +34,6 @@ env_file = ".env"
 name = "minimum"
 backend = "local"
 models = [
-  "Qwen/Qwen3.5-0.8B",
+  "Qwen/Qwen3.5-4B",
 ]
-modes = ["unconstrained", "constrained_direct", "constrained_mixed", "unconstrained_thinking", "outlines", "outlines_mixed"]
+modes = ["unconstrained", "constrained_direct", "constrained_mixed", "unconstrained_thinking"]

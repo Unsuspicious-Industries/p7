@@ -8,6 +8,17 @@ from typing import List, Optional, Tuple, Union
 
 from grammars import get_grammar_info
 
+# Mode strings used across the benchmark and environment.
+BENCHMARK_MODES = frozenset({
+    "constrained_direct",
+    "constrained_mixed",
+    "outlines",
+    "outlines_mixed",
+    "unconstrained",
+    "unconstrained_cleaned",
+    "unconstrained_thinking",
+})
+
 
 class Mode(Enum):
     """Current generation mode."""
@@ -150,6 +161,87 @@ def build_system_prompt(
     return "\n".join(lines)
 
 
+# Per-grammar generation rules surfaced in the task-level prompt.
+# These capture grammar-specific pitfalls that are not obvious from the summary.
+_GRAMMAR_RULES: dict = {
+    "fun": (
+        "Fun rule: if the prefix ends with `=`, write the right-hand-side value "
+        "immediately, then `;` and the requested final expression. "
+        "Prefer a lambda `(x: Type) => ...` for the RHS unless a literal suffices. "
+        "After the semicolon, return the bound name, not a second copy of the value."
+    ),
+    "stlc": (
+        "STLC rule: produce one lambda term. If the prefix ends after a lambda dot, "
+        "continue with that body immediately. For multi-argument functions add lambdas "
+        "before the body. Double application must be nested: `(f (f x))` not `(f x)`."
+    ),
+    "imp": (
+        "Imp rule: produce one `{ ... }` block. If the prefix is inside a `let` "
+        "initializer, write the value immediately then `;` and the remaining statements. "
+        "Declare result variables with `let name: Type = expr;`. "
+        "Do not write bare identifiers as statements."
+    ),
+}
+
+
+def build_task_prompt(
+    grammar_name: str,
+    instruction: str,
+    *,
+    mode: str = "constrained_direct",
+    initial: str = "",
+) -> str:
+    """Build the per-task user prompt for the given generation mode.
+
+    This is the canonical prompt used by the benchmark across all modes and by
+    ReasoningEnvironment when no explicit system_prompt is provided.  Keep the
+    grammar summary and language rules here so there is exactly one place to edit
+    them for reproducible eval runs.
+
+    Args:
+        grammar_name: Grammar identifier (``"stlc"``, ``"fun"``, ``"imp"``, …).
+        instruction: Task-specific instruction text from the benchmark task file.
+        mode: One of the BENCHMARK_MODES strings.
+        initial: Decoder-injected prefix (used only in constrained_direct / outlines).
+
+    Returns:
+        Prompt string ready to pass to the model.
+    """
+    info = get_grammar_info(grammar_name)
+    summary = str(info.get("summary") or info.get("description") or grammar_name)
+    rule = _GRAMMAR_RULES.get(grammar_name, "")
+
+    lines = [
+        f"Language: {grammar_name}",
+        f"Language summary:\n{summary}",
+        f"Task: {instruction}",
+    ]
+    if rule:
+        lines.append(rule)
+
+    if mode in {"constrained_mixed", "outlines_mixed", "unconstrained_thinking"}:
+        lines.extend([
+            "Workflow: think briefly, then write the final program text directly.",
+            "Output only program text: no explanation, markdown, labels, or lead-in words.",
+            "Stop as soon as the complete program satisfies the task.",
+        ])
+    elif mode in {"constrained_direct", "outlines"}:
+        lines.extend([
+            "Write the completed program directly.",
+            "Output only program text: no explanation, markdown, labels, or lead-in words.",
+            "If a prefix is already in the decoder, continue exactly after it and do not repeat it.",
+            "Stop as soon as the complete program satisfies the task.",
+        ])
+        if initial:
+            lines.extend([
+                "Decoder prefix already present:",
+                initial,
+                "Begin your generated continuation immediately after this prefix.",
+            ])
+
+    return "\n".join(lines)
+
+
 class ReasoningEnvironment:
     """
     Environment that performs exactly one think block and one formal block.
@@ -176,6 +268,7 @@ class ReasoningEnvironment:
         think_budget: int = 200,
         formal_budget: int = 100,
         system_prompt: Optional[str] = None,
+        temperature: float = 0.0,
     ):
         """
         Initialize the reasoning environment.
@@ -186,32 +279,21 @@ class ReasoningEnvironment:
             think_budget: Max tokens per think block
             formal_budget: Max tokens per formal block
             system_prompt: Custom system prompt (auto-generated if None)
+            temperature: Temperature for both think and formal generation
         """
         self.model = model
         self.grammar_name = grammar_name
         self.think_budget = think_budget
         self.formal_budget = formal_budget
+        self.temperature = temperature
+        self.system_prompt = system_prompt
 
         self.THINK_OPEN = self.model.think_open()
         self.THINK_CLOSE = self.model.think_close()
-        self.formal_open = "<formal>"
-        self.formal_close = "</formal>"
-
-        # System prompt — generated after think tokens are resolved so the
-        # prompt text references the model's actual reasoning tags.
-        if self.model.allow_system_prompt():
-            self.system_prompt = system_prompt or build_system_prompt(
-                grammar_name,
-                think_open=self.THINK_OPEN,
-                think_close=self.THINK_CLOSE,
-            )
-        else:
-            self.system_prompt = system_prompt or ""
 
         # Stop tokens for think mode
         self._think_stop = _dedupe(
-            self.model.stop_tokens_unconstrained(grammar_name)
-            + [self.THINK_CLOSE, self.formal_open, self.formal_close]
+            self.model.stop_tokens_unconstrained(grammar_name) + [self.THINK_CLOSE]
         )
 
     def _unconstrained_start_includes_think(self) -> bool:
@@ -228,7 +310,7 @@ class ReasoningEnvironment:
     def _generate_think(
         self,
         prompt: str,
-        temperature: float = 1.0,
+        initial: str = "",
     ) -> Tuple[str, int, str]:
         """
         Generate unconstrained thinking until </think> or <formal>.
@@ -237,8 +319,9 @@ class ReasoningEnvironment:
         """
         result = self.model.generate_unconstrained(
             prompt=prompt,
+            initial=initial,
             max_tokens=self.think_budget,
-            temperature=temperature,
+            temperature=self.temperature,
             stop_tokens=self._think_stop,
             grammar_name=self.grammar_name,
         )
@@ -248,7 +331,7 @@ class ReasoningEnvironment:
         if content.startswith(self.THINK_OPEN):
             content = content[len(self.THINK_OPEN) :]
 
-        for tag in [self.THINK_CLOSE, self.formal_open, self.formal_close]:
+        for tag in [self.THINK_CLOSE]:
             if tag in content:
                 idx = content.find(tag)
                 content = content[:idx]
@@ -271,6 +354,7 @@ class ReasoningEnvironment:
             initial=initial,
             max_tokens=self.formal_budget,
             grammar_name=self.grammar_name,
+            temperature=self.temperature,
         )
 
         return (
@@ -284,7 +368,6 @@ class ReasoningEnvironment:
         self,
         prompt: str,
         initial: str = "",
-        think_temperature: float = 1.0,
     ) -> EnvironmentResult:
         """
         Generate one think block followed by one formal block.
@@ -307,21 +390,18 @@ class ReasoningEnvironment:
             full_prompt = prompt
 
         think_prompt = full_prompt
+        think_initial = ""
         if not self._unconstrained_start_includes_think():
-            think_prompt += f"\n{self.THINK_OPEN}"
+            think_initial = self.THINK_OPEN
 
-        thought, think_tokens, _ = self._generate_think(
-            prompt=think_prompt,
-            temperature=think_temperature,
-        )
+        thought, think_tokens, _ = self._generate_think(prompt=think_prompt, initial=think_initial)
         result.blocks.append(ThinkBlock(content=thought, tokens=think_tokens))
         result.total_tokens += think_tokens
 
         formal_prompt = (
-            f"{full_prompt}\n{self.THINK_OPEN}{thought}{self.THINK_CLOSE}\n"
-            "Now write only the final program in the formal block. "
-            "Continue exactly from any prefix that follows <formal>; do not repeat it.\n"
-            f"{self.formal_open}"
+            f"{full_prompt}"
+            f"\n\nPrior reasoning:\n{thought}"
+            f"\n\nNow write only the final program text."
         )
 
         try:
