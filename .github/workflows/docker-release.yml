@@ -136,30 +136,58 @@ jobs:
           cat > dist/release_body.md <<'BODY'
           ## proposition7 — SAS 2026 Artifact
 
-          Artifact for the SAS 2026 paper *"Semantic Prefix Analysis for Sound Constrained Code Generation with Large Language Models"*.
+          Artifact for the SAS 2026 paper **"Semantic Prefix Analysis for Sound Constrained Code Generation with Large Language Models"**.
+
+          This release contains the complete benchmark environment needed to reproduce all results reported in the paper.
+
+          ---
 
           ### Included assets
 
-          | Asset | Description |
+          | File | Description |
           | --- | --- |
           | `sas26_reproduction.source.tar.gz` | Full source tree (excludes caches, model weights, `.env`) |
-          | `sas26_reproduction.manifest.txt` | SHA256 checksums for configs, Dockerfile, and lockfile |
+          | `sas26_reproduction.manifest.txt` | SHA256 checksums for configs, Dockerfile, and dependency lockfile |
           | `sas26_reproduction.checksums.txt` | Checksums for the release assets above |
+          | `proposition7-benchmark-artifact.tar` | Docker image archive (load with `docker load -i`) |
 
           ### Docker image
+
+          Pull from GitHub Container Registry:
 
           ```bash
           docker pull ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest
           ```
 
-          ### Quick start
+          Or load from the attached tar:
 
           ```bash
-          # Dry-run the full reproduction plan (no model download)
+          docker load -i proposition7-benchmark-artifact.tar
+          ```
+
+          ---
+
+          ### Quick start
+
+          **1. Validate the benchmark plan (no model download, no GPU):**
+
+          ```bash
           docker run --rm ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest \
             python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
+          ```
 
-          # Run the smoke benchmark on a GPU host
+          Expected output:
+          ```
+          [matrix] fig3-core-local: backend=local models=7 modes=constrained_direct,constrained_mixed,unconstrained planned=5922 pending=5922
+          [matrix] fig7-frontier-constrained: backend=local models=4 modes=constrained_mixed planned=1128 pending=1128
+          [matrix] fig7-openrouter-raw: backend=openrouter models=3 modes=unconstrained planned=846 pending=846
+          [matrix] text-reference-openrouter-raw: backend=openrouter models=1 modes=unconstrained planned=282 pending=282
+          [plan] run=sas26-reproduction tasks=94 matrices=4 total_jobs=8178 pending_jobs=8178 run_dir=benchmarks/out/sas26-reproduction
+          ```
+
+          **2. Run a small GPU smoke test (one 4B model, all modes):**
+
+          ```bash
           mkdir -p artifact-output hf-cache
           docker run --rm --gpus all \
             -v "$PWD/artifact-output:/workspace/benchmarks/out" \
@@ -168,7 +196,68 @@ jobs:
             python benchmarks/run.py --config benchmarks/configs/mini-4b.toml --resume
           ```
 
-          See `README.md` in the source bundle for the full reviewer runbook.
+          **3. Run the full SAS reproduction:**
+
+          ```bash
+          printf 'OPENROUTER_API_KEY=YOUR_KEY_HERE\n' > .env
+          mkdir -p artifact-output hf-cache
+          docker run --rm --gpus all \
+            --env-file .env \
+            -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+            -v "$PWD/hf-cache:/cache/huggingface" \
+            ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest \
+            python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
+          ```
+
+          **4. Aggregate results into CSV summaries:**
+
+          ```bash
+          docker run --rm \
+            -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+            ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest \
+            python benchmarks/agg.py \
+              --in benchmarks/out/sas26-reproduction/raw.jsonl \
+              --out-dir benchmarks/out/sas26-reproduction/processed
+          ```
+
+          ---
+
+          ### Benchmark configs
+
+          | Config | Purpose | GPU | API key |
+          | --- | --- | --- | --- |
+          | `sas26_reproduction.toml` | Full paper reproduction | Yes | Yes (OpenRouter) |
+          | `mini-4b.toml` | Single 4B model smoke test | Yes | No |
+          | `small-models.toml` | Local small-model sweep (0.8B–4B) | Yes | No |
+          | `simple.toml` | Broader local comparison (9B–27B) | Yes | No |
+
+          ---
+
+          ### Requirements
+
+          - **Python**: `>=3.9, <3.13` (3.12 recommended)
+          - **GPU**: CUDA host for local model rows; the full reproduction is intended for a GPU server
+          - **RAM/VRAM**: roughly `2 × model_size` for unquantized runs
+          - **OpenRouter API key**: required for configs with `backend = "openrouter"` rows
+
+          ---
+
+          ### What is included
+
+          - Python package `proposition7` with type-aware constrained generation
+          - Built-in typed grammars: `stlc`, `fun`, `imp`, `toy`
+          - 94 benchmark tasks under `benchmarks/data/`
+          - TOML benchmark configs under `benchmarks/configs/`
+          - Docker artifact with all dependencies pre-installed
+          - 65+ unit tests and generation smoke tests
+
+          ### What is excluded
+
+          - API keys, model weights, Hugging Face caches, benchmark outputs, or local backups
+
+          ---
+
+          See `README.md` in the source bundle for the full reviewer runbook with expected outputs, troubleshooting, and project layout.
           BODY
 
       - name: Create GitHub Release
