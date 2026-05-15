@@ -6,8 +6,8 @@ on:
       - '*'
 
 jobs:
-  docker:
-    name: Build and push Docker image to GHCR
+  release:
+    name: Build, push to GHCR, and create release
     runs-on: ubuntu-latest
 
     permissions:
@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -28,66 +30,157 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Compute image names
+        id: meta
         run: |
-          set -euxo pipefail
-
           REPO_LOWER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          IMAGE_TAG="ghcr.io/${REPO_LOWER}/proposition7-benchmark-artifact:${{ github.ref_name }}"
-          IMAGE_LATEST="ghcr.io/${REPO_LOWER}/proposition7-benchmark-artifact:latest"
+          IMAGE_BASE="ghcr.io/${REPO_LOWER}/proposition7-benchmark-artifact"
+          echo "tag=${IMAGE_BASE}:${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "latest=${IMAGE_BASE}:latest" >> "$GITHUB_OUTPUT"
 
-          echo "Building image: ${IMAGE_TAG}"
-          make docker IMAGE_NAME="${IMAGE_TAG}"
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: artifact/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.latest }}
+          build-args: |
+            PROPOSITION7_COMMIT=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
 
-          echo "Loading image from tar..."
-          docker load -i dist/proposition7-benchmark-artifact.tar
-
-          echo "Ensuring loaded image is tagged correctly..."
-          if ! docker image inspect "${IMAGE_TAG}" >/dev/null 2>&1; then
-            LOADED_IMAGE="$(docker images --format '{{.Repository}}:{{.Tag}}' | head -n 1)"
-            docker tag "${LOADED_IMAGE}" "${IMAGE_TAG}"
-          fi
-
-          echo "Pushing to GHCR..."
-          docker push "${IMAGE_TAG}"
-
-          echo "Tagging as latest..."
-          docker tag "${IMAGE_TAG}" "${IMAGE_LATEST}"
-          docker push "${IMAGE_LATEST}"
-
-          echo "Verifying push..."
-          docker manifest inspect "${IMAGE_TAG}"
-
-          echo "Done!"
+      - name: Build local tar for source bundle
+        run: |
+          docker buildx build \
+            --build-arg "PROPOSITION7_COMMIT=${{ github.sha }}" \
+            --tag "localhost/proposition7-benchmark-artifact:${{ github.ref_name }}" \
+            --file artifact/Dockerfile \
+            --output type=docker,dest=dist/proposition7-benchmark-artifact.tar \
+            .
 
       - name: Create source bundle, manifest and checksums
         run: |
           set -euxo pipefail
 
-          REPO_LOWER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          IMAGE_TAG="ghcr.io/${REPO_LOWER}/proposition7-benchmark-artifact:${{ github.ref_name }}"
+          # Create source bundle (same exclusions as build_artifact_image.sh)
+          tar -C .. \
+            --exclude="$(basename "$PWD")/.git" \
+            --exclude="$(basename "$PWD")/.github" \
+            --exclude="$(basename "$PWD")/.env" \
+            --exclude="$(basename "$PWD")/.env.*" \
+            --exclude="$(basename "$PWD")/.mypy_cache" \
+            --exclude="$(basename "$PWD")/.pytest_cache" \
+            --exclude="$(basename "$PWD")/.ruff_cache" \
+            --exclude="$(basename "$PWD")/**/*.egg-info" \
+            --exclude="$(basename "$PWD")/.venv" \
+            --exclude="$(basename "$PWD")/.vscode" \
+            --exclude="$(basename "$PWD")/**/__pycache__" \
+            --exclude="$(basename "$PWD")/**/*.pyc" \
+            --exclude="$(basename "$PWD")/artifact-output" \
+            --exclude="$(basename "$PWD")/benchmarks/out" \
+            --exclude="$(basename "$PWD")/backup" \
+            --exclude="$(basename "$PWD")/build" \
+            --exclude="$(basename "$PWD")/checkpoints" \
+            --exclude="$(basename "$PWD")/dist" \
+            --exclude="$(basename "$PWD")/evals" \
+            --exclude="$(basename "$PWD")/final" \
+            --exclude="$(basename "$PWD")/hf-cache" \
+            --exclude="$(basename "$PWD")/huggingface" \
+            --exclude="$(basename "$PWD")/model-cache" \
+            --exclude="$(basename "$PWD")/models" \
+            --exclude="$(basename "$PWD")/processed" \
+            --exclude="$(basename "$PWD")/result" \
+            --exclude="$(basename "$PWD")/unified" \
+            --exclude="$(basename "$PWD")/vast_model_matrix" \
+            --exclude="$(basename "$PWD")/**/*.safetensors" \
+            --exclude="$(basename "$PWD")/**/*.bin" \
+            --exclude="$(basename "$PWD")/**/*.ckpt" \
+            --exclude="$(basename "$PWD")/**/*.gguf" \
+            --exclude="$(basename "$PWD")/**/*.onnx" \
+            --exclude="$(basename "$PWD")/**/*.pt" \
+            --exclude="$(basename "$PWD")/**/*.pth" \
+            -czf dist/sas26_reproduction.source.tar.gz \
+            "$(basename "$PWD")"
 
-          test -f dist/proposition7-review-bundle.tar.gz
-          test -f dist/proposition7-review-manifest.txt
-
-          mv dist/proposition7-review-bundle.tar.gz dist/sas26_reproduction.source.tar.gz
-
-          sed -i "s|image_name=.*|image_name=${IMAGE_TAG}|" dist/proposition7-review-manifest.txt
-          mv dist/proposition7-review-manifest.txt dist/sas26_reproduction.manifest.txt
+          # Write manifest
+          {
+            printf 'image_name=%s\n' "${{ steps.meta.outputs.tag }}"
+            printf 'docker_archive=dist/proposition7-benchmark-artifact.tar\n'
+            printf 'source_bundle=dist/sas26_reproduction.source.tar.gz\n'
+            printf 'dockerfile=artifact/Dockerfile\n'
+            printf 'config_dir=benchmarks/configs\n'
+            printf 'image_contains=source_tree,benchmark_configs,python_dependencies\n'
+            printf 'image_excludes=api_keys,model_weights,model_caches,benchmark_outputs,backup\n'
+            printf 'model_cache_mount=/cache/huggingface\n'
+            printf 'output_mount=/workspace/benchmarks/out\n'
+            for cfg in benchmarks/configs/*.toml; do
+              printf 'config=%s sha256=%s\n' "$cfg" "$(sha256sum "$cfg" | cut -d ' ' -f 1)"
+            done
+            printf 'uv_lock_sha256=%s\n' "$(sha256sum uv.lock | cut -d ' ' -f 1)"
+            printf 'dockerfile_sha256=%s\n' "$(sha256sum artifact/Dockerfile | cut -d ' ' -f 1)"
+            printf 'git_commit=%s\n' "${{ github.sha }}"
+            printf 'built_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > dist/sas26_reproduction.manifest.txt
 
           sha256sum \
             dist/sas26_reproduction.source.tar.gz \
             dist/sas26_reproduction.manifest.txt \
             > dist/sas26_reproduction.checksums.txt
-      - name: Create Release
+
+      - name: Generate release body
+        run: |
+          cat > dist/release_body.md <<'BODY'
+          ## proposition7 — SAS 2026 Artifact
+
+          Artifact for the SAS 2026 paper *"Semantic Prefix Analysis for Sound Constrained Code Generation with Large Language Models"*.
+
+          ### Included assets
+
+          | Asset | Description |
+          | --- | --- |
+          | `sas26_reproduction.source.tar.gz` | Full source tree (excludes caches, model weights, `.env`) |
+          | `sas26_reproduction.manifest.txt` | SHA256 checksums for configs, Dockerfile, and lockfile |
+          | `sas26_reproduction.checksums.txt` | Checksums for the release assets above |
+
+          ### Docker image
+
+          ```bash
+          docker pull ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest
+          ```
+
+          ### Quick start
+
+          ```bash
+          # Dry-run the full reproduction plan (no model download)
+          docker run --rm ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest \
+            python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
+
+          # Run the smoke benchmark on a GPU host
+          mkdir -p artifact-output hf-cache
+          docker run --rm --gpus all \
+            -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+            -v "$PWD/hf-cache:/cache/huggingface" \
+            ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest \
+            python benchmarks/run.py --config benchmarks/configs/mini-4b.toml --resume
+          ```
+
+          See `README.md` in the source bundle for the full reviewer runbook.
+          BODY
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }} (Paper Reproduction)
+          name: Release ${{ github.ref_name }} (SAS 2026 Artifact)
           body_path: dist/release_body.md
           files: |
             dist/sas26_reproduction.source.tar.gz
             dist/sas26_reproduction.manifest.txt
             dist/sas26_reproduction.checksums.txt
+            dist/proposition7-benchmark-artifact.tar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
