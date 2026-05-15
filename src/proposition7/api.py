@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from grammars import get_grammar, list_grammars, GRAMMARS
+from .grammars import get_grammar, GRAMMARS
 from .llm import ConstrainedModel
 from .models import get_model_class
 from .environment import ReasoningEnvironment
@@ -48,6 +48,8 @@ class Session:
         max_tokens: int = 50,
         reason: bool = False,
         think_budget: int = 200,
+        temperature: float = 0.0,
+        seed: Optional[int] = None,
     ) -> Result:
         if reason:
             env = ReasoningEnvironment(
@@ -55,6 +57,8 @@ class Session:
                 self.grammar,
                 think_budget=think_budget,
                 formal_budget=max_tokens,
+                temperature=temperature,
+                seed=seed,
             )
             r = env.generate(prompt, initial=initial)
             out = r.final_output
@@ -69,7 +73,8 @@ class Session:
             prompt=prompt,
             initial=initial,
             max_tokens=max_tokens,
-            grammar_name=self.grammar,
+            temperature=temperature,
+            seed=seed,
         )
         return Result(
             text=r.text,
@@ -87,8 +92,8 @@ def generate(
     initial: str = "",
     max_tokens: int = 50,
     reason: bool = False,
-    remote: bool = False,
-    gpu: str = "T4",
+    temperature: float = 0.0,
+    seed: Optional[int] = None,
     **kwargs,
 ) -> Result:
     """Generate typed, constrained output from a prompt.
@@ -103,10 +108,6 @@ def generate(
         remote: Deprecated remote path.
         gpu: Reserved for remote container launchers.
     """
-    if remote:
-        raise NotImplementedError(
-            "Remote generation is no longer exposed through the Python API."
-        )
     think_budget = kwargs.pop("think_budget", 200)
     if "device" not in kwargs and "device_map" not in kwargs:
         try:
@@ -124,6 +125,8 @@ def generate(
             grammar,
             think_budget=think_budget,
             formal_budget=max_tokens,
+            temperature=temperature,
+            seed=seed,
         )
         r = env.generate(prompt, initial=initial)
         out = r.final_output
@@ -138,7 +141,8 @@ def generate(
         prompt=prompt,
         initial=initial,
         max_tokens=max_tokens,
-        grammar_name=grammar,
+        temperature=temperature,
+        seed=seed,
     )
     return Result(
         text=r.text,

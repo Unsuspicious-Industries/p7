@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional, Tuple, Union
 
-from grammars import get_grammar_info
+from .grammars import get_grammar_info
 
 # Mode strings used across the benchmark and environment.
 BENCHMARK_MODES = frozenset({
@@ -269,6 +269,7 @@ class ReasoningEnvironment:
         formal_budget: int = 100,
         system_prompt: Optional[str] = None,
         temperature: float = 0.0,
+        seed: Optional[int] = None,
     ):
         """
         Initialize the reasoning environment.
@@ -280,12 +281,14 @@ class ReasoningEnvironment:
             formal_budget: Max tokens per formal block
             system_prompt: Custom system prompt (auto-generated if None)
             temperature: Temperature for both think and formal generation
+            seed: Optional sampling seed for both generation phases
         """
         self.model = model
         self.grammar_name = grammar_name
         self.think_budget = think_budget
         self.formal_budget = formal_budget
         self.temperature = temperature
+        self.seed = seed
         self.system_prompt = system_prompt
 
         self.THINK_OPEN = self.model.think_open()
@@ -293,7 +296,7 @@ class ReasoningEnvironment:
 
         # Stop tokens for think mode
         self._think_stop = _dedupe(
-            self.model.stop_tokens_unconstrained(grammar_name) + [self.THINK_CLOSE]
+            self.model.stop_tokens_unconstrained() + [self.THINK_CLOSE]
         )
 
     def _unconstrained_start_includes_think(self) -> bool:
@@ -301,7 +304,7 @@ class ReasoningEnvironment:
         if not callable(start_tokens):
             return False
         try:
-            tokens = start_tokens(self.grammar_name)
+            tokens = start_tokens()
         except TypeError:
             tokens = start_tokens()
         think_open = self.THINK_OPEN.rstrip()
@@ -323,7 +326,7 @@ class ReasoningEnvironment:
             max_tokens=self.think_budget,
             temperature=self.temperature,
             stop_tokens=self._think_stop,
-            grammar_name=self.grammar_name,
+            seed=self.seed,
         )
 
         content = result.text
@@ -353,8 +356,8 @@ class ReasoningEnvironment:
             prompt=prompt,
             initial=initial,
             max_tokens=self.formal_budget,
-            grammar_name=self.grammar_name,
             temperature=self.temperature,
+            seed=self.seed,
         )
 
         return (

@@ -352,6 +352,29 @@ def ensure_run_directory(
         paths.traces_jsonl.write_text("", encoding="utf-8")
 
 
+def write_results_summary(
+    config: BenchmarkConfig,
+    paths: RunPaths,
+    *,
+    task_count: int,
+    total_jobs: int,
+    planned_pending_jobs: int,
+) -> None:
+    summary = {
+        "run": config.run_name,
+        "tasks": task_count,
+        "matrices": [matrix.name for matrix in config.matrices],
+        "total_jobs": total_jobs,
+        "planned_pending_jobs": planned_pending_jobs,
+        "raw_jsonl": str(paths.raw_jsonl),
+        "completed_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    paths.results_json.write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Mode validation
 # ---------------------------------------------------------------------------
@@ -846,6 +869,13 @@ def main() -> None:
     ensure_run_directory(config, paths, resume=args.resume)
     for matrix in config.matrices:
         run_matrix(config, matrix, tasks, paths, resume=args.resume, dry_run=False)
+    write_results_summary(
+        config,
+        paths,
+        task_count=len(tasks),
+        total_jobs=total_jobs,
+        planned_pending_jobs=pending_jobs,
+    )
 
 
 if __name__ == "__main__":

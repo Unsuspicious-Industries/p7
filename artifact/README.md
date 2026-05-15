@@ -79,6 +79,17 @@ artifact-output/sas26-reproduction/raw.jsonl
 artifact-output/sas26-reproduction/results.json
 ```
 
+Process a completed run into CSV summaries with:
+
+```bash
+docker run --rm \
+  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
+  proposition7-benchmark-artifact:latest \
+  python benchmarks/agg.py \
+    --in benchmarks/out/sas26-reproduction/raw.jsonl \
+    --out-dir benchmarks/out/sas26-reproduction/processed
+```
+
 Models are downloaded at run time into the mounted `hf-cache/` directory. Keeping
 that cache outside the image prevents the Docker archive from containing model
 weights while still allowing resumed/repeated runs to reuse downloads.
@@ -93,7 +104,7 @@ docker run --rm --gpus all \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
   -v "$PWD/hf-cache:/cache/huggingface" \
   proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/paper.toml --resume
+  python benchmarks/run.py --config benchmarks/configs/mini-4b.toml --resume
 ```
 
 For local-only configs, omit `--env-file .env`. For OpenRouter-only configs,

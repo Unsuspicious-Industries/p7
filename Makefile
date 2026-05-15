@@ -6,7 +6,7 @@ OUTPUT_TAR ?= $(ROOT)/dist/proposition7-benchmark-artifact.tar
 OUTPUT_BUNDLE ?= $(ROOT)/dist/proposition7-review-bundle.tar.gz
 PYTHON_FILES := benchmarks/api.py benchmarks/run.py benchmarks/agg.py benchmarks/providers.py
 SHELL_FILES := scripts/build_artifact_image.sh
-TEST_FILES := tests/api.py tests/benchmarks_api.py tests/environment.py tests/grammar.py tests/llm_stop_tokens.py
+TEST_FILES := tests/api.py tests/benchmarks_api.py tests/grammar.py tests/generation_smoke.py
 RUN_CONFIG ?= benchmarks/configs/sas26_reproduction.toml
 RUN_ARGS ?= --resume
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import List, Optional
+from collections.abc import Sequence
 
 from ..llm import ConstrainedModel
 
@@ -24,8 +24,12 @@ class ChatConstrainedModel(ConstrainedModel):
                 continue
         return prompt_text
 
-    def _set_prompt(self, prompt: str, initial: str, start_tokens: List[str]) -> None:
-        import torch
+    def _set_prompt(
+        self,
+        prompt: str,
+        initial: str,
+        start_tokens: Sequence[str] = (),
+    ) -> None:
         formatted = self.format_prompt(prompt + "".join(start_tokens))
         # When initial opens a think block (think phase), strip the pre-closed
         # empty block that enable_thinking=False injects (<think>\n\n</think>\n\n).

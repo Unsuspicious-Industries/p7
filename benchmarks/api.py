@@ -485,7 +485,6 @@ def run_interaction(
                 prompt=interaction.prompt,
                 initial=interaction.initial,
                 max_tokens=interaction.max_tokens,
-                grammar_name=interaction.grammar_name,
                 seed=seed,
                 temperature=temperature,
             )
@@ -495,7 +494,6 @@ def run_interaction(
                 initial=interaction.initial,
                 max_tokens=interaction.max_tokens,
                 temperature=temperature,
-                grammar_name=interaction.grammar_name,
                 seed=seed,
             )
         else:
@@ -668,6 +666,7 @@ def run_mixed_generation(
         think_budget=think_budget,
         formal_budget=interaction.max_tokens,
         temperature=temperature,
+        seed=seed,
     )
     env_result = env.generate(
         interaction.prompt,
@@ -709,7 +708,7 @@ def run_unconstrained_thinking_generation(
     start_fn = getattr(model, "start_tokens_unconstrained", None)
     if callable(start_fn):
         try:
-            toks = start_fn(interaction.grammar_name)
+            toks = start_fn()
             if any(str(t).rstrip() == think_open.rstrip() for t in toks):
                 think_initial = ""
         except Exception:
@@ -724,7 +723,6 @@ def run_unconstrained_thinking_generation(
         initial=think_initial,
         max_tokens=think_budget,
         temperature=temperature,
-        grammar_name=interaction.grammar_name,
         seed=seed,
     )
     thoughts = think_result.text.strip()
@@ -751,7 +749,6 @@ def run_unconstrained_thinking_generation(
         initial=interaction.initial,
         max_tokens=interaction.max_tokens,
         temperature=temperature,
-        grammar_name=interaction.grammar_name,
         seed=seed,
     )
     result = proposition7.GenerationResult(

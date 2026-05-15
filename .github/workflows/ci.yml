@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Unit tests (no model)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: pip install --user uv==0.11.1
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Run unit tests
+        run: uv run python -m pytest tests/api.py tests/grammar.py tests/benchmarks_api.py -v
+
+  generation-smoke:
+    name: Generation smoke (gpt2 on CPU)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install CPU-only torch and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e ".[transformers,dev]"
+
+      - name: Run generation smoke tests
+        run: python -m pytest tests/generation_smoke.py -v
+
+  benchmark-dry-run:
+    name: Benchmark dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: pip install --user uv==0.11.1
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Run benchmark dry-run
+        run: uv run python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
+
+  docker-artifact:
+    name: Build Docker artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build artifact
+        run: make artifact
+
+      - name: Verify dist outputs
+        run: |
+          test -f dist/proposition7-benchmark-artifact.tar
+          test -f dist/proposition7-review-bundle.tar.gz
+          test -f dist/proposition7-review-manifest.txt
+
+      - name: Load and dry-run inside image
+        run: |
+          docker load -i dist/proposition7-benchmark-artifact.tar
+          docker run --rm proposition7-benchmark-artifact:latest \
+            python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
+
+  larger-models:
+    name: Larger model generation (manual only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        model:
+          - "EleutherAI/pythia-160m"
+          - "Qwen/Qwen3.5-0.8B"
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install CPU-only torch and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e ".[transformers,dev]"
+
+      - name: Run constrained generation with ${{ matrix.model }}
+        run: |
+          python -c "
+          import proposition7
+          grammar = proposition7.get_grammar('stlc')
+          model = proposition7.ConstrainedModel.from_pretrained(
+              '${{ matrix.model }}',
+              grammar=grammar,
+              device='cpu',
+          )
+          result = model.generate_constrained(
+              prompt='Write the identity function.',
+              initial='λx:Int.',
+              max_tokens=32,
+              seed=42,
+          )
+          print(f'text={result.text}')
+          print(f'complete={result.is_complete}')
+          print(f'stopped={result.stopped_reason}')
+          print(f'tokens={result.tokens_generated}')
+          assert result.tokens_generated > 0, 'no tokens generated'
+          assert result.text.startswith('λx:Int.'), f'bad prefix: {result.text}'
+          print('OK')
+          "

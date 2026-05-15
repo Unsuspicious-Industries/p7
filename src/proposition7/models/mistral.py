@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from ..llm import ConstrainedModel
 
 
 class MistralConstrainedModel(ConstrainedModel):
-    def stop_tokens_unconstrained(self, grammar_name: Optional[str] = None) -> List[str]:
+    def stop_tokens_unconstrained(self) -> List[str]:
         extra = ["</s>", "<s>"]
-        return self._dedupe_tokens(super().stop_tokens_unconstrained(grammar_name) + extra)
+        return self._dedupe_tokens(super().stop_tokens_unconstrained() + extra)
 
-    def stop_tokens_constrained(self, grammar_name: Optional[str] = None) -> List[str]:
+    def stop_tokens_constrained(self) -> List[str]:
         extra = ["</s>", "<s>"]
-        return self._dedupe_tokens(super().stop_tokens_constrained(grammar_name) + extra)
+        return self._dedupe_tokens(super().stop_tokens_constrained() + extra)

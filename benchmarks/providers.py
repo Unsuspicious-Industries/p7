@@ -71,11 +71,11 @@ class OpenRouterModel:
         initial: str = "",
         max_tokens: int = 50,
         temperature: float = 0.0,
-        grammar_name: Optional[str] = None,
+        top_k: int = 0,
         on_token: Optional[Callable[[str, int], None]] = None,
         seed: Optional[int] = None,
     ) -> GenerationResult:
-        del grammar_name
+        del top_k
         payload: dict[str, Any] = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": self._prompt(prompt, initial)}],
@@ -214,7 +214,6 @@ class OutlinesSyntaxModel:
         *,
         initial: str = "",
         max_tokens: int = 50,
-        grammar_name: Optional[str] = None,
         seed: Optional[int] = None,
         temperature: float = 0.0,
     ) -> GenerationResult:
@@ -222,7 +221,6 @@ class OutlinesSyntaxModel:
             prompt,
             initial=initial,
             max_tokens=max_tokens,
-            grammar_name=grammar_name or self.grammar_name,
             seed=seed,
             temperature=temperature,
         )

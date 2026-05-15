@@ -57,7 +57,6 @@ def main():
         prompt=prompt,
         initial=initial_code,
         max_tokens=args.max_tokens,
-        grammar_name=args.grammar,
     )
 
     print("\n--- Result ---")

@@ -78,7 +78,7 @@ jobs:
           sha256sum \
             dist/sas26_reproduction.source.tar.gz \
             dist/sas26_reproduction.manifest.txt \
-            > dist/sas26_reproduction.checksums.txt 
+            > dist/sas26_reproduction.checksums.txt
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:

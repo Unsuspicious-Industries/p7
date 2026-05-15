@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, List
 
 from .chat import ChatConstrainedModel
 
@@ -23,8 +23,8 @@ class DeepseekConstrainedModel(ChatConstrainedModel):
     def think_close(self) -> str:
         return "</think>"
 
-    def start_tokens_unconstrained(self, grammar_name: Optional[str] = None) -> List[str]:
+    def start_tokens_unconstrained(self) -> List[str]:
         return [self.think_open()]
 
-    def start_tokens_constrained(self, grammar_name: Optional[str] = None) -> List[str]:
+    def start_tokens_constrained(self) -> List[str]:
         return []

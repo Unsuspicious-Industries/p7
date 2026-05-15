@@ -120,29 +120,6 @@ GRAMMARS: Dict[str, Dict[str, Any]] = {
             ("concat", "beep:Fizz + boop:Fizz"),
         ],
     },
-    "lamb": {
-        "spec": _load_spec("lamb"),
-        "name": "Lamb",
-        "short": "lambda-calculus programs",
-        "description": "Lambench-style lambda-calculus submissions with top-level definitions",
-        "summary": (
-            "Lambench lambda-calculus program. Output one or more top-level definitions "
-            "@name = term, usually including @main. Terms are variables, global refs "
-            "@name, lambdas λx.body, parenthesized terms, and calls f(arg) or "
-            "f(arg1,arg2). Global refs may only refer to definitions written earlier; "
-            "forward and recursive refs are rejected. Lambda variables may shadow names."
-        ),
-        "syntax_hints": [
-            "Top-level definition: @name = term",
-            "Lambda: λname.term",
-            "Reference: @name",
-            "Application: f(x,y), meaning repeated application",
-        ],
-        "examples": [
-            ("identity", "@main = λx.x"),
-            ("helper", "@id = λx.x @main = @id"),
-        ],
-    },
 }
 
 

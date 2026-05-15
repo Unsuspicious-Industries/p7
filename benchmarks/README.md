@@ -36,7 +36,6 @@ Resolution is implemented per grammar because the languages do not have the same
 - `stlc`: `mode = "equivalence"`, with alpha/beta normalization and type checking against `resolution.type`.
 - `fun`: `mode = "value"`, using the Fun interpreter and comparing `resolution.value`.
 - `imp`: `mode = "env"`, using the Imp interpreter and comparing selected environment variables.
-- `lamb`: currently exact/equivalence text comparison after scoped grammar parse.
 - other grammars: exact/equivalence text fallback.
 
 All checked-in TOML tasks are validated by tests: expected outputs must parse and pass their own resolution.
@@ -102,16 +101,16 @@ pip install -e ".[transformers]"
 pip install -e ".[outlines]"  # only needed when a config includes outlines modes
 ```
 
-Run the full paper-oriented suite:
+Dry-run the full paper-reproduction suite:
 
 ```bash
-python benchmarks/run.py --config benchmarks/configs/paper.toml
+python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
 ```
 
 Benchmarks are repository tools rather than part of the published PyPI package, so run them from a checkout:
 
 ```bash
-python benchmarks/run.py --config benchmarks/configs/paper.toml
+python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
 ```
 
 Resume an interrupted run without overwriting data:
@@ -125,7 +124,7 @@ Every fresh run creates a dedicated run directory under `run.output_root/run.nam
 Process a finished run into CSV summaries:
 
 ```bash
-python benchmarks/agg.py --in benchmarks/out/paper/raw.jsonl --out-dir benchmarks/out/paper/processed
+python benchmarks/agg.py --in benchmarks/out/sas26-reproduction/raw.jsonl --out-dir benchmarks/out/sas26-reproduction/processed
 ```
 
 ## Config Format
@@ -179,7 +178,7 @@ modes = ["unconstrained", "unconstrained_cleaned"]
 time. The runner does not execute multiple models or matrices concurrently in a
 single process.
 
-For deployable split runs, use `benchmarks/configs/deploy_constrained.toml` for GPU-backed constrained modes and `benchmarks/configs/openrouter_closed.toml` for closed-model unconstrained modes.
+Use `benchmarks/configs/mini-4b.toml` or `benchmarks/configs/small-models.toml` for smaller local-only runs before launching the full reproduction config.
 
 ## Resume Safety
 
@@ -196,6 +195,5 @@ Changing a TOML task or resolution will not reuse stale rows. The raw JSONL line
 ## Validation
 
 ```bash
-pytest -q tests/benchmarks_api.py
-pytest -q
+make test
 ```

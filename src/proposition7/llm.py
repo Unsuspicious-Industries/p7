@@ -1,9 +1,22 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Callable, Dict, List, Optional
-import torch
+
+try:
+    import torch
+except ImportError:  # pragma: no cover - exercised in packaging/import smoke tests
+    torch = None  # type: ignore[assignment]
 
 from .inference import GenerationResult
+
+
+def _require_torch():
+    if torch is None:
+        raise ImportError(
+            "Local generation requires torch. Install with `pip install -e '.[transformers]'`."
+        )
+    return torch
 
 
 def _dedupe(tokens: List[str]) -> List[str]:
@@ -43,6 +56,7 @@ def set_generation_seed(seed: Optional[int]) -> None:
         return
     import random
 
+    torch = _require_torch()
     random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -59,6 +73,7 @@ def _masked_entropy_bits(masked_logits: torch.Tensor) -> float:
     log₂(0) = -inf.  Returns 0.0 for a fully masked or single-token
     distribution.
     """
+    torch = _require_torch()
     finite_mask = torch.isfinite(masked_logits)
     if not finite_mask.any():
         return 0.0
@@ -127,6 +142,7 @@ class ConstrainedModel:
         device: str = "cpu",
         **model_kwargs,
     ) -> "ConstrainedModel":
+        torch = _require_torch()
         tokenizer, model = cls.load_model_and_tokenizer(model_name, **model_kwargs)
 
         if "device_map" in model_kwargs:
@@ -154,12 +170,10 @@ class ConstrainedModel:
     def think_close(self) -> str:
         return "</think>"
 
-    def start_tokens_unconstrained(
-        self, grammar_name: Optional[str] = None
-    ) -> List[str]:
+    def start_tokens_unconstrained(self) -> List[str]:
         return []
 
-    def start_tokens_constrained(self, grammar_name: Optional[str] = None) -> List[str]:
+    def start_tokens_constrained(self) -> List[str]:
         return []
 
     def get_grammar_obj(self) -> str:
@@ -233,13 +247,9 @@ class ConstrainedModel:
             + self._token_ids_for_stop_tokens(stop_tokens)
         )
 
-    def stop_tokens_unconstrained(
-        self, grammar_name: Optional[str] = None
-    ) -> List[str]:
-        tokens = self._tokenizer_stop_tokens() + [self.think_close()]
-        return _dedupe(tokens)
 
-    def stop_tokens_constrained(self, grammar_name: Optional[str] = None) -> List[str]:
+
+    def stop_tokens(self) -> List[str]:
         tokens = self._tokenizer_stop_tokens()
         # Also include generation stop tokens (eos from generation config)
         stop_ids = self._generation_stop_token_ids()
@@ -259,7 +269,18 @@ class ConstrainedModel:
         tokens.extend(extra)
         return _dedupe(tokens)
 
-    def _set_prompt(self, prompt: str, initial: str, start_tokens: List[str]) -> None:
+    def stop_tokens_unconstrained(self) -> List[str]:
+        return self.stop_tokens()
+
+    def stop_tokens_constrained(self) -> List[str]:
+        return self.stop_tokens()
+
+    def _set_prompt(
+        self,
+        prompt: str,
+        initial: str,
+        start_tokens: Sequence[str] = (),
+    ) -> None:
         encoded = self.tokenizer(
             self.format_prompt(prompt + "".join(start_tokens)) + initial,
             return_tensors="pt",
@@ -269,6 +290,7 @@ class ConstrainedModel:
         self._pending_input_ids = self._input_ids
 
     def _append_token(self, token: str) -> None:
+        torch = _require_torch()
         token_ids = self.tokenizer.encode(token, add_special_tokens=False)
         if not token_ids:
             return
@@ -285,6 +307,7 @@ class ConstrainedModel:
         )
 
     def _append_token_id(self, token_id: int) -> None:
+        torch = _require_torch()
         new_ids = torch.tensor([[token_id]], device=self.device)
         self._input_ids = (
             new_ids
@@ -302,6 +325,7 @@ class ConstrainedModel:
         return logits.float().cpu().tolist()
 
     def _get_logits_tensor(self):
+        torch = _require_torch()
         input_ids = self._pending_input_ids
         if input_ids is None:
             input_ids = self._input_ids[:, -1:]
@@ -346,7 +370,6 @@ class ConstrainedModel:
         self,
         logits: torch.Tensor,
         accumulated_input: str,
-        grammar_spec: str,
         stop_tokens: set[str],
         stop_token_ids: set[int],
         greedy=False,
@@ -380,6 +403,7 @@ class ConstrainedModel:
         retries: grammar-rejected candidates before the accepted token was found.
             High values indicate grammatically sparse positions in the lattice.
         """
+        torch = _require_torch()
         # JANK: aufbau uses regex-based tokenization on the raw character string.
         # try_feed() treats its argument as a whitespace-delimited unit, so feeding
         # an LM sub-word token like ' 3' after '4' would produce '4 3' (two grammar
@@ -402,8 +426,8 @@ class ConstrainedModel:
         pre_entropy = _masked_entropy_bits(logits)
 
         stop_token_ids = set(stop_token_ids)
-        # Single reusable synthesizer — set_input fully resets state each call.
-        test_synth = aufbau.Synthesizer(grammar_spec, "")
+        # Single reusable synthesizer 
+        test_synth = aufbau.Synthesizer(self.grammar, "")
         retries = 0
 
         for _ in range(max_retries):
@@ -468,12 +492,12 @@ class ConstrainedModel:
                 retries += 1
                 continue
 
-            # Valid grammar token accepted — compute post-mask entropy at this
+            # Valid grammar token accepted, we compute post-mask entropy at this
             # point (grammar-valid tokens only, minus retry-excluded tokens).
             post_entropy = _masked_entropy_bits(valid_logits)
             return token_id, token, False, accumulated_input + token_content, pre_entropy, post_entropy, retries
 
-        # Exhausted all retries — no valid token found.
+        # Exhausted all retries, return no valid token found.
         return None, None, False, accumulated_input, pre_entropy, 0.0, retries
 
     def generate_constrained(
@@ -481,22 +505,18 @@ class ConstrainedModel:
         prompt: str = "",
         initial: str = "",
         max_tokens: int = 50,
-        grammar_name: Optional[str] = None,
-        seed: Optional[int] = None,
         temperature: float = 0.0,
-        top_k: Optional[int] = None,
+        seed: Optional[int] = None,
+        logit_filter: Optional[Callable[[torch.Tensor, str], Any]] = None,
     ) -> GenerationResult:
-        if top_k is not None:
-            pass
         import aufbau
 
+        torch = _require_torch()
         set_generation_seed(seed)
-        self._set_prompt(prompt, initial, self.start_tokens_constrained(grammar_name))
-        stop_tokens = set(self.stop_tokens_constrained(grammar_name))
+        self._set_prompt(prompt, initial, self.start_tokens_constrained())
+        stop_tokens = set(self.stop_tokens_constrained())
         stop_token_ids = set(self._stop_token_ids(list(stop_tokens)))
-        from proposition7 import get_grammar
-        grammar_spec = get_grammar(grammar_name)
-        synthesizer = aufbau.Synthesizer(grammar_spec, "")
+        synthesizer = aufbau.Synthesizer(self.grammar, "")
 
         if initial:
             try:
@@ -522,11 +542,15 @@ class ConstrainedModel:
         for _ in range(max_tokens):
             try:
                 logits = self._get_logits_tensor()
+                if logit_filter is not None:
+                    filtered = logit_filter(logits, accumulated_input)
+                    if not isinstance(filtered, torch.Tensor):
+                        filtered = torch.tensor(filtered, dtype=logits.dtype, device=logits.device)
+                    logits = filtered.to(device=logits.device, dtype=logits.dtype)
                 token_id, token, is_stop, accumulated_input, pre_entropy, post_entropy, retries = (
                     self._constrained_sample_with_masking(
                         logits,
                         accumulated_input,
-                        grammar_spec,
                         stop_tokens,
                         stop_token_ids,
                         temperature=temperature,
@@ -560,7 +584,7 @@ class ConstrainedModel:
                 fed = False
             if not fed:
                 # Check if accumulated_input is complete using fresh synthesizer state
-                check_synth = aufbau.Synthesizer(grammar_spec, "")
+                check_synth = aufbau.Synthesizer(self.grammar, "")
                 check_synth.set_input(accumulated_input)
                 try:
                     check_synth.parse()
@@ -581,7 +605,7 @@ class ConstrainedModel:
             self._append_token_id(token_id)
 
         # Final is_complete check on accumulated_input
-        final_synth = aufbau.Synthesizer(grammar_spec, "")
+        final_synth = aufbau.Synthesizer(self.grammar, "")
         final_synth.set_input(accumulated_input)
         try:
             final_synth.parse()
@@ -600,8 +624,12 @@ class ConstrainedModel:
             step_retries=step_retries,
         )
 
-    def _sample_unconstrained(self, temperature: float) -> int:
+    def _sample_unconstrained(self, temperature: float, top_k: int = 0) -> int:
+        torch = _require_torch()
         logits = self._get_logits_tensor().float()
+        if top_k > 0 and top_k < logits.numel():
+            top_values, _ = torch.topk(logits, top_k)
+            logits = logits.masked_fill(logits < top_values[-1], float("-inf"))
         if temperature == 0.0:
             return torch.argmax(logits).item()
         logits = logits / max(temperature, 1e-6)
@@ -615,23 +643,20 @@ class ConstrainedModel:
         max_tokens: int = 50,
         temperature: float = 0.0,
         stop_tokens: Optional[List[str]] = None,
-        grammar_name: Optional[str] = None,
         seed: Optional[int] = None,
-        top_k: Optional[int] = None,
+        top_k: int = 0,
     ) -> GenerationResult:
-        if top_k is not None:
-            pass
         set_generation_seed(seed)
-        stop_tokens = stop_tokens or self.stop_tokens_unconstrained(grammar_name)
+        stop_tokens = stop_tokens or self.stop_tokens_unconstrained()
         stop_token_ids = set(self._stop_token_ids(list(stop_tokens)))
-        self._set_prompt(prompt, initial, self.start_tokens_unconstrained(grammar_name))
+        self._set_prompt(prompt, initial, self.start_tokens_unconstrained())
 
         generated_ids: List[int] = []
         tokens_generated = 0
         stopped_reason = "max_tokens"
 
         for _ in range(max_tokens):
-            sampled = self._sample_unconstrained(temperature)
+            sampled = self._sample_unconstrained(temperature, top_k=top_k)
             if sampled in stop_token_ids:
                 stopped_reason = f"stop_token:{self._stop_token_label(sampled, None)}"
                 break

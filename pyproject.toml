@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Type-aware constrained decoding for LLMs using the Proposition 7 grammar format"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.13"
 authors = [
     { name = "Paul Kronlund-Drouault" }
 ]

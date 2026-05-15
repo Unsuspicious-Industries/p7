@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from .chat import ChatConstrainedModel
 
@@ -22,17 +22,13 @@ class PleiasConstrainedModel(ChatConstrainedModel):
     def think_close(self) -> str:
         return "</think>"
 
-    def start_tokens_unconstrained(
-        self, grammar_name: Optional[str] = None
-    ) -> List[str]:
+    def start_tokens_unconstrained(self) -> List[str]:
         return [self.think_open()]
 
-    def start_tokens_constrained(self, grammar_name: Optional[str] = None) -> List[str]:
+    def start_tokens_constrained(self) -> List[str]:
         return []
 
-    def stop_tokens_unconstrained(
-        self, grammar_name: Optional[str] = None
-    ) -> List[str]:
+    def stop_tokens_unconstrained(self) -> List[str]:
         extra = [
             "<|end_of_text|>",
             "<|begin_of_text|>",
@@ -41,10 +37,10 @@ class PleiasConstrainedModel(ChatConstrainedModel):
             "<|im_start|>",
         ]
         return self._dedupe_tokens(
-            super().stop_tokens_unconstrained(grammar_name) + extra
+            super().stop_tokens_unconstrained() + extra
         )
 
-    def stop_tokens_constrained(self, grammar_name: Optional[str] = None) -> List[str]:
+    def stop_tokens_constrained(self) -> List[str]:
         extra = [
             "<|end_of_text|>",
             "<|begin_of_text|>",
@@ -53,7 +49,7 @@ class PleiasConstrainedModel(ChatConstrainedModel):
             "<|im_start|>",
         ]
         return self._dedupe_tokens(
-            super().stop_tokens_constrained(grammar_name) + extra
+            super().stop_tokens_constrained() + extra
         )
 
     def format_prompt(self, prompt_text: str) -> str:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from aufbau import Synthesizer
 
-from grammars import (
+from .grammars import (
     GRAMMARS,
     get_grammar,
     get_grammar_info,

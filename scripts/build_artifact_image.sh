@@ -47,6 +47,7 @@ create_source_bundle() {
     --exclude="$root_name/.nix-pip" \
     --exclude="$root_name/.pytest_cache" \
     --exclude="$root_name/.ruff_cache" \
+    --exclude="$root_name/**/*.egg-info" \
     --exclude="$root_name/.venv" \
     --exclude="$root_name/.venv-nix" \
     --exclude="$root_name/.vscode" \
