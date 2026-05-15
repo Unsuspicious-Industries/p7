@@ -76,6 +76,10 @@ jobs:
       - name: Load and dry-run inside image
         run: |
           docker load -i dist/proposition7-benchmark-artifact.tar
+          # podman saves with localhost/ prefix; ensure the unqualified tag exists
+          if ! docker image inspect proposition7-benchmark-artifact:latest >/dev/null 2>&1; then
+            docker tag localhost/proposition7-benchmark-artifact:latest proposition7-benchmark-artifact:latest
+          fi
           docker run --rm proposition7-benchmark-artifact:latest \
             python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
 
