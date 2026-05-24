@@ -106,7 +106,6 @@ modes = ["unconstrained"]
 name = "text-reference-openrouter-raw"
 backend = "openrouter"
 models = [
-  # Section 6 notes GPT-5.3 reached 100% as a reference point.
   "openai/gpt-5.3-codex",
 ]
 modes = ["unconstrained"]
