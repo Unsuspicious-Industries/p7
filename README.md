@@ -8,7 +8,8 @@ This README covers local installation,
 local generation, Docker artifact checks, benchmark reproduction, expected
 outputs, and validation commands.
 
-Benchmark runs are configured by TOML files, typically stored in `benchmarks/configs`.
+Benchmark runs are configured by TOML files, typically stored in `benchmarks/configs`. More information about the config format is given in the benchmark [README](./benchmarks/README.md)
+Configs are used for ensuring the reproducibility of benchmarks runs. Running a config twice should yield the same results (without taking into account runtime numerical difference and potentially non-deterministic sampling).
 The benchmarks outputs are by default in the `benchmarks/out/<run-name>` folder, where run name depends on the config used. Config name is defined in the top of the TOML file. 
 
 ## What Is Included
@@ -254,11 +255,10 @@ Matrix meaning:
 - `fig7-frontier-constrained`: larger local constrained rows used in the Figure
   7 leaderboard.
 - `fig7-openrouter-raw`: closed/frontier OpenRouter raw baseline rows for Figure
-  7.
-- `text-reference-openrouter-raw`: reference closed-model row discussed in the
-  text.
+  7 leaderboard.
+- `text-reference-openrouter-raw`: reference for 100% pass rate with GPT-5.3-codex
 
-## Run A Small GPU Smoke Benchmark
+## Run A Small GPU Benchmark
 
 Before launching the full reproduction, run a smaller local-only config on a GPU
 server. This checks real model loading, constrained generation, benchmark output,
