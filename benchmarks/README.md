@@ -58,16 +58,25 @@ Outlines modes are constraint engine modes, not benchmark backends. The benchmar
 
 ## Artifact Docker
 
-Build the reviewable Docker image tarball and source bundle:
+The canonical image is on GHCR. Pull it and (optionally) retag to the short
+name used by the commands below:
+
+```bash
+docker pull ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest
+docker tag  ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest \
+            proposition7-benchmark-artifact:latest
+```
+
+To build from source instead:
 
 ```bash
 make artifact
+docker load -i dist/proposition7-benchmark-artifact.tar
 ```
 
 The image has no config-specific entrypoint. Invoke the runner explicitly:
 
 ```bash
-docker load -i dist/proposition7-benchmark-artifact.tar
 docker run --rm proposition7-benchmark-artifact:latest \
   python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
 ```

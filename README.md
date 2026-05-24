@@ -134,7 +134,6 @@ Expected behavior:
 
 Because `gpt2` is a tiny non-code model, do not use this example to judge paper
 performance. It is a local installation and constrained-decoding smoke test.
-I
 
 ### GPU Example
 
@@ -196,33 +195,29 @@ print(result.complete)
 
 ## Docker Artifact
 
-Build the review artifact through the unified Makefile:
+The canonical image is on GHCR. See also the
+[`sas-artifact-v2` release page](https://github.com/Unsuspicious-Industries/p7/releases/tag/sas-artifact-v2).
+
+```bash
+docker pull ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest
+docker tag  ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest \
+            proposition7-benchmark-artifact:latest
+```
+
+The retag lets the `docker run` commands below use the short name.
+
+To build from source instead:
 
 ```bash
 make artifact
-```
-
-This produces:
-
-```text
-dist/proposition7-benchmark-artifact.tar
-dist/proposition7-review-bundle.tar.gz
-dist/proposition7-review-manifest.txt
-dist/proposition7-review.git-status.txt
-dist/proposition7-review.source-diff.patch
-```
-
-The Docker image contains the repository snapshot, benchmark configs, and Python
-dependencies. It does not contain API keys, model weights, model caches,
-benchmark outputs, ...
-
-Load the image:
-
-```bash
 docker load -i dist/proposition7-benchmark-artifact.tar
 ```
 
-If you use Podman, replace `docker` with `podman` in the commands below.
+The image contains the repository snapshot, benchmark configs, and Python
+dependencies. It does not contain API keys, model weights, model caches,
+benchmark outputs, or local backups.
+
+Replace `docker` with `podman` if needed.
 
 ## Dry-Run The Paper Config
 
@@ -298,13 +293,23 @@ artifact-output/mini-4b/processed/process_stats.json
 
 ## Run The Full SAS Reproduction
 
-The full reproduction contains local GPU rows and OpenRouter rows. Create an
-environment file before running configs that include OpenRouter models:
+The full reproduction contains local GPU rows and OpenRouter rows.
+
+### OpenRouter API Key
+
+Only `sas26_reproduction.toml` has OpenRouter rows and needs an API key.
+`mini-4b.toml`, `small-models.toml`, and `simple.toml` are local-only; run them
+without `--env-file .env`.
 
 ```bash
 printf 'OPENROUTER_API_KEY=YOUR_KEY_HERE\n' > .env
 mkdir -p artifact-output hf-cache
 ```
+
+The runner reads `.env` via the `--env-file` flag (path configurable in
+`[openrouter] env_file`).
+
+### Run
 
 Run the full reproduction on a GPU host:
 
