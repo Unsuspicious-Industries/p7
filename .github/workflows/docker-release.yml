@@ -53,15 +53,6 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
 
-      - name: Build local tar for source bundle
-        run: |
-          docker buildx build \
-            --build-arg "PROPOSITION7_COMMIT=${{ github.sha }}" \
-            --tag "localhost/proposition7-benchmark-artifact:${{ github.ref_name }}" \
-            --file artifact/Dockerfile \
-            --output type=docker,dest=dist/proposition7-benchmark-artifact.tar \
-            .
-
       - name: Create source bundle, manifest and checksums
         run: |
           set -euxo pipefail
@@ -109,7 +100,7 @@ jobs:
           # Write manifest
           {
             printf 'image_name=%s\n' "${{ steps.meta.outputs.tag }}"
-            printf 'docker_archive=dist/proposition7-benchmark-artifact.tar\n'
+            printf 'docker_image=%s\n' "${{ steps.meta.outputs.tag }}"
             printf 'source_bundle=dist/sas26_reproduction.source.tar.gz\n'
             printf 'dockerfile=artifact/Dockerfile\n'
             printf 'config_dir=benchmarks/configs\n'
@@ -149,7 +140,7 @@ jobs:
           | `sas26_reproduction.source.tar.gz` | Full source tree (excludes caches, model weights, `.env`) |
           | `sas26_reproduction.manifest.txt` | SHA256 checksums for configs, Dockerfile, and dependency lockfile |
           | `sas26_reproduction.checksums.txt` | Checksums for the release assets above |
-          | `proposition7-benchmark-artifact.tar` | Docker image archive (load with `docker load -i`) |
+          | _(GHCR only)_ | Docker image — too large for release assets; pull via `docker pull` below |
 
           ### Docker image
 
@@ -157,12 +148,6 @@ jobs:
 
           ```bash
           docker pull ghcr.io/unsuspicious-industries/proposition7-benchmark-artifact:latest
-          ```
-
-          Or load from the attached tar:
-
-          ```bash
-          docker load -i proposition7-benchmark-artifact.tar
           ```
 
           ---
@@ -270,6 +255,5 @@ jobs:
             dist/sas26_reproduction.source.tar.gz
             dist/sas26_reproduction.manifest.txt
             dist/sas26_reproduction.checksums.txt
-            dist/proposition7-benchmark-artifact.tar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
