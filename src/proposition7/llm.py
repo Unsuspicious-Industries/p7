@@ -434,7 +434,6 @@ class ConstrainedModel:
             if not valid_mask.any():
                 return None, None, False, accumulated_input, pre_entropy, 0.0, retries
 
-            # --- sample from the masked distribution ----------------------------
             # Zero-out invalid logits with -inf so softmax assigns them p=0.
             valid_logits = logits.masked_fill(~valid_mask, float("-inf"))
 
@@ -539,7 +538,8 @@ class ConstrainedModel:
         step_entropies: list[float] = []
         step_retries: list[int] = []
 
-        for _ in range(max_tokens):
+        for i in range(max_tokens):
+            print(f"Step {i}")
             try:
                 logits = self._get_logits_tensor()
                 if logit_filter is not None:

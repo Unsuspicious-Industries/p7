@@ -1,4 +1,4 @@
-# proposition7
+# Proposition 7
 
 The `proposition7` package is a constrained decoding interface for the `aufbau` prefix parsing engine. 
 It implements type-aware constrained generation and the benchmark runner used to
@@ -171,7 +171,7 @@ result = model.generate_unconstrained(
     top_k=50,
     temperature=0.8,
 )
-```
+```https://www.cs.cmu.edu/~fp/courses/15814-f21/lectures/11-elab.pdf
 
 ### High-Level Helper
 
@@ -182,10 +182,10 @@ small `Result` object:
 import proposition7
 
 result = proposition7.generate(
-    "identity function",
-    model="gpt2",
-    grammar="stlc",
-    initial="λx:Int.",
+    "Define an x variable of type Int and value 2 and add 1 to it",
+    model="Qwen/Qwen3.5-0.8B",
+    grammar="imp",
+    initial="{ let",
     max_tokens=20,
 )
 
@@ -466,5 +466,5 @@ works on the host.
 
 Out-of-memory during a local model row:
 
-Use a smaller config/model, reduce concurrency, or run on a larger GPU. The full
-SAS reproduction is intended for a GPU server, not a laptop.
+Use a smaller config/model, reduce concurrency, or run on a larger GPU.
+The full SAS reproduction is intended for a large GPU server. The paper figures were produced on an RTX PRO 6000 (96G). 
