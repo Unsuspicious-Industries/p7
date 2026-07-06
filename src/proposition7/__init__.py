@@ -4,10 +4,12 @@ from aufbau import Synthesizer
 
 from grammars import (
     GRAMMARS,
+    base_grammar,
     get_grammar,
     get_grammar_info,
     get_grammar_summary,
     list_grammars,
+    strip_typing_rules,
 )
 from .inference import GenerationResult
 from .llm import ConstrainedModel
@@ -63,6 +65,8 @@ __all__ = [
     "get_grammar",
     "get_grammar_info",
     "get_grammar_summary",
+    "base_grammar",
+    "strip_typing_rules",
 ]
 
 __version__: str = "0.1.0"

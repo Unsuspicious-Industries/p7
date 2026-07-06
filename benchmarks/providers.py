@@ -74,8 +74,11 @@ class OpenRouterModel:
         grammar_name: Optional[str] = None,
         on_token: Optional[Callable[[str, int], None]] = None,
         seed: Optional[int] = None,
+        top_k: Optional[int] = None,
     ) -> GenerationResult:
-        del grammar_name
+        # grammar_name/top_k complete the uniform generate_unconstrained
+        # signature but have no remote-API analogue: accepted and ignored.
+        del grammar_name, top_k
         payload: dict[str, Any] = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": self._prompt(prompt, initial)}],

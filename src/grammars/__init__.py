@@ -7,15 +7,10 @@ from typing import Any, Dict, List
 def _load_spec(name: str) -> str:
     """Load a grammar spec from bundled specs, falling back to aufbau repo."""
     # 1. Bundled in package (works in Docker / pip installs)
-    bundled = Path(__file__).resolve().parent /  f"{name}.auf"
+    bundled = Path(__file__).resolve().parent / f"{name}.auf"
     if not bundled.exists():
-        raise FileNotFoundError(
-            f"Grammar spec '{name}' not found. "
-            f"Checked: {bundled}"
-        )
+        raise FileNotFoundError(f"Grammar spec '{name}' not found. Checked: {bundled}")
     return bundled.read_text(encoding="utf-8")
-
-    
 
 
 # Unified grammar information: spec content + metadata for prompt construction.
@@ -45,58 +40,35 @@ GRAMMARS: Dict[str, Dict[str, Any]] = {
             ("apply", "λf:(Int->Bool).λx:Int.(f x)"),
         ],
     },
-    "imp": {
-        "spec": _load_spec("imp"),
-        "name": "IMP",
-        "short": "typed imperative programs",
-        "description": "Typed imperative language with assignments, conditionals, and loops",
+    "ml": {
+        "spec": _load_spec("ml"),
+        "name": "ML",
+        "short": "well-typed OCaml-subset programs",
+        "description": "Monomorphic ML (strict OCaml subset): functions, pairs, lists, match, let rec",
         "summary": (
-            "Typed imperative block language. A program is { statements }. Statements: "
-            "let x: Int = expr; or Bool, assignment x = expr;, if (cond) { ... } "
-            "else { ... }, and while (cond) { ... }. Expressions include integers, "
-            "booleans, variables, Int arithmetic + - * /, and Int comparisons "
-            "== != < <= > >= returning Bool. Declare variables before use and assign "
-            "values of the same type."
+            "Monomorphic ML, a strict OCaml subset: every program is also valid OCaml. "
+            "One expression per program. Lambda: fun (x : int) -> body. Application: "
+            "f(arg). Pairs: (a, b) with fst/snd. Lists: [] and h :: t, typed t list. "
+            "match xs with [] -> e1 | h :: t -> e2. let x : t = v in body and "
+            "let rec f : t -> u = fun (x : t) -> ... in body. Types: int, bool, "
+            "t list, t * u, t -> u. Int ops + -, comparisons = < <= > >= return bool. "
+            "assert false inhabits any type."
         ),
         "syntax_hints": [
-            "Programs are wrapped in { ... }",
-            "Assignment: let x: Type = value;",
-            "Arithmetic values: x + y, x - 1, a * b",
-            "Conditionals: if (cond) { ... } else { ... }",
-            "Loops: while (cond) { ... }",
+            "Lambda: fun (x : int) -> expr",
+            "Application: f(arg)",
+            "Lists: 1 :: 2 :: [] of type int list",
+            "match xs with [] -> e1 | h :: t -> e2",
+            "let x : int = 5 in body / let rec f : int -> int = fun (n : int) -> ... in body",
+            "assert false has any type (divergence)",
         ],
         "examples": [
-            ("assignment", "{ let x: Int = 5; }"),
-            ("sequence", "{ let x: Int = 1; let y: Int = x + 2; }"),
-            ("if_else", "{ let x: Int = 1; if (x < 5) { let y: Int = x + 1; } else { let y: Int = 0; } }"),
-            ("while", "{ let counter: Int = 0; while (counter < 3) { counter = counter + 1; } }"),
-        ],
-    },
-    "fun": {
-        "spec": _load_spec("fun"),
-        "name": "Fun",
-        "short": "typed functional expressions",
-        "description": "ML-style functional language with let bindings and typed lambdas",
-        "summary": (
-            "Typed ML-style expression language. Top level is one expression. Literals: "
-            "Int, Float, Bool. Let: let x: Type = value; body. Lambda: "
-            "(x: Type) => body. Application: f(arg), with repeated calls allowed. "
-            "Types include Int, Float, Bool, and monomorphic function types A->B. "
-            "Use + - * / for Int and +. -. *. /. for Float. Variables are scoped by "
-            "lets and lambdas."
-        ),
-        "syntax_hints": [
-            "Lambda: (x: Type) => expr",
-            "Let binding: let x: Type = value; body",
-            "Function application: f(arg)",
-            "Int ops: + - * /, Float ops: +. -. *. /.",
-            "Literals include Int, Float, and Bool",
-        ],
-        "examples": [
-            ("identity", "(x: Int) => x"),
-            ("let_int", "let x: Int = 1; x + 2"),
-            ("apply_lambda", "((x: Int) => x + 1)(41)"),
-            ("float_math", "let f: Float = 1.5; f +. 2.0"),
+            ("identity", "fun (x : int) -> x"),
+            ("let", "let a : int = 5 in a + 1"),
+            (
+                "sum",
+                "let rec sum : int list -> int = fun (xs : int list) -> match xs with [] -> 0 | h :: t -> h + sum(t) in sum(1 :: 2 :: [])",
+            ),
         ],
     },
     "toy": {
@@ -120,30 +92,120 @@ GRAMMARS: Dict[str, Dict[str, Any]] = {
             ("concat", "beep:Fizz + boop:Fizz"),
         ],
     },
-    "lamb": {
-        "spec": _load_spec("lamb"),
-        "name": "Lamb",
-        "short": "lambda-calculus programs",
-        "description": "Lambench-style lambda-calculus submissions with top-level definitions",
+    "c": {
+        "spec": _load_spec("c"),
+        "name": "C",
+        "short": "well-typed, compilable C functions",
+        "description": "A typed C subset: real, compilable C, checked against cc as an external oracle",
         "summary": (
-            "Lambench lambda-calculus program. Output one or more top-level definitions "
-            "@name = term, usually including @main. Terms are variables, global refs "
-            "@name, lambdas λx.body, parenthesized terms, and calls f(arg) or "
-            "f(arg1,arg2). Global refs may only refer to definitions written earlier; "
-            "forward and recursive refs are rejected. Lambda variables may shadow names."
+            "A typed C subset: every accepted program is real, compilable C, checked "
+            "against `cc -fsyntax-only` as an external oracle. A program is one or "
+            "more function definitions, each of arbitrary arity, e.g. `int add(int x, "
+            "int y) { return x + y; }`. Base types: int, float, char, void, and "
+            "pointers (T*, T**, ...). Pointers: &e (address-of), *e (dereference). "
+            "Explicit casts: (T) e. Arithmetic is + - / only (no *, to keep pointer "
+            "syntax unambiguous). Control flow: if/else, while, for. A function may "
+            "call any function defined earlier in the same program (not itself: no "
+            "self-recursion). return is not checked against the declared return type."
         ),
         "syntax_hints": [
-            "Top-level definition: @name = term",
-            "Lambda: λname.term",
-            "Reference: @name",
-            "Application: f(x,y), meaning repeated application",
+            "Function: int add(int x, int y) { return x + y; }",
+            "Zero-arg: int f() { ... }",
+            "Pointers: int *p = &x; return *p;",
+            "Cast: int y = (int) x;",
+            "Arithmetic ops are + - / only, never * (reserved for pointers)",
+            "A function may call any earlier-defined function, never itself",
         ],
         "examples": [
-            ("identity", "@main = λx.x"),
-            ("helper", "@id = λx.x @main = @id"),
+            ("add", "int add(int x, int y) { return x + y; }"),
+            ("deref", "int deref(int *p) { return *p; }"),
+            (
+                "helper",
+                "int double_it(int x) { return x + x; }\nint sum_doubled(int a, int b) { return double_it(a) + double_it(b); }",
+            ),
+        ],
+    },
+    "tool": {
+        "spec": _load_spec("tool"),
+        "name": "Tool-call pipeline",
+        "short": "typed tool-calling pipelines",
+        "description": (
+            "An invented tool-calling DSL over a fixed typed tool registry: no "
+            "pretraining exposure, so it isolates the effect of grammar constraint "
+            "from memorized syntax"
+        ),
+        "summary": (
+            "A pipeline of typed tool calls against a fixed registry: "
+            "search(string) -> docs, summarize(docs) -> string, count(docs) -> int, "
+            "format(int) -> string. `let name = tool(arg);` binds a call's result "
+            "for later use; the program ends with `return value;`. Arguments are a "
+            "string/int literal or an already-bound variable of the matching type."
+        ),
+        "syntax_hints": [
+            'let r = search("query"); let s = summarize(r); return s;',
+            "Each tool takes exactly one argument of its declared type",
+            "A variable must be bound by an earlier let before it can be used",
+        ],
+        "examples": [
+            ("search_summarize", 'let r = search("agents"); let s = summarize(r); return s;'),
+            (
+                "count_format",
+                'let r = search("agents"); let n = count(r); let s = format(n); return s;',
+            ),
+        ],
+    },
+    "tool_sexpr": {
+        "spec": _load_spec("tool_sexpr"),
+        "name": "Tool-call pipeline (S-expression)",
+        "short": "typed tool-calling pipelines, S-expression syntax",
+        "description": (
+            "The same typed tool registry and typing rules as `tool`, in S-expression "
+            "syntax instead of semicolon-terminated statements — isolates the effect "
+            "of syntax choice from the underlying type discipline"
+        ),
+        "summary": (
+            "The same fixed tool registry as `tool` (search: string -> docs, "
+            "summarize: docs -> string, count: docs -> int, format: int -> string), "
+            "written as S-expressions: `(let name (tool arg))` binds a call's result; "
+            "the program ends with `(return value)`."
+        ),
+        "syntax_hints": [
+            '(let r (search "query")) (let s (summarize r)) (return s)',
+            "Each tool call is `(tool arg)` with exactly one argument",
+            "A variable must be bound by an earlier (let ...) before it can be used",
+        ],
+        "examples": [
+            (
+                "search_summarize",
+                '(let r (search "agents")) (let s (summarize r)) (return s)',
+            ),
         ],
     },
 }
+
+
+def strip_typing_rules(spec: str) -> str:
+    """Return a grammar spec with its typing rules removed.
+
+    Every bundled grammar separates its syntactic productions from its typing
+    rules with a ``// ... Typing Rules ...`` section header. Cutting from that
+    header onward yields a purely syntactic grammar."""
+    import re as _re
+
+    out: List[str] = []
+    for line in spec.splitlines():
+        if _re.match(r"^\s*//.*Typing Rules", line, _re.IGNORECASE):
+            break
+        out.append(line)
+    return "\n".join(out).rstrip() + "\n"
+
+
+def base_grammar(name: str) -> str:
+    """Strip a trailing `_syntactic` suffix, if present. A syntactic twin
+    (e.g. `imp_syntactic`) constrains generation with typing rules stripped,
+    but is still graded by its semantic base grammar's oracle."""
+    suffix = "_syntactic"
+    return name[: -len(suffix)] if name.endswith(suffix) else name
 
 
 def list_grammars() -> List[str]:

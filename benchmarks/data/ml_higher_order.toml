@@ -1,0 +1,17 @@
+id = "ml_higher_order"
+grammar = "ml"
+category = "ml:higher_order"
+max_tokens = 80
+
+[prompt]
+text = "Write a function taking an int-to-int function f and an int x, returning f applied to x."
+
+[initial]
+text = "fun (f : int -> int) ->"
+
+[expected]
+text = "fun (f : int -> int) -> fun (x : int) -> f(x)"
+
+[resolution]
+mode = "type"
+type = "(int -> int) -> int -> int"

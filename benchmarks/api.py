@@ -16,11 +16,7 @@ except ImportError:  # pragma: no cover - Python < 3.11
 
 import proposition7
 from proposition7 import build_task_prompt
-from benchmarks.oracles import (
-    check_resolution,
-    validate_fun_samples_schema,
-    validate_imp_samples_schema,
-)
+from benchmarks.oracles import check_resolution
 
 
 ROOT = Path(__file__).resolve().parent
@@ -122,38 +118,6 @@ def _validate_task_resolution(
             f"{path}: {task_id}: resolution.mode must be a non-empty string"
         )
 
-    if grammar == "fun":
-        allowed = {"exact", "equivalence", "value", "samples"}
-        if mode not in allowed:
-            raise ValueError(
-                f"{path}: {task_id}: unsupported fun resolution mode {mode!r}"
-            )
-        if mode == "samples":
-            try:
-                validate_fun_samples_schema(resolution.get("samples"))
-            except ValueError as error:
-                raise ValueError(
-                    f"{path}: {task_id}: invalid samples spec: {error}"
-                ) from error
-            if "fn" in resolution and not str(resolution.get("fn") or "").strip():
-                raise ValueError(
-                    f"{path}: {task_id}: resolution.fn must be a non-empty string"
-                )
-            if "hidden_samples" in resolution:
-                hidden = resolution["hidden_samples"]
-                try:
-                    hidden_int = int(hidden)
-                except Exception as error:
-                    raise ValueError(
-                        f"{path}: {task_id}: resolution.hidden_samples must be an int"
-                    ) from error
-                if hidden_int < 0:
-                    raise ValueError(
-                        f"{path}: {task_id}: resolution.hidden_samples must be >= 0"
-                    )
-        _validate_fun_structure(path, task_id, resolution.get("structure"))
-        return
-
     if grammar == "stlc":
         if mode not in {"exact", "equivalence"}:
             raise ValueError(
@@ -169,97 +133,36 @@ def _validate_task_resolution(
             raise ValueError(f"{path}: {task_id}: resolution.type must be non-empty")
         return
 
-    if grammar == "imp":
-        if mode not in {"exact", "env", "samples"}:
+    if grammar == "ml":
+        if mode not in {"exact", "type", "equivalence"}:
             raise ValueError(
-                f"{path}: {task_id}: unsupported imp resolution mode {mode!r}"
+                f"{path}: {task_id}: unsupported ml resolution mode {mode!r}"
             )
-        if mode == "env":
-            if "env" in resolution and not isinstance(resolution["env"], dict):
-                raise ValueError(f"{path}: {task_id}: resolution.env must be an object")
-            if "vars" in resolution:
-                vars_value = resolution["vars"]
-                if not isinstance(vars_value, list) or not all(
-                    isinstance(item, str) and item for item in vars_value
-                ):
-                    raise ValueError(
-                        f"{path}: {task_id}: resolution.vars must be a list of names"
-                    )
-        if mode == "samples":
-            try:
-                validate_imp_samples_schema(
-                    resolution.get("samples"),
-                    resolution.get("input_vars"),
-                    resolution.get("vars"),
-                )
-            except ValueError as error:
+        if mode in {"type", "equivalence"} and "type" in resolution:
+            if not str(resolution.get("type") or "").strip():
                 raise ValueError(
-                    f"{path}: {task_id}: invalid imp samples spec: {error}"
-                ) from error
-            if "hidden_samples" in resolution:
-                try:
-                    hidden_int = int(resolution["hidden_samples"])
-                except Exception as error:
-                    raise ValueError(
-                        f"{path}: {task_id}: resolution.hidden_samples must be an int"
-                    ) from error
-                if hidden_int < 0:
-                    raise ValueError(
-                        f"{path}: {task_id}: resolution.hidden_samples must be >= 0"
-                    )
-            if "input_domains" in resolution:
-                domains = resolution["input_domains"]
-                if not isinstance(domains, dict):
-                    raise ValueError(
-                        f"{path}: {task_id}: resolution.input_domains must be an object"
-                    )
-                for name, domain in domains.items():
-                    if not isinstance(name, str) or not name:
-                        raise ValueError(
-                            f"{path}: {task_id}: resolution.input_domains keys must be variable names"
-                        )
-                    if not isinstance(domain, dict):
-                        raise ValueError(
-                            f"{path}: {task_id}: resolution.input_domains.{name} must be an object"
-                        )
-                    if "min" in domain:
-                        int(domain["min"])
-                    if "max" in domain:
-                        int(domain["max"])
+                    f"{path}: {task_id}: resolution.type must be a non-empty string"
+                )
+        return
+
+    if grammar == "c":
+        if mode not in {"exact", "type"}:
+            raise ValueError(
+                f"{path}: {task_id}: unsupported c resolution mode {mode!r}"
+            )
+        return
+
+    if grammar in {"tool", "tool_sexpr"}:
+        if mode not in {"exact", "type"}:
+            raise ValueError(
+                f"{path}: {task_id}: unsupported {grammar} resolution mode {mode!r}"
+            )
         return
 
     if mode not in {"exact", "equivalence"}:
         raise ValueError(
             f"{path}: {task_id}: unsupported {grammar} resolution mode {mode!r}"
         )
-
-
-def _validate_fun_structure(path: Path, task_id: str, structure: Any) -> None:
-    if structure is None:
-        return
-    if not isinstance(structure, dict):
-        raise ValueError(f"{path}: {task_id}: resolution.structure must be an object")
-    for key in ["let_bindings", "applications", "lambdas"]:
-        if key not in structure:
-            continue
-        try:
-            value = int(structure[key])
-        except Exception as error:
-            raise ValueError(
-                f"{path}: {task_id}: resolution.structure.{key} must be an int"
-            ) from error
-        if value < 0:
-            raise ValueError(
-                f"{path}: {task_id}: resolution.structure.{key} must be >= 0"
-            )
-    if "operations" in structure:
-        operations = structure["operations"]
-        if not isinstance(operations, list) or not all(
-            isinstance(op, str) and op for op in operations
-        ):
-            raise ValueError(
-                f"{path}: {task_id}: resolution.structure.operations must be a list of operators"
-            )
 
 
 def load_all_tasks() -> list[BenchmarkTask]:
@@ -346,12 +249,13 @@ def check_parse(spec: str, text: str) -> tuple[bool, bool, str]:
 
 
 def _code_start_pattern(gname: str) -> re.Pattern[str]:
+    gname = proposition7.base_grammar(gname)
     patterns = {
-        "imp": r"\{",
-        "lamb": r"@",
         "toy": r"\b(?:beep|boop|blorp)\b|\(",
-        "fun": r"\blet\b|\btrue\b|\bfalse\b|\d|\(",
         "stlc": r"λ|\(",
+        "c": r"\b(?:int|float|char|void)\b|\{",
+        "tool": r"\b(?:let|return)\b",
+        "tool_sexpr": r"\(",
         "typescript": r"\b(?:function|let|const|return|if)\b",
     }
     return re.compile(patterns.get(gname, r"\S"))
@@ -440,6 +344,41 @@ def classify(
     return "task_failed"
 
 
+def rejection_reason(
+    error: str,
+    *,
+    resolution_error: str = "",
+    parse_error: str = "",
+    stop_reason: str = "",
+) -> str:
+    """One consolidated, human-readable reason a completion was rejected.
+
+    Empty string means accepted. Otherwise the most specific cause wins, so a
+    study can tabulate *why* completions fail and attribute the difference
+    between semantic and syntactic pruning:
+      - ``non_completable``  parser could complete no extension of the prefix
+      - ``parse_error:…``    output did not parse at all
+      - ``incomplete:…``     parsed but the program was left unfinished
+      - ``type_or_value:…``  parsed and complete but the oracle rejected it
+                             (the type/behaviour mismatch syntactic pruning
+                             cannot prevent)
+      - ``mismatch``         exact-mode text mismatch with no oracle detail
+    """
+    if error == "ok":
+        return ""
+    if error == "non_completable":
+        return "non_completable"
+    if error == "parse_error":
+        return f"parse_error:{parse_error}" if parse_error else "parse_error"
+    if error == "incomplete":
+        return f"incomplete:{stop_reason}" if stop_reason else "incomplete"
+    if error == "task_failed":
+        if resolution_error:
+            return f"type_or_value:{resolution_error}"
+        return "mismatch"
+    return error or "rejected"
+
+
 def result_diagnostics(result: Any) -> dict[str, Any]:
     diagnostics = getattr(result, "diagnostics", {}) or {}
     return dict(diagnostics) if isinstance(diagnostics, dict) else {}
@@ -518,6 +457,7 @@ def run_interaction(
             "parse_ok": False,
             "parse_complete": False,
             "error": "parse_error",
+            "reject_reason": f"model_error:{error}",
             "parse_error": str(error),
             "stop_reason": "model_error",
             "tokens": 0,
@@ -603,6 +543,14 @@ def run_interaction(
         if resolution_result is not None
         else None,
         "error": error,
+        "reject_reason": rejection_reason(
+            error,
+            resolution_error=(
+                resolution_result.reason if resolution_result is not None else ""
+            ),
+            parse_error=parse_error,
+            stop_reason=result.stopped_reason,
+        ),
         "parse_error": parse_error,
         "stop_reason": result.stopped_reason,
         "tokens": result.tokens_generated,

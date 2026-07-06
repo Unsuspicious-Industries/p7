@@ -1,0 +1,17 @@
+id = "ml_sum_list"
+grammar = "ml"
+category = "ml:recursion"
+max_tokens = 160
+
+[prompt]
+text = "Define a recursive function summing an int list, then sum 1, 2."
+
+[initial]
+text = "let rec sum : int list -> int ="
+
+[expected]
+text = "let rec sum : int list -> int = fun (xs : int list) -> match xs with [] -> 0 | h :: t -> h + sum(t) in sum(1 :: 2 :: [])"
+
+[resolution]
+mode = "type"
+type = "int"

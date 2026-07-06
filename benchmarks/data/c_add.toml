@@ -1,0 +1,16 @@
+id = "c_add"
+grammar = "c"
+category = "c:arith"
+max_tokens = 48
+
+[prompt]
+text = "Write a function that adds two ints and returns the sum."
+
+[initial]
+text = "int add(int x, int y) {"
+
+[expected]
+text = "int add(int x, int y) { return x + y; }"
+
+[resolution]
+mode = "type"

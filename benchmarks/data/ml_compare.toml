@@ -1,0 +1,17 @@
+id = "ml_compare"
+grammar = "ml"
+category = "ml:comparison"
+max_tokens = 32
+
+[prompt]
+text = "Write the boolean comparison 1 less than 2."
+
+[initial]
+text = ""
+
+[expected]
+text = "1 < 2"
+
+[resolution]
+mode = "type"
+type = "bool"

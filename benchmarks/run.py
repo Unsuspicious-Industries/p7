@@ -89,6 +89,7 @@ class BenchmarkConfig:
     task_ids: list[str]
     max_tasks: int
     max_tokens_override: int
+    pruning_twins: bool
     tries: int
     seed: int
     timeout: float
@@ -264,6 +265,9 @@ def load_benchmark_config(path: Path) -> BenchmarkConfig:
         max_tokens_override=_as_int(
             tasks.get("max_tokens_override"), "tasks.max_tokens_override", 0
         ),
+        pruning_twins=_as_bool(
+            tasks.get("pruning_twins"), "tasks.pruning_twins", False
+        ),
         tries=_as_int(execution.get("tries"), "execution.tries", 1),
         seed=_as_int(execution.get("seed"), "execution.seed", 7),
         timeout=_as_float(execution.get("timeout"), "execution.timeout", 0.0),
@@ -387,11 +391,36 @@ def selected_tasks(config: BenchmarkConfig) -> list[Any]:
             raise SystemExit(f"Unknown task ids: {', '.join(sorted(missing))}")
     if config.max_tasks > 0:
         tasks = tasks[: config.max_tasks]
+    if config.pruning_twins:
+        tasks = expand_pruning_twins(tasks)
     if config.max_tokens_override > 0:
         tasks = [replace(task, max_tokens=config.max_tokens_override) for task in tasks]
     if not tasks:
         raise SystemExit("No tasks selected")
     return tasks
+
+
+def expand_pruning_twins(tasks: list[Any]) -> list[Any]:
+    """For the pruning study: alongside each task on a study grammar, emit a
+    twin task that constrains generation with the typing rules stripped
+    (grammar ``<g>_syntactic``). Both arms keep the same prompt, initial,
+    expected and oracle, so a record's ``grammar`` field is the only thing that
+    differs between semantic and syntactic pruning. ``reject_reason`` then
+    explains every rejection in either arm."""
+    available = set(proposition7.list_grammars())
+    expanded: list[Any] = []
+    for task in tasks:
+        expanded.append(task)
+        twin_grammar = f"{task.grammar}_syntactic"
+        if twin_grammar in available:
+            expanded.append(
+                replace(
+                    task,
+                    grammar=twin_grammar,
+                    task_id=f"{task.task_id}__syntactic",
+                )
+            )
+    return expanded
 
 
 # ---------------------------------------------------------------------------
@@ -511,6 +540,7 @@ def error_record(job: Job, args: argparse.Namespace, error: Exception) -> dict[s
         "resolution_observed": None,
         "resolution_expected": None,
         "error": str(error),
+        "reject_reason": f"model_error:{error}",
         "parse_error": str(error),
         "stop_reason": "model_error",
         "tokens": 0,
@@ -543,6 +573,7 @@ def timeout_record(job: Job, args: argparse.Namespace, seconds: float) -> dict[s
         "resolution_observed": None,
         "resolution_expected": None,
         "error": "timeout",
+        "reject_reason": "timeout",
         "parse_error": "timeout",
         "stop_reason": "timeout",
         "tokens": 0,

@@ -115,7 +115,7 @@ def build_system_prompt(
     Procedurally generate a compact system prompt for the given grammar.
 
     Args:
-        grammar_name: Name of the grammar (e.g., "stlc", "fun", "imp")
+        grammar_name: Name of the grammar (e.g., "stlc", "ml", "c")
         task_description: Optional task-specific description
         include_examples: Whether to include syntax examples
         think_open: Model-specific opening tag for reasoning blocks
@@ -164,22 +164,35 @@ def build_system_prompt(
 # Per-grammar generation rules surfaced in the task-level prompt.
 # These capture grammar-specific pitfalls that are not obvious from the summary.
 _GRAMMAR_RULES: dict = {
-    "fun": (
-        "Fun rule: if the prefix ends with `=`, write the right-hand-side value "
-        "immediately, then `;` and the requested final expression. "
-        "Prefer a lambda `(x: Type) => ...` for the RHS unless a literal suffices. "
-        "After the semicolon, return the bound name, not a second copy of the value."
-    ),
     "stlc": (
         "STLC rule: produce one lambda term. If the prefix ends after a lambda dot, "
         "continue with that body immediately. For multi-argument functions add lambdas "
         "before the body. Double application must be nested: `(f (f x))` not `(f x)`."
     ),
-    "imp": (
-        "Imp rule: produce one `{ ... }` block. If the prefix is inside a `let` "
-        "initializer, write the value immediately then `;` and the remaining statements. "
-        "Declare result variables with `let name: Type = expr;`. "
-        "Do not write bare identifiers as statements."
+    "ml": (
+        "ML rule: produce one expression, a strict OCaml subset. Use `fun (x : t) -> "
+        "body` for lambdas, `f(arg)` for application, and `let rec` for recursive "
+        "functions over lists. `assert false` is the universal inhabitant when a branch "
+        "is unreachable."
+    ),
+    "c": (
+        "C rule: produce one or more function definitions of real, compilable C, any "
+        "number of parameters. Declare variables before use. Use & and * for pointers "
+        "and explicit casts `(T) e` rather than relying on implicit conversions. "
+        "Arithmetic is + - / only, never * (reserved for pointer syntax). A function "
+        "may call any function defined earlier in the same program, but never itself."
+    ),
+    "tool": (
+        "Tool rule: produce a sequence of `let name = tool(arg);` bindings ending in "
+        "`return value;`. Each tool takes exactly one argument of its declared type "
+        "(a string/int literal or an already-bound variable) — the tools are "
+        "search(string)->docs, summarize(docs)->string, count(docs)->int, "
+        "format(int)->string."
+    ),
+    "tool_sexpr": (
+        "Tool rule: the same fixed tools as `tool` (search/summarize/count/format), "
+        "written as S-expressions: `(let name (tool arg))` for each binding, ending "
+        "in `(return value)`."
     ),
 }
 
@@ -199,7 +212,7 @@ def build_task_prompt(
     them for reproducible eval runs.
 
     Args:
-        grammar_name: Grammar identifier (``"stlc"``, ``"fun"``, ``"imp"``, …).
+        grammar_name: Grammar identifier (``"stlc"``, ``"ml"``, ``"c"``, …).
         instruction: Task-specific instruction text from the benchmark task file.
         mode: One of the BENCHMARK_MODES strings.
         initial: Decoder-injected prefix (used only in constrained_direct / outlines).
@@ -389,19 +402,22 @@ class ReasoningEnvironment:
         else:
             full_prompt = prompt
 
+        # Open the think block in the prompt unless the model's chat template
+        # already starts inside one (start_tokens_unconstrained yields <think>).
         think_prompt = full_prompt
-        think_initial = ""
         if not self._unconstrained_start_includes_think():
-            think_initial = self.THINK_OPEN
+            think_prompt = f"{full_prompt}\n{self.THINK_OPEN}"
 
-        thought, think_tokens, _ = self._generate_think(prompt=think_prompt, initial=think_initial)
+        thought, think_tokens, _ = self._generate_think(prompt=think_prompt, initial="")
         result.blocks.append(ThinkBlock(content=thought, tokens=think_tokens))
         result.total_tokens += think_tokens
 
+        # Hand the formal pass the closed think block followed by the opening
+        # <formal> tag — the two-block protocol build_system_prompt describes.
         formal_prompt = (
             f"{full_prompt}"
-            f"\n\nPrior reasoning:\n{thought}"
-            f"\n\nNow write only the final program text."
+            f"\n{self.THINK_OPEN}{thought}{self.THINK_CLOSE}"
+            f"\n<formal>"
         )
 
         try:

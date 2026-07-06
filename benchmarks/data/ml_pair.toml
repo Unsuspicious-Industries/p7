@@ -1,0 +1,17 @@
+id = "ml_pair"
+grammar = "ml"
+category = "ml:product"
+max_tokens = 40
+
+[prompt]
+text = "Build the pair of 1 and true."
+
+[initial]
+text = ""
+
+[expected]
+text = "(1, true)"
+
+[resolution]
+mode = "type"
+type = "int * bool"

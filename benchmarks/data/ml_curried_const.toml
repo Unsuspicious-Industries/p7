@@ -1,0 +1,17 @@
+id = "ml_curried_const"
+grammar = "ml"
+category = "ml:function"
+max_tokens = 64
+
+[prompt]
+text = "Write a curried function of an int then a bool that returns the int."
+
+[initial]
+text = "fun (x : int) -> fun (y : bool) ->"
+
+[expected]
+text = "fun (x : int) -> fun (y : bool) -> x"
+
+[resolution]
+mode = "type"
+type = "int -> bool -> int"

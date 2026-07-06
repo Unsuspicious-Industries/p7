@@ -1,0 +1,17 @@
+id = "ml_fst"
+grammar = "ml"
+category = "ml:product"
+max_tokens = 40
+
+[prompt]
+text = "Take the first component of the pair (1, true)."
+
+[initial]
+text = "fst"
+
+[expected]
+text = "fst (1, true)"
+
+[resolution]
+mode = "type"
+type = "int"

@@ -1,0 +1,17 @@
+id = "ml_identity_int"
+grammar = "ml"
+category = "ml:function"
+max_tokens = 48
+
+[prompt]
+text = "Write a function that returns its int argument unchanged."
+
+[initial]
+text = "fun (x : int) ->"
+
+[expected]
+text = "fun (x : int) -> x"
+
+[resolution]
+mode = "type"
+type = "int -> int"

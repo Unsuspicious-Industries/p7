@@ -25,7 +25,7 @@ import re
 import sys
 from pathlib import Path
 
-LANGUAGE_TAGS = ("fun", "imp", "stlc")
+LANGUAGE_TAGS = ("stlc", "ml", "c")
 
 TAG_PATTERN = re.compile(
     r"^<(" + "|".join(LANGUAGE_TAGS) + r")>\s*(.*?)\s*</\1>$",
@@ -50,12 +50,12 @@ def is_likely_output(inner: str, language: str) -> bool:
     if not inner:
         return False
     lang = language.lower()
-    if lang == "fun":
-        return inner.startswith("let ")
-    if lang == "imp":
-        return inner.startswith("{")
     if lang == "stlc":
         return inner.startswith("\u03bb")
+    if lang == "ml":
+        return len(inner) >= 3
+    if lang == "c":
+        return inner.startswith("{") or bool(re.match(r"\b(?:int|float|char|void)\b", inner))
     return len(inner) >= 3
 
 

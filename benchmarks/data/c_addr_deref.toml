@@ -1,0 +1,16 @@
+id = "c_addr_deref"
+grammar = "c"
+category = "c:pointer"
+max_tokens = 64
+
+[prompt]
+text = "Write a function that takes an int parameter, stores its address in a pointer, then returns the dereferenced pointer."
+
+[initial]
+text = "int roundtrip(int x) { int *p ="
+
+[expected]
+text = "int roundtrip(int x) { int *p = &x; return *p; }"
+
+[resolution]
+mode = "type"
