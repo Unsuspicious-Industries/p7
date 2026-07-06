@@ -142,7 +142,7 @@ printf 'Saved source bundle: %s\n' "$OUTPUT_BUNDLE"
 printf 'Saved manifest: %s\n' "$OUTPUT_MANIFEST"
 printf '\nDry-run the SAS reproduction config:\n'
 printf '  docker load -i %s\n' "$OUTPUT_TAR"
-printf '  docker run --rm %s python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run\n' "$IMAGE_NAME"
+printf '  docker run --rm %s python benchmarks/run.py --config benchmarks/configs/main.toml --dry-run\n' "$IMAGE_NAME"
 printf '\nRun the SAS reproduction config on a GPU host:\n'
 printf '  mkdir -p artifact-output hf-cache\n'
-printf '  docker run --rm --gpus all --env-file .env -v "$PWD/artifact-output:/workspace/benchmarks/out" -v "$PWD/hf-cache:/cache/huggingface" %s python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume\n' "$IMAGE_NAME"
+printf '  docker run --rm --gpus all --env-file .env -v "$PWD/artifact-output:/workspace/benchmarks/out" -v "$PWD/hf-cache:/cache/huggingface" %s python benchmarks/run.py --config benchmarks/configs/main.toml --resume\n' "$IMAGE_NAME"
