@@ -188,14 +188,22 @@ def strip_typing_rules(spec: str) -> str:
     """Return a grammar spec with its typing rules removed.
 
     Every bundled grammar separates its syntactic productions from its typing
-    rules with a ``// ... Typing Rules ...`` section header. Cutting from that
-    header onward yields a purely syntactic grammar."""
-    import re as _re
-
+    rules with a section header whose comment, once ``//``, whitespace, and
+    any ``=`` fence characters are stripped, reads exactly "Typing Rules"
+    (case-insensitive) -- e.g. ``// Typing Rules`` or
+    ``// ===== Typing rules =====``. Matching on that exact content (not a
+    substring) matters: c.auf's header comment mentions "typing rules" in
+    prose (describing what a nonterminal is used for) well before its real
+    section divider, and a substring match cut the syntax-only grammar down
+    to almost nothing there. Cutting from the real header onward yields a
+    purely syntactic grammar."""
     out: List[str] = []
     for line in spec.splitlines():
-        if _re.match(r"^\s*//.*Typing Rules", line, _re.IGNORECASE):
-            break
+        stripped = line.strip()
+        if stripped.startswith("//"):
+            content = stripped[2:].strip().strip("=").strip()
+            if content.lower() == "typing rules":
+                break
         out.append(line)
     return "\n".join(out).rstrip() + "\n"
 
