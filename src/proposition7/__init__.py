@@ -13,6 +13,7 @@ from grammars import (
 )
 from .inference import GenerationResult
 from .llm import ConstrainedModel
+from . import agents
 from .models import (
     get_model_class,
     PleiasConstrainedModel,
@@ -38,6 +39,7 @@ from .environment import (
 from .api import Session, generate, Result
 
 __all__ = [
+    "agents",
     "generate",
     "Session",
     "Result",
