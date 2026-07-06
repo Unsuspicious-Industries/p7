@@ -13,6 +13,8 @@ Usage: uv run python benchmarks/scripts/false_prune.py
 """
 from __future__ import annotations
 
+import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -43,6 +45,10 @@ def prefix_violations(spg, program: str) -> list[int]:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", type=Path, default=None, help="write per-program results as JSON")
+    args = parser.parse_args()
+
     tasks = load_all_tasks()
     by_grammar: dict[str, list[BenchmarkTask]] = {}
     for task in tasks:
@@ -51,6 +57,7 @@ def main() -> int:
 
     total_programs = 0
     total_violations = 0
+    records: list[dict] = []
     for grammar in CERTIFIED_GRAMMARS:
         grammar_tasks = by_grammar.get(grammar, [])
         spg = aufbau.SPG(proposition7.get_grammar(grammar))
@@ -59,12 +66,28 @@ def main() -> int:
             total_programs += 1
             violations = prefix_violations(spg, task.expected)
             total_violations += len(violations)
+            records.append(
+                {"grammar": grammar, "task_id": task.task_id, "violations": violations}
+            )
             if violations:
                 print(f"  FALSE-PRUNE  {task.task_id}: dead at char(s) {violations}")
             else:
                 print(f"  ok           {task.task_id}")
 
     print(f"\n{total_programs} programs, {total_violations} false-prune violation(s).")
+    if args.json is not None:
+        args.json.parent.mkdir(parents=True, exist_ok=True)
+        args.json.write_text(
+            json.dumps(
+                {
+                    "total_programs": total_programs,
+                    "total_violations": total_violations,
+                    "records": records,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
     if total_violations:
         print("false_prune_rate > 0 -- SOUNDNESS VIOLATION, see above")
         return 1

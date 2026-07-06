@@ -16,6 +16,8 @@ Usage: uv run python benchmarks/scripts/lead_time.py
 """
 from __future__ import annotations
 
+import argparse
+import json
 import re
 import shutil
 import statistics
@@ -129,6 +131,10 @@ def first_dead_offset(spg, program: str) -> int | None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", type=Path, default=None, help="write per-mutant results as JSON")
+    args = parser.parse_args()
+
     if _OCAMLC is None or _CC is None:
         print(f"missing compiler(s): ocamlc={_OCAMLC} cc={_CC}")
         return 1
@@ -143,6 +149,7 @@ def main() -> int:
     semantic_leads: list[int] = []
     syntactic_leads: list[int] = []
     skipped = 0
+    records: list[dict] = []
 
     for mutant in MUTANTS:
         error_offset = (
@@ -151,6 +158,14 @@ def main() -> int:
         if error_offset is None:
             print(f"SKIP  {mutant.task_id} ({mutant.kind}): compiler did not reject this mutant, or offset unparseable")
             skipped += 1
+            records.append(
+                {
+                    "task_id": mutant.task_id,
+                    "grammar": mutant.grammar,
+                    "kind": mutant.kind,
+                    "skipped": True,
+                }
+            )
             continue
 
         semantic_dead = first_dead_offset(semantic_spgs[mutant.grammar], mutant.program)
@@ -161,6 +176,18 @@ def main() -> int:
         print(
             f"{mutant.task_id:20s} ({mutant.kind:24s}) compiler_err={error_offset:3d}  "
             f"semantic_dead={semantic_str:>5s}  syntactic_dead={syntactic_str:>5s}"
+        )
+
+        records.append(
+            {
+                "task_id": mutant.task_id,
+                "grammar": mutant.grammar,
+                "kind": mutant.kind,
+                "skipped": False,
+                "compiler_err_offset": error_offset,
+                "semantic_dead_offset": semantic_dead,
+                "syntactic_dead_offset": syntactic_dead,
+            }
         )
 
         if semantic_dead is not None:
@@ -198,6 +225,23 @@ def main() -> int:
         )
     else:
         print(" -- a syntax-only grammar cannot detect a type error by construction; this is the expected floor")
+
+    if args.json is not None:
+        args.json.parent.mkdir(parents=True, exist_ok=True)
+        args.json.write_text(
+            json.dumps(
+                {
+                    "used": used,
+                    "total": len(MUTANTS),
+                    "skipped": skipped,
+                    "semantic_leads": semantic_leads,
+                    "syntactic_leads": syntactic_leads,
+                    "records": records,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
     return 0
 
 

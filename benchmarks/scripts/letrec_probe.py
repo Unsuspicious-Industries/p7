@@ -23,6 +23,8 @@ Usage: uv run python benchmarks/scripts/letrec_probe.py
 """
 from __future__ import annotations
 
+import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -117,30 +119,51 @@ def ocamlc_accepts(program: str) -> bool:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", type=Path, default=None, help="write per-case results as JSON")
+    args = parser.parse_args()
+
     if _OCAMLC is None:
         print("ocamlc not found on PATH -- cannot run the differential probe")
         return 1
 
     spg = aufbau.SPG(proposition7.get_grammar("ml"))
     failed = 0
+    records: list[dict] = []
 
-    def case(label: str, ok: bool) -> None:
+    def case(category: str, program: str, ok: bool, aufbau_r: bool, ocaml_r: bool) -> None:
         nonlocal failed
-        print(("ok   " if ok else "FAIL ") + label)
+        label = {"valid": "agree+", "invalid": "agree-", "beyond": "bound "}[category]
+        print(("ok   " if ok else "FAIL ") + f"{label} {program}")
+        records.append(
+            {
+                "category": category,
+                "program": program,
+                "aufbau_accepts": aufbau_r,
+                "ocamlc_accepts": ocaml_r,
+                "agree": ok,
+            }
+        )
         if not ok:
             failed += 1
 
     for program in VALID:
         a, o = aufbau_accepts(spg, program), ocamlc_accepts(program)
-        case(f"agree+ {program}", a and o)
+        case("valid", program, a and o, a, o)
     for program in INVALID:
         a, o = aufbau_accepts(spg, program), ocamlc_accepts(program)
-        case(f"agree- {program}", (not a) and (not o))
+        case("invalid", program, (not a) and (not o), a, o)
     for program in BEYOND:
         a, o = aufbau_accepts(spg, program), ocamlc_accepts(program)
-        case(f"bound  {program}", (not a) and o)
+        case("beyond", program, (not a) and o, a, o)
 
     print()
+    if args.json is not None:
+        args.json.parent.mkdir(parents=True, exist_ok=True)
+        args.json.write_text(
+            json.dumps({"total_cases": len(records), "disagreements": failed, "records": records}, indent=2)
+            + "\n"
+        )
     if failed:
         print(f"{failed} disagreement(s) -- see FAIL lines above")
         return 1
