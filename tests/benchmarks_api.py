@@ -961,29 +961,46 @@ modes = ["unconstrained"]
         bench_run.load_benchmark_config(config_path)
 
 
-def test_sas26_reproduction_config_matches_pdf_mode_split():
-    config = bench_run.load_benchmark_config(
-        Path("benchmarks/configs/sas26_reproduction.toml")
-    )
+def test_main_config_mode_split():
+    config = bench_run.load_benchmark_config(Path("benchmarks/configs/main.toml"))
     matrices = {matrix.name: matrix for matrix in config.matrices}
 
-    assert config.run_name == "sas26-reproduction"
-    assert matrices["fig3-core-local"].modes == [
-        "constrained_direct",
-        "constrained_mixed",
+    assert config.run_name == "lmpl-main"
+    assert matrices["scale-local"].backend == "local"
+    assert "syntactic_only" in matrices["scale-local"].modes
+    assert matrices["frontier-local"].backend == "local"
+    assert set(matrices["frontier-local"].modes) <= set(matrices["scale-local"].modes)
+    assert matrices["closed-api"].backend == "openrouter"
+    # OpenRouter gives no logit access, so constrained modes cannot appear there.
+    assert set(matrices["closed-api"].modes) <= {
         "unconstrained",
-    ]
-    assert matrices["fig7-frontier-constrained"].modes == [
-        "constrained_mixed"
-    ]
-    assert matrices["fig7-openrouter-raw"].modes == ["unconstrained"]
-    assert "openai/gpt-5.4-mini" in matrices["fig7-openrouter-raw"].models
+        "unconstrained_cleaned",
+        "unconstrained_thinking",
+    }
     assert all(
-        "unconstrained_cleaned" not in matrix.modes
-        and "outlines" not in matrix.modes
-        and "outlines_mixed" not in matrix.modes
+        "outlines" not in matrix.modes and "outlines_mixed" not in matrix.modes
         for matrix in config.matrices
     )
+
+
+def test_build_jobs_restricts_agent_tasks_to_agent_modes():
+    from benchmarks.utils import AGENT_MODES, build_jobs
+
+    tasks = load_tasks(["all"])
+    agent_ids = {t.task_id for t in tasks if t.kind == "agent"}
+    assert agent_ids, "corpus should contain agent tasks"
+
+    jobs = build_jobs(
+        tasks,
+        ["m"],
+        ["constrained_direct", "unconstrained", "syntactic_only", "unconstrained_thinking"],
+        1,
+        bench_run.grammar_name,
+    )
+    agent_modes_seen = {j.mode for j in jobs if j.task.task_id in agent_ids}
+    assert agent_modes_seen == set(AGENT_MODES)
+    single_modes_seen = {j.mode for j in jobs if j.task.task_id not in agent_ids}
+    assert "syntactic_only" in single_modes_seen
 
 
 def test_run_script_dry_run_accepts_config(tmp_path):

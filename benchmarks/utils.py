@@ -46,6 +46,14 @@ class Job:
         )
 
 
+# Agent episodes think per turn by construction, so the single-shot
+# think/no-think and semantic/syntactic mode splits don't apply to them;
+# run_agent_episode only implements these two arms. Pairing an agent task
+# with any other mode would run constrained_direct under the other mode's
+# label and silently corrupt mode comparisons.
+AGENT_MODES = frozenset({"constrained_direct", "unconstrained"})
+
+
 def build_jobs(
     tasks: list[Any],
     models: list[str],
@@ -58,6 +66,8 @@ def build_jobs(
     for model_name in models:
         for task in tasks:
             for mode in modes:
+                if getattr(task, "kind", "single_shot") == "agent" and mode not in AGENT_MODES:
+                    continue
                 gname = grammar_name_fn(task.grammar)
                 for attempt in range(tries):
                     jobs.append(

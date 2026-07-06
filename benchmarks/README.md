@@ -110,10 +110,10 @@ The image has no config-specific entrypoint. Invoke the runner explicitly:
 ```bash
 docker load -i dist/proposition7-benchmark-artifact.tar
 docker run --rm proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
+  python benchmarks/run.py --config benchmarks/configs/main.toml --dry-run
 ```
 
-Run the SAS reproduction on a GPU host with output and model-cache mounts:
+Run the main benchmark config on a GPU host with output and model-cache mounts:
 
 ```bash
 printf 'OPENROUTER_API_KEY=...\n' > .env
@@ -123,7 +123,7 @@ docker run --rm --gpus all \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
   -v "$PWD/hf-cache:/cache/huggingface" \
   proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
+  python benchmarks/run.py --config benchmarks/configs/main.toml --resume
 ```
 
 Hugging Face models are downloaded into the mounted `hf-cache/` directory at run

@@ -16,13 +16,13 @@ import proposition7
 
 model = proposition7.ConstrainedModel.from_pretrained(
     "gpt2",
-    grammar=proposition7.get_grammar("fun"),
+    grammar=proposition7.get_grammar("ml"),
     device="cpu",
 )
 
 result = model.generate_constrained(
-    prompt="Define inc:Int->Int and call it on 1. Output only program text.",
-    initial="let inc: Int -> Int = (n: Int) =>",
+    prompt="Define inc over ints and apply it to 1. Output only program text.",
+    initial="let inc (n : int) : int =",
     max_tokens=64,
 )
 
@@ -69,15 +69,15 @@ caches, benchmark outputs, or `backup/`.
 The image has no config-specific entrypoint. Run the benchmark command you want
 explicitly with `python benchmarks/run.py --config ...`.
 
-Dry-run the SAS 2026 paper-reproduction config without GPU or API access:
+Dry-run the main benchmark config without GPU or API access:
 
 ```bash
 docker load -i dist/proposition7-benchmark-artifact.tar
 docker run --rm proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
+  python benchmarks/run.py --config benchmarks/configs/main.toml --dry-run
 ```
 
-Run the SAS 2026 paper-reproduction config on a GPU host:
+Run the main benchmark config on a GPU host:
 
 ```bash
 docker load -i dist/proposition7-benchmark-artifact.tar
@@ -87,7 +87,7 @@ docker run --rm --gpus all \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
   -v "$PWD/hf-cache:/cache/huggingface" \
   proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
+  python benchmarks/run.py --config benchmarks/configs/main.toml --resume
 ```
 
 Create `.env` with `OPENROUTER_API_KEY=...` before running configs that include
@@ -105,9 +105,10 @@ Built-in grammars:
 | Name | Language |
 | --- | --- |
 | `stlc` | Simply typed lambda calculus |
-| `fun` | ML-style functional expressions |
-| `imp` | Typed imperative programs |
+| `ml` | Typed OCaml subset (checkable with `ocamlc`) |
+| `c` | Typed C subset (checkable with `cc`) |
 | `toy` | Small typed toy grammar |
+| `tool` / `tool_sexpr` | Tool-calling DSLs for agent episodes |
 
 Pass a grammar name through high-level APIs, or pass a raw grammar spec to
 `ConstrainedModel.from_pretrained`.

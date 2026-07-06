@@ -1,7 +1,7 @@
 # Artifact Docker
 
 The reviewer artifact is Docker-first. The image contains the full repository
-snapshot needed to run the SAS 2026 reproduction and any benchmark config present
+snapshot needed to run the main benchmark config and any benchmark config present
 under `benchmarks/configs/` at build time. It installs the Python dependencies
 during the image build, but it does not include API keys, Hugging Face/model caches,
 model weights, benchmark outputs, or `backup/`.
@@ -36,11 +36,11 @@ Load the image:
 docker load -i dist/proposition7-benchmark-artifact.tar
 ```
 
-Dry-run the SAS reproduction config without GPU or API access:
+Dry-run the main benchmark config config without GPU or API access:
 
 ```bash
 docker run --rm proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --dry-run
+  python benchmarks/run.py --config benchmarks/configs/main.toml --dry-run
 ```
 
 List included configs:
@@ -50,9 +50,9 @@ docker run --rm proposition7-benchmark-artifact:latest \
   python -c 'from pathlib import Path; print("\n".join(str(p) for p in sorted(Path("benchmarks/configs").glob("*.toml"))))'
 ```
 
-## Full SAS Run
+## Full Benchmark Run
 
-The SAS reproduction config includes local GPU rows and OpenRouter rows. Create a
+The main benchmark config includes local GPU rows and OpenRouter rows. Create a
 local `.env` file before the full run:
 
 ```bash
@@ -60,7 +60,7 @@ printf 'OPENROUTER_API_KEY=...\n' > .env
 mkdir -p artifact-output hf-cache
 ```
 
-Run the reproduction:
+Run the benchmark:
 
 ```bash
 docker run --rm --gpus all \
@@ -68,15 +68,15 @@ docker run --rm --gpus all \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
   -v "$PWD/hf-cache:/cache/huggingface" \
   proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
+  python benchmarks/run.py --config benchmarks/configs/main.toml --resume
 ```
 
 Expected outputs:
 
 ```text
-artifact-output/sas26-reproduction/config.toml
-artifact-output/sas26-reproduction/raw.jsonl
-artifact-output/sas26-reproduction/results.json
+artifact-output/lmpl-main/config.toml
+artifact-output/lmpl-main/raw.jsonl
+artifact-output/lmpl-main/results.json
 ```
 
 Models are downloaded at run time into the mounted `hf-cache/` directory. Keeping
@@ -110,7 +110,7 @@ docker run --rm --gpus all \
   -v "$PWD/artifact-output:/workspace/benchmarks/out" \
   -v "$PWD/hf-cache:/cache/huggingface" \
   proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/sas26_reproduction.toml --resume
+  python benchmarks/run.py --config benchmarks/configs/main.toml --resume
 ```
 
 ## Bundle Hygiene

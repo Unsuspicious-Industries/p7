@@ -74,6 +74,10 @@ def run_agent_episode(
     "constrained_direct" (masked per turn) or "unconstrained" (no masking,
     judged after the fact by the same checker -- see
     `_unconstrained_step_generate`)."""
+    if generate is None and mode not in {"constrained_direct", "unconstrained"}:
+        raise ValueError(
+            f"agent episodes implement modes constrained_direct/unconstrained, got {mode!r}"
+        )
     session = AgentSession(
         model,
         MOCK_REGISTRY,

@@ -7,7 +7,7 @@ OUTPUT_BUNDLE ?= $(ROOT)/dist/proposition7-review-bundle.tar.gz
 PYTHON_FILES := benchmarks/api.py benchmarks/run.py benchmarks/agg.py benchmarks/providers.py
 SHELL_FILES := scripts/build_artifact_image.sh
 TEST_FILES := tests/api.py tests/benchmarks_api.py tests/environment.py tests/grammar.py tests/llm_stop_tokens.py
-RUN_CONFIG ?= benchmarks/configs/sas26_reproduction.toml
+RUN_CONFIG ?= benchmarks/configs/main.toml
 RUN_ARGS ?= --resume
 
 .PHONY: help build artifact docker dry-run paper test process clean-dist
