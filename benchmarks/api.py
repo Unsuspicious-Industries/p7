@@ -428,6 +428,16 @@ def run_interaction(
                 seed=seed,
                 temperature=temperature,
             )
+        elif mode == "syntactic_only":
+            result = model.generate_constrained(
+                prompt=interaction.prompt,
+                initial=interaction.initial,
+                max_tokens=interaction.max_tokens,
+                grammar_name=interaction.grammar_name,
+                seed=seed,
+                temperature=temperature,
+                syntax_only=True,
+            )
         elif mode in {"unconstrained", "unconstrained_cleaned"}:
             result = model.generate_unconstrained(
                 prompt=interaction.prompt,

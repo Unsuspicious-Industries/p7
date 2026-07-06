@@ -57,47 +57,45 @@ Benchmark modes are code-owned, not task-owned.
 
 Outlines modes are constraint engine modes, not benchmark backends. The benchmark backend remains `local` for open models.
 
-## Pruning Study
+## Semantic vs syntactic pruning (`syntactic_only` mode)
 
 Measures how much the *semantic* layer of an Aufbau grammar (its typing rules)
 prunes during constrained decoding, versus the bare *syntactic* grammar. Three
-regimes, on the exact same task corpus:
+regimes, on the exact same task corpus, selected via a config's `modes` list:
 
-- `unconstrained` on `<g>` — no grammar pruning (raw model)
-- `constrained_direct` on `<g>_syntactic` — syntactic pruning only (typing rules stripped)
-- `constrained_direct` on `<g>` — full semantic pruning
+- `unconstrained` — no grammar pruning (raw model)
+- `syntactic_only` — the grammar with its typing rules stripped
+  (`grammars.strip_typing_rules`), so only parse errors (not type errors) can
+  prune a candidate
+- `constrained_direct` — the full grammar, semantic + syntactic pruning
 
-Set `tasks.pruning_twins = true` in the config. For every selected task on a
-study grammar the runner emits a twin task whose grammar is the typing-stripped
-`<g>_syntactic` (same prompt, initial, expected and oracle). The only thing that
-differs between a record and its twin is the pruning. Every rejected completion
-carries a `reject_reason` (`non_completable`, `parse_error:…`, `incomplete:…`,
-`type_or_value:…`); `type_or_value` is the class only the type system catches.
+All three run the same prompt/initial/expected/oracle per task; grading always
+uses the full semantic grammar regardless of which mode generated the output
+(the point is to see how a *weaker* constraint at decode time affects the
+*same* final acceptance criterion), so a `syntactic_only` record can still be
+marked failed even though nothing was masked away for a type reason.
+Constrained records store per-step `step_pre_entropies` / `step_entropies`
+(mask entropy before/after pruning) regardless of mode.
 
-Three pieces:
+For the model-free half of this question — real, replayable differential
+numbers, no GPU required — see `benchmarks/scripts/`:
 
-1. **GPU run** (relates pruning to model size, goal 3):
-   ```bash
-   python benchmarks/run.py --config benchmarks/configs/pruning_study.toml --resume
-   ```
-   Three models spanning the SAS capability range, on `imp` + `fun` (`toy` has no
-   corpus tasks, `ml` is out of scope). Constrained records also store per-step
-   `step_pre_entropies` / `step_entropies` (mask entropy before/after pruning).
+- `false_prune.py`: feeds every character-level prefix of every valid ml/c
+  corpus program and asserts the semantic grammar never says `dead` (the
+  empirical soundness check).
+- `lead_time.py`: on hand-mutated invalid ml/c programs, compares how many
+  characters before the real compiler's reported error site the semantic
+  grammar goes dead, against the `syntactic_only` grammar as a baseline (which
+  cannot detect a type error at all, by construction).
+- `letrec_probe.py`: differential certification of `ml.auf` against plain
+  `ocamlc` on PATH (no OCaml FFI/dune build needed), including adversarial
+  self-recursion probes.
 
-2. **Report** (pass rate per regime + rejection breakdown):
-   ```bash
-   python benchmarks/pruning_report.py benchmarks/out/pruning-study --json report.json
-   ```
-
-3. **Static measurement** (model-free, no GPU; relates pruning to a language's
-   typing power, goals 1–2). Walks the same corpus and counts, per prefix, how
-   many candidates each grammar admits (`Synthesizer.mask`); semantic admits are
-   always a subset of syntactic. Emits per-grammar aggregates plus typing-power
-   descriptors and a per-position dataset:
-   ```bash
-   python benchmarks/pruning_static.py
-   # -> benchmarks/out/pruning-study/static/{summary.json,positions.jsonl}
-   ```
+```bash
+python benchmarks/scripts/false_prune.py
+python benchmarks/scripts/lead_time.py
+python benchmarks/scripts/letrec_probe.py
+```
 
 ## Artifact Docker
 

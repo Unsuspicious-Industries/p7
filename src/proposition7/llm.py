@@ -512,6 +512,7 @@ class ConstrainedModel:
         temperature: float = 0.0,
         top_k: Optional[int] = None,
         context: Optional[dict[str, str]] = None,
+        syntax_only: bool = False,
     ) -> GenerationResult:
         if top_k is not None:
             pass
@@ -526,7 +527,15 @@ class ConstrainedModel:
         # prefix: candidates are screened with mask() (state-free) and the
         # accepted spelling committed with feed(). Its input() is the text
         # aufbau validated and the text returned.
-        spg = self._spg(self._resolve_spec(grammar_name))
+        spec = self._resolve_spec(grammar_name)
+        if syntax_only:
+            # The semantic/syntactic ablation (paper section 5.2): same
+            # concrete syntax, typing rules stripped, so only parse errors
+            # (not type errors) can ever prune a candidate.
+            from grammars import strip_typing_rules
+
+            spec = strip_typing_rules(spec)
+        spg = self._spg(spec)
         synth = aufbau.Synthesizer.from_grammar(spg, "")
 
         # A multi-turn agent (benchmarks/agent.py) pre-populates Γ with

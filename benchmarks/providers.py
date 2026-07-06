@@ -175,7 +175,15 @@ class OpenRouterModel:
 
 
 class OutlinesSyntaxModel:
-    """Local HF model wrapper that delegates constrained generation to proposition7."""
+    """Local HF model wrapper backing the "outlines"/"outlines_mixed" modes.
+
+    Despite the name, this does not use the Outlines library: it delegates
+    straight to the same aufbau-backed ConstrainedModel as constrained_direct
+    (proposition7.get_model_class(...).from_pretrained(...)). These modes
+    exist as a naming placeholder from before that delegation was wired in;
+    treat "outlines" as a duplicate of constrained_direct, not a real
+    Outlines-vs-aufbau comparison, until/unless it is rewired to an actual
+    Outlines backend."""
 
     def __init__(
         self,

@@ -14,6 +14,7 @@ BENCHMARK_MODES = frozenset({
     "constrained_mixed",
     "outlines",
     "outlines_mixed",
+    "syntactic_only",
     "unconstrained",
     "unconstrained_cleaned",
     "unconstrained_thinking",
@@ -238,7 +239,7 @@ def build_task_prompt(
             "Output only program text: no explanation, markdown, labels, or lead-in words.",
             "Stop as soon as the complete program satisfies the task.",
         ])
-    elif mode in {"constrained_direct", "outlines"}:
+    elif mode in {"constrained_direct", "outlines", "syntactic_only"}:
         lines.extend([
             "Write the completed program directly.",
             "Output only program text: no explanation, markdown, labels, or lead-in words.",
