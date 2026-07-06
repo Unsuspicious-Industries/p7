@@ -70,15 +70,15 @@ jobs:
           test -f dist/proposition7-review-bundle.tar.gz
           test -f dist/proposition7-review-manifest.txt
 
-          mv dist/proposition7-review-bundle.tar.gz dist/sas26_reproduction.source.tar.gz
+          mv dist/proposition7-review-bundle.tar.gz dist/p7_benchmark.source.tar.gz
 
           sed -i "s|image_name=.*|image_name=${IMAGE_TAG}|" dist/proposition7-review-manifest.txt
-          mv dist/proposition7-review-manifest.txt dist/sas26_reproduction.manifest.txt
+          mv dist/proposition7-review-manifest.txt dist/p7_benchmark.manifest.txt
 
           sha256sum \
-            dist/sas26_reproduction.source.tar.gz \
-            dist/sas26_reproduction.manifest.txt \
-            > dist/sas26_reproduction.checksums.txt 
+            dist/p7_benchmark.source.tar.gz \
+            dist/p7_benchmark.manifest.txt \
+            > dist/p7_benchmark.checksums.txt 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -86,8 +86,8 @@ jobs:
           name: Release ${{ github.ref_name }} (Paper Reproduction)
           body_path: dist/release_body.md
           files: |
-            dist/sas26_reproduction.source.tar.gz
-            dist/sas26_reproduction.manifest.txt
-            dist/sas26_reproduction.checksums.txt
+            dist/p7_benchmark.source.tar.gz
+            dist/p7_benchmark.manifest.txt
+            dist/p7_benchmark.checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
