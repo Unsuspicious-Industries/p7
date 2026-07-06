@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proposition7"
-version = "0.1.0"
+version = "0.2.0"
 description = "Type-aware constrained decoding for LLMs using the Proposition 7 grammar format"
 readme = "README.md"
 license = "MIT"
@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Software Development :: Compilers",
 ]
 keywords = ["llm", "constrained-decoding", "type-systems", "grammar", "code-generation"]
-dependencies = ["aufbau-rs>=0.1.2", "grpcio>=1.65.0", "tomli>=2.0.0; python_version<'3.11'"]
+dependencies = ["aufbau-rs>=0.3.1", "grpcio>=1.65.0", "tomli>=2.0.0; python_version<'3.11'"]
 
 [project.urls]
 Homepage = "https://unsuspicious.org/blog/proposition-7"

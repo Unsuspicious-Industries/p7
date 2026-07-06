@@ -96,11 +96,19 @@ wheels = [
 
 [[package]]
 name = "aufbau-rs"
-version = "0.1.2"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/24/84/24d37146ab86deb22100312c6127dccdee849511378d35a67e47c34d4761/aufbau_rs-0.1.2.tar.gz", hash = "sha256:3c174960d3fd5a23935fde27f844ff30000d0700400a0cb106f988666636af62", size = 205508, upload-time = "2026-04-24T17:51:57.008Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/8e/9587a95e7eb813ce0c5c8d5fcc31bbff918ba2c3676bed8a234922fce600/aufbau_rs-0.1.2-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:bc4244e6f67ad08e58ecb98f41ee5eb8445f3ccf3b19a24a995d622580315849", size = 1234863, upload-time = "2026-04-24T17:51:55.433Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/d3/7914ced7670cb47e7200c398cbca2bdde542f00da0c5efff87d805508f82/aufbau_rs-0.3.1-cp310-cp310-manylinux_2_34_aarch64.whl", hash = "sha256:012d5a66c530ee5d2a427a47cfe783142fed1dd763231daec12f70c945026baa", size = 1004336, upload-time = "2026-07-05T12:29:05.665Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/0e/70d5b20d4e2efcd9e09b3eefea3a05f0acde021441167c8bf1f64c97f929/aufbau_rs-0.3.1-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:5f239a82b82646dd26a57376ad954e528f07f88c614150c4a59c26a62d01b719", size = 998834, upload-time = "2026-07-05T12:29:10.777Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/b2/8da3a3178c57c62f95b9d86e3a25e631286224fdc7f445dfc154cf7ca45d/aufbau_rs-0.3.1-cp311-cp311-manylinux_2_34_aarch64.whl", hash = "sha256:1cfac10a0418ea4e84ec57658129d15bc02bf111c3068ca328e91e50741c8f81", size = 1003790, upload-time = "2026-07-05T12:29:09.742Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/59/3c71ce27f4c8e8be1beeca03f7a76a5bf3e16993a9dc9e912ca49b3ba316/aufbau_rs-0.3.1-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:05109f20dc1761736596d16ed48a39e9a54de7531c0afa02ffd425e0511036db", size = 998701, upload-time = "2026-07-05T12:29:11.99Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/39/c8ab53cdea5836438bbc30d30bfc12c868ec86cc3f0561b9490f1fbf35bc/aufbau_rs-0.3.1-cp312-cp312-manylinux_2_34_aarch64.whl", hash = "sha256:ff5437ffcef84dcae2d4a927127d6cdf347eedded0f2c220218edce878908c61", size = 1000307, upload-time = "2026-07-05T12:29:05.129Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/63/d32a7b8953b663ece22b1f5e4ce1adb9ac29629bd337887fd5f15d141132/aufbau_rs-0.3.1-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:0420ca9977c9a101b7d637ec92fa466fc3ca1b1bfb7a8dd0d1e835eeafad5114", size = 997336, upload-time = "2026-07-05T12:29:01.094Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/76/2bd91662ccac5826100af6502dcb9dddebaaf879c92b714d24b46876687c/aufbau_rs-0.3.1-cp313-cp313-manylinux_2_34_aarch64.whl", hash = "sha256:22e207a5d9c818668e61e1ea931c376e07c4af968de7f2661af128206f239ca1", size = 1000120, upload-time = "2026-07-05T12:29:07.594Z" },
+    { url = "https://files.pythonhosted.org/packages/02/74/8fff4ad67d4e22a315c43fcc429f18fedda2f61b28d32779dd89829d632d/aufbau_rs-0.3.1-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:0cc9efe813e4dcc68dd00a8cfb0f40c46b37fa13ee270f64b5ac28809add6c79", size = 997009, upload-time = "2026-07-05T12:29:12.306Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/24/6b0f5401636d87e3a69d801089e424abeef855d7d31cd474f0387948e6bb/aufbau_rs-0.3.1-cp39-cp39-manylinux_2_34_aarch64.whl", hash = "sha256:8c850e28e6ea0b0dd5283b38adc2af7462fee811c6864bd2e36715a0dd32563f", size = 1007971, upload-time = "2026-07-05T12:29:09.086Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/74/2eb87defb186af8500d1c1a2e7e15e976e9af6592e31bb4bf9e74469cec4/aufbau_rs-0.3.1-cp39-cp39-manylinux_2_34_x86_64.whl", hash = "sha256:58f7f1cfab139ec8c219a5963e93b02c7ed398b83b743672558f7925f099ae58", size = 1001214, upload-time = "2026-07-05T12:28:59.812Z" },
 ]
 
 [[package]]
@@ -1892,7 +1900,7 @@ wheels = [
 
 [[package]]
 name = "proposition7"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "aufbau-rs" },
@@ -1934,7 +1942,7 @@ transformers = [
 requires-dist = [
     { name = "accelerate", marker = "extra == 'outlines'" },
     { name = "accelerate", marker = "extra == 'transformers'" },
-    { name = "aufbau-rs", specifier = ">=0.1.2" },
+    { name = "aufbau-rs", specifier = ">=0.3.1" },
     { name = "flask", marker = "extra == 'dev'", specifier = ">=2.3.0" },
     { name = "flask-cors", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "grpcio", specifier = ">=1.65.0" },

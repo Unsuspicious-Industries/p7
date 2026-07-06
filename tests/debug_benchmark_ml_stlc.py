@@ -22,21 +22,21 @@ def main() -> int:
     print(f"Model {model_name}")
     print(f"Device {device}")
 
-    fun_task = first_task("fun")
+    ml_task = first_task("ml")
     stlc_task = first_task("stlc")
-    print(f"Fun task {fun_task.task_id} initial={fun_task.initial!r}")
+    print(f"ML task {ml_task.task_id} initial={ml_task.initial!r}")
     print(f"STLC task {stlc_task.task_id} initial={stlc_task.initial!r}")
 
     model = proposition7.get_model_class(model_name).from_pretrained(
         model_name,
-        grammar=proposition7.get_grammar(fun_task.grammar),
+        grammar=proposition7.get_grammar(ml_task.grammar),
         device=device,
         torch_dtype="float16" if device == "cuda" else "float32",
         device_map=device,
     )
 
     records = []
-    for task in [fun_task, stlc_task]:
+    for task in [ml_task, stlc_task]:
         model.grammar = proposition7.get_grammar(task.grammar)
         record = run_interaction(
             model,

@@ -113,7 +113,7 @@ def run_grammar_only(grammar_name: str, initial: str) -> None:
     grammar_analysis_step(grammar_spec, initial, CLOSING_CANDIDATES)
 
     # ── Simulate first few tokens that the model emits in constrained mode ──
-    # These come from the observed benchmark output for fun/constrained_direct.
+    # These come from the observed benchmark output for ml/constrained_direct.
     loop_suffix_tokens = [
         " (x",        # model writes "let x: Int = (x..."
         ": Int)",     # "..."
@@ -371,7 +371,7 @@ def main():
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--model", default=None,
                    help="HuggingFace model name for full logit mode (needs GPU)")
-    p.add_argument("--grammar", default="fun")
+    p.add_argument("--grammar", default="ml")
     p.add_argument(
         "--task",
         default="Define a function that doubles its input, then return that function as the final expression.",

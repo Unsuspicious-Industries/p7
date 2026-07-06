@@ -14,7 +14,7 @@ ChatML prompt format.  No trust_remote_code required.
 Usage examples
 --------------
 # Constrained generation with Monad (smallest, good for quick tests)
-python examples/pleias.py --model PleIAs/Monad --grammar fun --mode constrained
+python examples/pleias.py --model PleIAs/Monad --grammar ml --mode constrained
 
 # Constrained generation with Baguettotron
 python examples/pleias.py --model PleIAs/Baguettotron --grammar stlc --mode constrained
@@ -46,14 +46,14 @@ TASKS = {
         "initial": "λf:(Int->Bool).",
         "description": "Should produce λf:(Int->Bool).λx:Int.(f x)",
     },
-    "fun": {
+    "ml": {
         "prompt": "Write a typed functional expression that doubles an integer.",
-        "initial": "let double: Int -> Int = (x: Int) =>",
-        "description": "Should produce let double: Int -> Int = (x: Int) => x + x",
+        "initial": "let double : int -> int = fun (x : int) ->",
+        "description": "Should produce let double : int -> int = fun (x : int) -> x + x",
     },
-    "imp": {
-        "prompt": "Write a typed imperative program that stores 1 in x and conditionally assigns y.",
-        "initial": "{ let x: Int = 1; if (x < 5) { let y: Int =",
+    "c": {
+        "prompt": "Write a typed C function that stores 1 in x and conditionally assigns y.",
+        "initial": "int f() { int x = 1; if (x < 5) { int y =",
         "description": "Should produce a well-typed if/else block",
     },
 }

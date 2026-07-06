@@ -88,17 +88,17 @@ def test_aufbau_prefix_validation() -> None:
         ok, complete, _ = check_parse(spec, bad)
         check(not ok, f"stlc invalid: {bad!r}")
 
-    spec_fun = proposition7.get_grammar("fun")
+    spec_ml = proposition7.get_grammar("ml")
 
-    for term in ["(x: Int) => x", "let x: Int = 1; x + 2", "((x: Int) => x + 1)(41)"]:
-        ok, complete, _ = check_parse(spec_fun, term)
-        check(ok and complete, f"fun complete: {term!r}")
+    for term in ["fun (x : int) -> x", "let x : int = 1 in x + 2", "(fun (x : int) -> x + 1)(41)"]:
+        ok, complete, _ = check_parse(spec_ml, term)
+        check(ok and complete, f"ml complete: {term!r}")
 
-    spec_imp = proposition7.get_grammar("imp")
+    spec_c = proposition7.get_grammar("c")
 
-    for prog in ["{ let x: Int = 5; }", "{ let x: Int = 1; let y: Int = x + 2; }"]:
-        ok, complete, _ = check_parse(spec_imp, prog)
-        check(ok and complete, f"imp complete: {prog!r}")
+    for prog in ["int f() { int x = 5; return x; }", "int f(int x) { int y = x + 2; return y; }"]:
+        ok, complete, _ = check_parse(spec_c, prog)
+        check(ok and complete, f"c complete: {prog!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -108,14 +108,14 @@ def test_aufbau_prefix_validation() -> None:
 def test_aufbau_spacing_jank() -> None:
     section("2. aufbau spacing / tokenization (the jank)")
 
-    spec = proposition7.get_grammar("fun")
+    spec = proposition7.get_grammar("ml")
 
     # JANK: aufbau's parse() tokenizes the full character string.
     # A space between digits creates two grammar tokens, so '4 3' ≠ '43'.
     for text, expected_ok, desc in [
         ("43", True, "integer 43: single token"),
         ("4 3", False, "4 3: two tokens — fails as integer"),
-        ("let x: Int = 1; x", True, "let with spaces: ok"),
+        ("let x : int = 1 in x", True, "let with spaces: ok"),
     ]:
         ok, complete, _ = check_parse(spec, text)
         check(ok == expected_ok, desc, f"parse({text!r}) ok={ok} expected={expected_ok}")
@@ -132,10 +132,8 @@ def test_aufbau_spacing_jank() -> None:
         check(False, "digit continuation: neither variant valid")
 
     # Keyword boundary: ' x' after 'let'.  We want 'let x' not 'letx'.
-    # Note: 'letx: Int = 1; x' DOES parse in the fun grammar (letx is a valid
-    # identifier), which is the subtle jank — lstrip produces a different-but-valid
-    # expression rather than an obvious error.  The workaround (try as-is first)
-    # picks 'let x' since that also parses, and it is the correct interpretation.
+    # The workaround (try as-is first) picks 'let x' since that also parses,
+    # and it is the correct interpretation.
     acc2 = "let"
     for candidate in (" x", "x"):
         ok, _, _ = check_parse(spec, acc2 + candidate)
@@ -148,14 +146,6 @@ def test_aufbau_spacing_jank() -> None:
             break
     else:
         check(False, "keyword boundary: neither variant valid")
-
-    # Document the silent-wrong-output jank:
-    ok_letx, complete_letx, _ = check_parse(spec, "letx: Int = 1; x")
-    check(
-        ok_letx and complete_letx,
-        "JANK: 'letx: Int = 1; x' parses as valid fun (letx is a valid identifier)"
-        " — lstrip error is silent, not a parse failure",
-    )
 
 
 # ---------------------------------------------------------------------------

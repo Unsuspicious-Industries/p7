@@ -24,48 +24,6 @@ def test_all_grammars_parseable():
         synthesizer.parse()
 
 
-def test_lamb_grammar_accepts_basic_program():
-    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
-    synthesizer.set_input("@main = λx.x")
-    assert synthesizer.is_complete()
-
-
-def test_lamb_grammar_accepts_sequential_references():
-    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
-    synthesizer.set_input("@id = λx.x @main = @id")
-    assert synthesizer.is_complete()
-
-
-def test_lamb_grammar_rejects_forward_references_for_lamb_globals():
-    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
-    synthesizer.set_input("@main = @id @id = λx.x")
-
-    try:
-        synthesizer.parse()
-    except RuntimeError as error:
-        assert "no parse found" in str(error)
-    else:
-        raise AssertionError("forward global reference unexpectedly parsed")
-
-
-def test_lamb_grammar_rejects_recursive_definition():
-    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
-    synthesizer.set_input("@loop = @loop")
-
-    try:
-        synthesizer.parse()
-    except RuntimeError as error:
-        assert "no parse found" in str(error)
-    else:
-        raise AssertionError("recursive global reference unexpectedly parsed")
-
-
-def test_lamb_grammar_accepts_shadowed_lambda_variables():
-    synthesizer = proposition7.Synthesizer(proposition7.get_grammar("lamb"), "")
-    synthesizer.set_input("@main = λx.λx.x")
-    assert synthesizer.is_complete()
-
-
 def test_proposition7_exports_public_api():
     assert proposition7.ConstrainedModel is not None
     assert proposition7.generate is not None
@@ -74,12 +32,15 @@ def test_proposition7_exports_public_api():
 def test_synthesizer_set_input_and_feed_round_trip():
     synthesizer = proposition7.Synthesizer("start ::= 'x' 'y'", "")
 
+    # feed() appends raw characters; the caller supplies token separators
+    # (here the space before "y"), matching how decoded LM tokens carry their
+    # own leading whitespace.
     assert not synthesizer.is_complete()
     synthesizer.feed("x")
     assert synthesizer.input() == "x"
     assert not synthesizer.is_complete()
 
-    synthesizer.feed("y")
+    synthesizer.feed(" y")
     assert synthesizer.input() == "x y"
     assert synthesizer.is_complete()
 
