@@ -1,0 +1,76 @@
+// tool — a minimal typed tool-calling pipeline DSL.
+//
+// A small, deliberately unfamiliar language: not real-world syntax a model
+// has seen in pretraining (unlike c.auf/ml.auf, which are real C/OCaml), so
+// this is where constrained decoding's effect on pass rate should be
+// largest — an unconstrained model has no memorized syntax to fall back on.
+// The oracle is aufbau's own type system: there is no external ground-truth
+// compiler for an invented DSL, so soundness here means self-consistency,
+// the same role ml.auf's own type system plays before its OCaml cross-check.
+//
+// A fixed registry of tools, each with one typed argument and a fixed
+// return type — no arbitrary arity, no user-defined functions, no
+// polymorphism, so every call's typing rule is a direct premise/conclusion
+// pair with no metavariable machinery at all:
+//   search    : string -> docs
+//   summarize : docs   -> string
+//   count     : docs   -> int
+//   format    : int    -> string
+// A program is a sequence of `let` bindings threading each call's result
+// into the next (the same adjacent-sibling effect propagation c.auf's
+// StatementList relies on), ending in a `return`.
+
+Identifier ::= /[a-z_][a-z0-9_]*/
+StringLit(str_lit) ::= /"[a-zA-Z0-9_]*"/
+IntLit(int_lit) ::= /[0-9]+/
+
+Variable(var) ::= Identifier[x]
+Value ::= Variable | StringLit | IntLit
+
+SearchCall(search_call) ::= 'search' '(' Value[arg] ')'
+SummarizeCall(summarize_call) ::= 'summarize' '(' Value[arg] ')'
+CountCall(count_call) ::= 'count' '(' Value[arg] ')'
+FormatCall(format_call) ::= 'format' '(' Value[arg] ')'
+
+Call ::= SearchCall | SummarizeCall | CountCall | FormatCall
+
+LetStmt(let) ::= 'let' Identifier[name] '=' Call[value] ';'
+ReturnStmt(return) ::= 'return' Value[e] ';'
+
+Program ::= LetStmt Program | ReturnStmt
+
+// ===================== Typing rules =====================
+
+x ∈ Γ
+----------- (var)
+Γ(x)
+
+----------- (str_lit)
+'string'
+
+----------- (int_lit)
+'int'
+
+Γ ⊢ arg : 'string'
+-------------------- (search_call)
+'docs'
+
+Γ ⊢ arg : 'docs'
+-------------------- (summarize_call)
+'string'
+
+Γ ⊢ arg : 'docs'
+-------------------- (count_call)
+'int'
+
+Γ ⊢ arg : 'int'
+-------------------- (format_call)
+'string'
+
+Γ ⊢ value : ?τ
+------------------------- (let)
+Γ → Γ[name:?τ] ⊢ 'void'
+
+Γ ⊢ e : ?A
+----------- (return)
+'void'
