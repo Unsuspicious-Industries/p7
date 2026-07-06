@@ -34,7 +34,10 @@ max_tokens_override = 0
 [execution]
 tries = 1
 seed = 7
-timeout = 300.0
+# 900 not 300: frontier-local models decode at single-digit tok/s on
+# bandwidth-limited unified-memory boxes, and a 2048-token think budget
+# alone can take ~7 minutes there. The timeout guards hangs, not slowness.
+timeout = 900.0
 think_budget = 2048
 model_concurrency = "auto"
 low_space = true
