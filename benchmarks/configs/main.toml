@@ -77,6 +77,10 @@ name = "frontier-local"
 backend = "local"
 models = [
   "Qwen/Qwen3.6-27B",
+  # 36B-total/3B-active MoE; BF16 weights ~72 GB, fits a 121 GB unified-memory
+  # box; loads through AutoModelForCausalLM despite the multimodal registration
+  # (verified against transformers 5.13).
+  "Qwen/Qwen3.6-35B-A3B",
   "openai/gpt-oss-20b",
   "google/gemma-4-26b-a4b-it",
   "google/gemma-4-E4B-it",
