@@ -42,6 +42,25 @@ def check_resolution(task: Any, output: str) -> OracleResult:
     return _check_default_resolution(mode, resolution, output, expected)
 
 
+def check_episode_resolution(task: Any, result: Any) -> OracleResult:
+    """Grade a multi-turn agent episode (a `proposition7.agents.AgentResult`)
+    against a task's `resolution.expected_value`. Task accomplishment, not
+    typedness: `result.success` only means the episode mechanically reached
+    a well-typed `return` within the turn budget (a one-turn `return
+    "hello";` is `success=True` too) -- the actual pass/fail criterion here
+    is whether the *executed* return value matches what the task asked for
+    (lmpl-plan.md section 5.2)."""
+    resolution = dict(getattr(task, "resolution", {}) or {})
+    expected_value = resolution.get("expected_value")
+    if not bool(getattr(result, "success", False)):
+        reason = str(getattr(result, "reason", ""))
+        return OracleResult(False, f"episode_failed:{reason}", None, expected_value)
+    observed = getattr(result, "return_value", None)
+    ok = observed == expected_value
+    reason = "" if ok else f"wrong_value:{observed!r}_vs_{expected_value!r}"
+    return OracleResult(ok, reason, observed, expected_value)
+
+
 _ML_SPG = None
 
 
@@ -135,10 +154,16 @@ def _check_tool_resolution(
     expected: str,
     grammar: str = "tool",
 ) -> OracleResult:
-    """Grade tool-DSL output with the type system itself: `type` mode requires
-    every `let` binding and the final `return` to be well-typed against the
-    fixed tool registry (search/summarize/count/format)."""
-    del resolution
+    """Grade tool-DSL output. `type` mode checks only well-typedness against
+    the fixed tool registry (search/summarize/count/format) -- informative
+    for the *unconstrained* arm's failure decomposition, but circular as a
+    pass/fail criterion for the constrained arm, which is decoded under this
+    exact checker (see lmpl-plan.md section 5.1): a completed constrained
+    output is well-typed by construction, so `type` mode there would measure
+    nothing. `value` mode is the real grading criterion: run the program
+    against the same deterministic mock registry (benchmarks/tool_registry)
+    and compare the *executed* return value to `resolution["expected_value"]`
+    -- task accomplishment, not typedness."""
     try:
         if mode == "exact":
             ok = _normalize_text(output) == _normalize_text(expected)
@@ -150,6 +175,18 @@ def _check_tool_resolution(
             status = aufbau.Synthesizer.from_grammar(_tool_spg(grammar), output).status()
             ok = status == "typed"
             return OracleResult(ok, "" if ok else f"not_well_typed:{status}", output, expected)
+
+        if mode == "value":
+            from benchmarks.tool_registry import InterpretError, run_program
+
+            wanted = resolution.get("expected_value")
+            try:
+                value, _env = run_program(output, syntax=grammar)
+            except InterpretError as error:
+                return OracleResult(False, f"unexecutable:{error}", output, expected)
+            ok = value == wanted
+            reason = "" if ok else f"wrong_value:{value!r}_vs_{wanted!r}"
+            return OracleResult(ok, reason, str(value), str(wanted))
     except Exception as error:  # noqa: BLE001 - oracle must never crash the run
         return OracleResult(False, f"tool_resolution_error: {error}")
 

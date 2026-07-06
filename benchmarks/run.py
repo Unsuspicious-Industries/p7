@@ -37,6 +37,7 @@ from benchmarks.api import (
     append_jsonl,
     load_tasks,
     grammar_name,
+    run_agent_interaction,
     run_interaction,
 )
 from benchmarks.providers import OpenRouterModel, OutlinesSyntaxModel
@@ -615,6 +616,19 @@ def run_job(
     def execute() -> dict[str, Any]:
         nonlocal model
         model = model or make_model(args, job.model_name, job.grammar_name, job.mode)
+        if job.task.kind == "agent":
+            # An agent episode's actual per-turn grammar is generated
+            # dynamically by AgentSession from its tool registry, not the
+            # model's construction-time grammar -- job.grammar_name only
+            # needs to be *a* valid registered name so make_model() above
+            # doesn't have to special-case agent tasks.
+            return run_agent_interaction(
+                model,
+                job.task,
+                job.mode,
+                seed=args.seed + job.attempt,
+                think_budget=args.think_budget,
+            )
         return run_interaction(
             model,
             job.task,

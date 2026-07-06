@@ -172,7 +172,12 @@ def test_ml_type_oracle_checks_well_typedness_and_type():
 
 
 def test_toml_expected_outputs_parse_and_pass_resolution():
+    # Agent tasks are graded by episode (accumulated over turns, against
+    # resolution.expected_value), not by a single-shot `expected` program
+    # text -- see tests/agent_tasks.py for their equivalent coverage.
     for row in load_tasks(["all"]):
+        if row.kind == "agent":
+            continue
         parse_ok, complete, error = check_parse(
             proposition7.get_grammar(grammar_name(row.grammar)), row.expected
         )

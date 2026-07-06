@@ -44,6 +44,9 @@ class BenchmarkTask:
     resolution: dict[str, Any]
     task_hash: str
     resolution_hash: str
+    kind: str = "single_shot"
+    max_turns: int = 6
+    max_tokens_per_step: int = 32
 
     @property
     def language(self) -> str:
@@ -75,25 +78,31 @@ def _load_task_file(path: Path) -> BenchmarkTask:
         task_id = str(data["id"])
         grammar = str(data["grammar"])
         category = str(data["category"])
+        kind = str(data.get("kind", "single_shot"))
         max_tokens = int(data["max_tokens"])
         prompt = str(data["prompt"]["text"])
         initial = str(data["initial"]["text"])
         expected = str(data["expected"]["text"])
         resolution = dict(data["resolution"])
+        max_turns = int(data.get("max_turns", 6))
+        max_tokens_per_step = int(data.get("max_tokens_per_step", 32))
     except KeyError as error:
         raise ValueError(f"{path}: missing required TOML field {error}") from error
 
-    _validate_task_resolution(path, task_id, grammar, resolution)
+    _validate_task_resolution(path, task_id, grammar, resolution, kind=kind)
 
     canonical = {
         "id": task_id,
         "grammar": grammar,
         "category": category,
+        "kind": kind,
         "max_tokens": max_tokens,
         "prompt": prompt,
         "initial": initial,
         "expected": expected,
         "resolution": resolution,
+        "max_turns": max_turns,
+        "max_tokens_per_step": max_tokens_per_step,
     }
     return BenchmarkTask(
         task_id=task_id,
@@ -106,17 +115,31 @@ def _load_task_file(path: Path) -> BenchmarkTask:
         resolution=resolution,
         task_hash=stable_hash(canonical),
         resolution_hash=stable_hash(resolution),
+        kind=kind,
+        max_turns=max_turns,
+        max_tokens_per_step=max_tokens_per_step,
     )
 
 
 def _validate_task_resolution(
-    path: Path, task_id: str, grammar: str, resolution: dict[str, Any]
+    path: Path, task_id: str, grammar: str, resolution: dict[str, Any], kind: str = "single_shot"
 ) -> None:
     mode = resolution.get("mode")
     if not isinstance(mode, str) or not mode.strip():
         raise ValueError(
             f"{path}: {task_id}: resolution.mode must be a non-empty string"
         )
+
+    if kind == "agent":
+        if mode != "episode":
+            raise ValueError(
+                f"{path}: {task_id}: agent tasks require resolution.mode = 'episode', got {mode!r}"
+            )
+        if "expected_value" not in resolution:
+            raise ValueError(
+                f"{path}: {task_id}: episode mode requires resolution.expected_value"
+            )
+        return
 
     if grammar == "stlc":
         if mode not in {"exact", "equivalence"}:
@@ -153,9 +176,13 @@ def _validate_task_resolution(
         return
 
     if grammar in {"tool", "tool_sexpr"}:
-        if mode not in {"exact", "type"}:
+        if mode not in {"exact", "type", "value"}:
             raise ValueError(
                 f"{path}: {task_id}: unsupported {grammar} resolution mode {mode!r}"
+            )
+        if mode == "value" and "expected_value" not in resolution:
+            raise ValueError(
+                f"{path}: {task_id}: value mode requires resolution.expected_value"
             )
         return
 
@@ -609,6 +636,92 @@ def run_interaction(
             )
         )
     return record
+
+
+def run_agent_interaction(
+    model: Any,
+    task: BenchmarkTask,
+    mode: str,
+    *,
+    seed: Optional[int] = None,
+    think_budget: int = 64,
+) -> dict[str, Any]:
+    """The `kind == "agent"` analogue of `run_interaction`: drives one
+    multi-turn episode (benchmarks/agent.run_agent_episode, itself a thin
+    wrapper over the real proposition7.agents library) and grades it on
+    task accomplishment via `check_episode_resolution` -- not on whether it
+    merely reached a well-typed `return` (lmpl-plan.md section 5.2). The
+    record shape is intentionally not forced into run_interaction's
+    single-shot fields (parse_ok/exact/output, ...): an episode is a
+    genuinely different kind of interaction, and pretending otherwise would
+    just paper over which fields are actually meaningful for it."""
+    from benchmarks.agent import run_agent_episode
+    from benchmarks.oracles import check_episode_resolution
+
+    started_at = time.time()
+    try:
+        result = run_agent_episode(
+            model,
+            task.prompt,
+            max_turns=task.max_turns,
+            max_tokens_per_step=task.max_tokens_per_step,
+            think_budget=think_budget,
+            seed=seed,
+            mode=mode,
+        )
+    except Exception as error:
+        seconds = time.time() - started_at
+        return {
+            "task_id": task.task_id,
+            "language": task.language,
+            "grammar": task.grammar,
+            "category": task.category,
+            "task_hash": task.task_hash,
+            "resolution_hash": task.resolution_hash,
+            "resolution_mode": "episode",
+            "mode": mode,
+            "kind": "agent",
+            "episode_success": False,
+            "episode_reason": f"model_error:{error}",
+            "return_value": None,
+            "expected_value": task.resolution.get("expected_value"),
+            "turns": 0,
+            "turn_kinds": [],
+            "error": "model_error",
+            "reject_reason": f"model_error:{error}",
+            "seed": seed,
+            "passed": False,
+            "seconds": round(seconds, 4),
+        }
+
+    seconds = time.time() - started_at
+    resolution_result = check_episode_resolution(task, result)
+    passed = resolution_result.ok
+    error = "ok" if passed else ("episode_incomplete" if not result.success else "task_failed")
+    return {
+        "task_id": task.task_id,
+        "language": task.language,
+        "grammar": task.grammar,
+        "category": task.category,
+        "task_hash": task.task_hash,
+        "resolution_hash": task.resolution_hash,
+        "resolution_mode": "episode",
+        "mode": mode,
+        "kind": "agent",
+        "episode_success": result.success,
+        "episode_reason": result.reason,
+        "return_value": resolution_result.observed,
+        "expected_value": resolution_result.expected,
+        "turns": len(result.turns),
+        "turn_kinds": [t.kind for t in result.turns],
+        "turn_tools": [t.tool for t in result.turns if t.tool],
+        "think_tokens_total": sum(t.think_tokens for t in result.turns),
+        "error": error,
+        "reject_reason": "" if passed else (resolution_result.reason or "rejected"),
+        "seed": seed,
+        "passed": passed,
+        "seconds": round(seconds, 4),
+    }
 
 
 def run_mixed_generation(
