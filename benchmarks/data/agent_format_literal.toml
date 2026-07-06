@@ -1,0 +1,20 @@
+id = "agent_format_literal"
+grammar = "tool"
+category = "agent:builtin"
+kind = "agent"
+max_tokens = 200
+max_turns = 2
+max_tokens_per_step = 32
+
+[prompt]
+text = "Format the exact integer 42 as a string and return it. Do not call any other tool."
+
+[initial]
+text = ""
+
+[expected]
+text = ""
+
+[resolution]
+mode = "episode"
+expected_value = "formatted_42"

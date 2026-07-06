@@ -1,0 +1,20 @@
+id = "agent_direct_return"
+grammar = "tool"
+category = "agent:builtin"
+kind = "agent"
+max_tokens = 200
+max_turns = 1
+max_tokens_per_step = 32
+
+[prompt]
+text = "Do not call any tool. Just return the exact string \"done\"."
+
+[initial]
+text = ""
+
+[expected]
+text = ""
+
+[resolution]
+mode = "episode"
+expected_value = "done"
