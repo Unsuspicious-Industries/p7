@@ -1,50 +1,25 @@
 """The agent language: primitive scheme, grammar composition, typed evaluator.
 
-The client-side half of congen — what `../../../../ARCHITECTURE.md` calls
-`[LANG]`. It lives here rather than in gamma because `benchmarks/agent.py`
-needs it: agent episodes are graded on *executed* value, so the paper's
-artifact needs both the constraint and the evaluator, and an open reproducible
-artifact cannot depend on a closed product.
+`[LANG]` in ../../../../ARCHITECTURE.md. One primitive table, two projections
+that cannot drift (I2):
 
-This does not violate p7's charter. That charter constrains
-`proposition7.backends.v1` — the minimal cross-repository surface provider7
-imports — and provider7 never imports this package: it receives already-composed
-`.auf` source and only compiles and masks (ARCHITECTURE §5).
+    Scheme -> grammar.compose()  -> .auf source  -> provider7 masks it
+           -> evaluator.Dispatch -> host calls   -> the client runs it
 
-Nor does it put execution on the inference host. `Dispatch` takes its host
-implementations as an argument; this package ships a dispatcher with no
-capabilities of its own. The functions that actually touch a filesystem or a
-shell are gamma's, injected at construction.
+Here rather than in gamma because `benchmarks/agent.py` grades episodes on
+executed value: the paper's artifact needs the evaluator as well as the
+constraint, and an open artifact cannot depend on a closed product. provider7
+never imports this — it receives composed `.auf` — so `backends.v1` stays
+minimal. It ships no capabilities: `Dispatch` takes hosts as an argument.
 
-## The current API
+`evaluator` is an execution enclave; read its module docstring before using it.
 
-    Scheme ──> grammar.compose()   ──> .auf source  ──> provider7 masks it
-           └─> evaluator.Dispatch  ──> host calls   ──> the client runs it
+The core language is not here. That is D3: a `.auf` file meeting the contract in
+`grammar`, supplied as `LanguageBinding.core_source`.
+"""
 
-One primitive table, two projections, so they cannot drift (ARCHITECTURE I2).
-
-- `scheme`     `Primitive`/`Param`/`Effect`/`Scheme` + the JSON wire format
-- `grammar`    scheme → `.auf` fragment, composed with a core language
-- `gamma`      `Gamma`: client-side (name → value), wire view (name → type)
-- `result`     `Result`/`Ok`/`Err` — failure is a value, never an exit
-- `evaluator`  `Dispatch`, effect audit, atomic turns
-- `turn`       the turn loop and `PromptLayout`
-
-The core language itself is not here: that is D3, supplied as `.auf` source to
-`LanguageBinding.core_source`."""
-
-
-# ── Current API ──────────────────────────────────────────────────────────
-
-from .evaluator import (
-    Dispatch,
-    DispatchError,
-    EffectAudit,
-    EvaluationError,
-    Evaluator,
-    TurnOutcome,
-)
-from .context import Binding, Gamma
+from .context import Gamma
+from .evaluator import Audit, Dispatch, DispatchError, EvaluationError, Evaluator, Outcome
 from .grammar import (
     PRIMITIVE_MARKER,
     PRIMITIVE_NT,
@@ -52,51 +27,20 @@ from .grammar import (
     LanguageBinding,
     compose,
     fragment,
+    nonterminal,
     validate_binding,
 )
 from .result import Err, Ok, PrimitiveFailure, Result
 from .scheme import SCHEME_VERSION, Effect, Param, Primitive, Scheme, TypeSource
-from .session import (
-    ConstraintClient,
-    CoreRequest,
-    CoreResponse,
-    PromptLayout,
-    Session,
-    TurnRecord,
-    build,
-)
+from .turn import Client, Request, Response, Session, prompt
 
 __all__ = [
-    "SCHEME_VERSION",
-    "PRIMITIVE_MARKER",
-    "PRIMITIVE_NT",
-    "Scheme",
-    "Primitive",
-    "Param",
-    "Effect",
-    "TypeSource",
-    "LanguageBinding",
-    "compose",
-    "fragment",
-    "validate_binding",
+    "SCHEME_VERSION", "PRIMITIVE_MARKER", "PRIMITIVE_NT",
+    "Scheme", "Primitive", "Param", "Effect", "TypeSource",
+    "LanguageBinding", "compose", "fragment", "nonterminal", "validate_binding",
     "CompositionError",
     "Gamma",
-    "Binding",
-    "Result",
-    "Ok",
-    "Err",
-    "PrimitiveFailure",
-    "Dispatch",
-    "Evaluator",
-    "EffectAudit",
-    "TurnOutcome",
-    "DispatchError",
-    "EvaluationError",
-    "Session",
-    "TurnRecord",
-    "CoreRequest",
-    "CoreResponse",
-    "ConstraintClient",
-    "PromptLayout",
-    "build",
+    "Result", "Ok", "Err", "PrimitiveFailure",
+    "Dispatch", "Evaluator", "Audit", "Outcome", "DispatchError", "EvaluationError",
+    "Session", "Request", "Response", "Client", "prompt",
 ]

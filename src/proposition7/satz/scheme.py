@@ -1,59 +1,34 @@
-"""The primitive scheme — `provider7.constraints/v1`.
+"""Primitive declarations. The single source of truth (ARCHITECTURE I2).
 
-This module is the single source of truth for what a primitive *is*
-(ARCHITECTURE I2).  Everything downstream is a projection of a `Scheme`:
+Two projections read this and nothing else:
+    grammar.compose()   -> .auf the mask enforces
+    evaluator.Dispatch  -> host calls that run
 
-    Scheme ──> .auf grammar fragment   (proposition7.satz.grammar)   what the mask enforces
-           └─> evaluator dispatch      (proposition7.satz.evaluator) what actually runs
-           └─> effect audit            (proposition7.satz.evaluator)   what the user approves
-
-There is deliberately no second place to declare a primitive.  A signature
-that appears in the grammar but not the dispatch table is a build error, not
-a runtime surprise.
-
-The scheme is *data*.  It serialises to JSON and crosses the wire to
-provider7 as part of a request, which is what keeps provider7 ignorant of the
-agent language (ARCHITECTURE §5).
+Types are source text in the active grammar's own `Type*` language. Nothing
+here parses them or branches on their constructors (ARCHITECTURE I4).
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from typing import Any, Iterable, Mapping
 
 SCHEME_VERSION = "provider7.constraints/v1"
-
-
-# ── Types ────────────────────────────────────────────────────────────────
-#
-# A type is *source text in the active grammar's own `Type*` language*
-# (ARCHITECTURE I4).  it never parses it, never branches on its
-# constructors, and never maintains a table of known type names.  Aufbau
-# parses it; the grammar's rules give it meaning.
-#
-# So `TypeSource` is a `str`, and that is not laziness — it is the invariant.
 
 TypeSource = str
 
 
 @dataclass(frozen=True)
 class Param:
-    """One typed parameter of a primitive."""
-
     name: str
     type: TypeSource
-    description: str = ""
 
 
 @dataclass(frozen=True)
 class Effect:
-    """A side effect a primitive may perform.
-
-    `kind` is a coarse class (`read`, `write`, `execute`, `network`, `delete`).
-    `scope` narrows it for display and approval — a path glob, a domain, a
-    command class.  Both are opaque here; gamma's policy interprets them.
-    """
+    """`kind` is read/write/execute/network/delete. `scope` narrows it for
+    approval. Both opaque here; gamma's policy interprets them."""
 
     kind: str
     scope: str = "*"
@@ -66,49 +41,35 @@ class Effect:
 class Primitive:
     """A typed foreign function callable from the agent language.
 
-    Not a "tool" in the tool-call sense: there is no separate call protocol
-    and no JSON envelope.  A primitive is an ordinary function in the
-    language, and the mask enforces its signature at decode time.
-
-    Fallibility is structural.  A primitive that can fail declares `raises`,
-    and its return type is then wrapped as a `Result` by the language binding
-    (ARCHITECTURE I1a).  There is no way to declare a fallible primitive that
-    returns a bare value, which is the point: no exceptional control flow can
-    enter the language through the primitive table.
+    `raises` set makes the return type a Result wrapper in both projections, so
+    a fallible primitive cannot return a bare value and no exceptional control
+    flow enters the language through this table (ARCHITECTURE I1a).
     """
 
     name: str
-    params: tuple[Param, ...]
-    returns: TypeSource
+    params: tuple[Param, ...] = ()
+    returns: TypeSource = ""
     raises: TypeSource | None = None
     effects: tuple[Effect, ...] = ()
-    description: str = ""
 
     @property
     def fallible(self) -> bool:
         return self.raises is not None
 
-    @property
-    def pure(self) -> bool:
-        return not self.effects
-
     def signature(self) -> str:
-        """Human-readable signature, for prompts and approval UI."""
         args = ", ".join(f"{p.name}: {p.type}" for p in self.params)
-        ret = self.returns if not self.fallible else f"{self.returns}!{self.raises}"
-        suffix = f"  [{', '.join(str(e) for e in self.effects)}]" if self.effects else ""
-        return f"{self.name}({args}) -> {ret}{suffix}"
+        ret = f"{self.returns}!{self.raises}" if self.fallible else self.returns
+        eff = "".join(f"  [{e}]" for e in self.effects)
+        return f"{self.name}({args}) -> {ret}{eff}"
 
 
 @dataclass(frozen=True)
 class Scheme:
-    """The full set of primitives granted for one request.
+    """The primitives granted for one request.
 
-    The scheme *is* the policy (ARCHITECTURE I7).  Granting a capability means
-    including the primitive that carries it; there is no separate permission
-    list, and provider7 enforces nothing.  A primitive absent from the scheme
-    is absent from the grammar, so the model cannot emit a call to it —
-    the grant and the constraint are the same object.
+    The scheme is the policy (ARCHITECTURE I7): a primitive absent here is
+    absent from the grammar, so the mask cannot emit a call to it. Grant and
+    constraint are the same object.
     """
 
     primitives: tuple[Primitive, ...] = ()
@@ -116,58 +77,40 @@ class Scheme:
 
     def __post_init__(self) -> None:
         names = [p.name for p in self.primitives]
-        duplicates = {n for n in names if names.count(n) > 1}
-        if duplicates:
-            raise ValueError(f"duplicate primitive names: {sorted(duplicates)}")
-
-    # ── Ordering ────────────────────────────────────────────────────────
-    #
-    # Byte-determinism of the composed grammar is a caching requirement, not
-    # a style preference: the SPG compile cache is keyed by content hash, so
-    # an order-unstable scheme recompiles the grammar on every single request
-    # (ARCHITECTURE §3.1).  Every projection iterates via `ordered()`.
+        dupes = {n for n in names if names.count(n) > 1}
+        if dupes:
+            raise ValueError(f"duplicate primitives: {sorted(dupes)}")
 
     def ordered(self) -> tuple[Primitive, ...]:
-        """Primitives in a stable, name-sorted order."""
+        """Name-sorted. Every projection iterates through this: the SPG cache is
+        keyed by content hash, so an unstable order recompiles the grammar on
+        every request (ARCHITECTURE §3.1)."""
         return tuple(sorted(self.primitives, key=lambda p: p.name))
-
-    # ── Set operations ──────────────────────────────────────────────────
 
     def get(self, name: str) -> Primitive | None:
         return next((p for p in self.primitives if p.name == name), None)
 
     def restrict(self, names: Iterable[str]) -> "Scheme":
-        """Narrow the scheme to `names`. This is how a capability is revoked."""
         keep = set(names)
-        return replace(
-            self, primitives=tuple(p for p in self.primitives if p.name in keep)
-        )
+        return replace(self, primitives=tuple(p for p in self.primitives if p.name in keep))
 
     def without_effects(self, kinds: Iterable[str]) -> "Scheme":
-        """Drop every primitive carrying any of `kinds`.
-
-        The read-only agent is `scheme.without_effects({"write", "delete", "execute"})`
-        — enforced by the mask, not by asking the model nicely.
-        """
+        """Drop every primitive carrying any of `kinds`. A read-only agent is
+        `without_effects({"write", "delete", "execute"})`."""
         banned = set(kinds)
         return replace(
             self,
             primitives=tuple(
-                p
-                for p in self.primitives
-                if not any(e.kind in banned for e in p.effects)
+                p for p in self.primitives if not any(e.kind in banned for e in p.effects)
             ),
         )
 
     def effects(self) -> tuple[Effect, ...]:
-        """Every effect reachable through this scheme, deduplicated."""
         seen: dict[tuple[str, str], Effect] = {}
-        for prim in self.ordered():
-            for eff in prim.effects:
-                seen.setdefault((eff.kind, eff.scope), eff)
+        for p in self.ordered():
+            for e in p.effects:
+                seen.setdefault((e.kind, e.scope), e)
         return tuple(seen.values())
-
-    # ── Wire format ─────────────────────────────────────────────────────
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -175,50 +118,34 @@ class Scheme:
             "primitives": [
                 {
                     "name": p.name,
-                    "params": [
-                        {"name": q.name, "type": q.type, "description": q.description}
-                        for q in p.params
-                    ],
+                    "params": [{"name": q.name, "type": q.type} for q in p.params],
                     "returns": p.returns,
                     "raises": p.raises,
                     "effects": [{"kind": e.kind, "scope": e.scope} for e in p.effects],
-                    "description": p.description,
                 }
                 for p in self.ordered()
             ],
         }
 
     def to_json(self) -> str:
-        # sort_keys for byte-determinism; see `ordered()`.
         return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
 
     @staticmethod
     def from_dict(data: Mapping[str, Any]) -> "Scheme":
         version = data.get("version", SCHEME_VERSION)
         if version != SCHEME_VERSION:
-            raise ValueError(
-                f"unsupported scheme version {version!r}, expected {SCHEME_VERSION!r}"
-            )
+            raise ValueError(f"unsupported scheme version {version!r}")
         return Scheme(
             version=version,
             primitives=tuple(
                 Primitive(
                     name=p["name"],
-                    params=tuple(
-                        Param(
-                            name=q["name"],
-                            type=q["type"],
-                            description=q.get("description", ""),
-                        )
-                        for q in p.get("params", ())
-                    ),
+                    params=tuple(Param(q["name"], q["type"]) for q in p.get("params", ())),
                     returns=p["returns"],
                     raises=p.get("raises"),
                     effects=tuple(
-                        Effect(kind=e["kind"], scope=e.get("scope", "*"))
-                        for e in p.get("effects", ())
+                        Effect(e["kind"], e.get("scope", "*")) for e in p.get("effects", ())
                     ),
-                    description=p.get("description", ""),
                 )
                 for p in data.get("primitives", ())
             ),
