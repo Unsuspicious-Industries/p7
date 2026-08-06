@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/warnings.py
+# hypothesis_version: 6.151.10
+
+['    %s\n', '  %s\n', '%s(%s)', ', ', '.', '.py', ':', '<string>', '<unknown>', '\\Z', '__main__', '__name__', '__warningregistry__', '_bootstrap', 'all', 'alpha', 'always', 'catch_warnings', 'category', 'default', 'error', 'file', 'filename', 'filterwarnings', 'formatwarning', 'gettotalrefcount', 'ignore', 'importlib', 'invalid action: %r', 'invalid lineno %r', 'line', 'lineno', 'message', 'module', 'module=%r', 'once', 'record=True', 'resetwarnings', 'showwarning', 'simplefilter', 'source', 'sys', 'version', 'warn', 'warn_explicit', 'warnings']

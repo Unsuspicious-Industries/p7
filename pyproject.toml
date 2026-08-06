@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Software Development :: Compilers",
 ]
 keywords = ["llm", "constrained-decoding", "type-systems", "grammar", "code-generation"]
-dependencies = ["aufbau-rs>=0.3.1", "grpcio>=1.65.0", "tomli>=2.0.0; python_version<'3.11'"]
+dependencies = ["aufbau-rs>=0.3.1", "grpcio>=1.65.0", "tomli>=2.0.0; python_version<'3.11'", "rich>=13.0.0"]
 
 [project.urls]
 Homepage = "https://unsuspicious.org/blog/proposition-7"
@@ -33,17 +33,18 @@ Homepage = "https://unsuspicious.org/blog/proposition-7"
 [project.optional-dependencies]
 transformers = ["transformers>=4.30.0", "torch>=2.0.0", "accelerate", "tiktoken"]
 outlines = ["outlines[llguidance]>=1.2.0", "transformers>=4.30.0", "torch>=2.0.0", "accelerate"]
-dev = ["pytest", "numpy", "flask>=2.3.0", "flask-cors>=4.0.0"]
+dev = ["pytest", "hypothesis", "numpy", "flask>=2.3.0", "flask-cors>=4.0.0"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["proposition7", "proposition7.*"]
+include = ["proposition7", "proposition7.*", "grammars", "grammars.*"]
 
 [tool.setuptools.package-data]
-"proposition7.grammars" = ["*.auf"]
+"grammars" = ["*.auf"]
+"proposition7.agentic" = ["*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

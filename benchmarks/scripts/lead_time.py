@@ -130,6 +130,12 @@ def first_dead_offset(spg, program: str) -> int | None:
     return None
 
 
+_ERROR_OFFSETS = {
+    "ml": ml_error_offset,
+    "c": c_error_offset,
+}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", type=Path, default=None, help="write per-mutant results as JSON")
@@ -152,9 +158,7 @@ def main() -> int:
     records: list[dict] = []
 
     for mutant in MUTANTS:
-        error_offset = (
-            ml_error_offset(mutant.program) if mutant.grammar == "ml" else c_error_offset(mutant.program)
-        )
+        error_offset = _ERROR_OFFSETS[mutant.grammar](mutant.program)
         if error_offset is None:
             print(f"SKIP  {mutant.task_id} ({mutant.kind}): compiler did not reject this mutant, or offset unparseable")
             skipped += 1

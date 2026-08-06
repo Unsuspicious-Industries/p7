@@ -13,5 +13,6 @@ text = "fun (x : int) -> fun (y : bool) ->"
 text = "fun (x : int) -> fun (y : bool) -> x"
 
 [resolution]
-mode = "type"
+mode = "eval"
 type = "int -> bool -> int"
+expected_value = "<fun>"

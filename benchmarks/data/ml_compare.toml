@@ -13,5 +13,6 @@ text = ""
 text = "1 < 2"
 
 [resolution]
-mode = "type"
+mode = "eval"
 type = "bool"
+expected_value = "true"

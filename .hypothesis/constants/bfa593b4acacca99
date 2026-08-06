@@ -1,0 +1,4 @@
+# file: /workspace/p7/src/proposition7/__init__.py
+# hypothesis_version: 6.151.10
+
+['0.1.0', 'BENCHMARK_MODES', 'ChatConstrainedModel', 'ConstrainedModel', 'EnvironmentResult', 'FormalBlock', 'GRAMMARS', 'GenerationResult', 'GlmConstrainedModel', 'GrammarBlock', 'Mode', 'ReasoningEnvironment', 'Result', 'Session', 'Synthesizer', 'ThinkBlock', 'agents', 'base_grammar', 'build_system_prompt', 'build_task_prompt', 'generate', 'get_grammar', 'get_grammar_info', 'get_grammar_summary', 'get_model_class', 'list_grammars', 'strip_typing_rules']

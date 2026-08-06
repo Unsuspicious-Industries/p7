@@ -1,7 +1,6 @@
 import aufbau
 
-from proposition7.agents import Tool, ToolRegistry
-from proposition7.agents.registry import Param
+from proposition7.agentic import Tool, ToolRegistry, Param
 
 _FOUR_TOOL_REGISTRY = ToolRegistry(
     [

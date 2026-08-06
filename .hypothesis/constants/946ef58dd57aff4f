@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/pathlib.py
+# hypothesis_version: 6.151.10
+
+[123, 256, 438, 511, 1921, '%r has an empty name', '*', '*\n', '**', '.', '.+', '.+\\n', '..', '/', '123456789¹²³', ':', '<{}.parents>', '?.', 'AUX', 'Aa', 'CON', 'CONIN$', 'CONOUT$', 'Invalid name %r', 'Invalid suffix %r', 'NUL', 'PRN', 'Path', 'PosixPath', 'PurePath', 'PurePosixPath', 'PureWindowsPath', 'Symlink loop from %r', 'WindowsPath', '\\', '\\Z', '\\\\', '^', '_', '_drv', '_hash', '_lines_cached', '_path', '_raw_paths', '_root', '_str', '_str_normcase_cached', '_tail', '_tail_cached', 'b', 'empty pattern', 'errno', 'file:', 'file://', 'file:///', 'link', 'nt', 'pathlib.Path.glob', 'pathlib.Path.rglob', 'pathlib.Path.walk', 'r', 'rb', 'readlink', 'symlink', 'w', 'wb', 'winerror', '{}({!r})', '~']

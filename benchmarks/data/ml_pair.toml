@@ -13,5 +13,6 @@ text = ""
 text = "(1, true)"
 
 [resolution]
-mode = "type"
+mode = "eval"
 type = "int * bool"
+expected_value = "(1, true)"

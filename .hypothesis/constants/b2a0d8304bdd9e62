@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/multiprocessing/connection.py
+# hypothesis_version: 6.151.10
+
+[b'#CHALLENGE#', b'#FAILURE#', b'#WELCOME#', b'md5', b'sha256', b'sha384', b'sha3_256', b'sha3_384', b'{', b'{%s}%s', b'}', 0.0, 0.5, 20.0, 128, 256, 1000, 8192, 16384, 2147483647, '!Q', '!i', 'AF_INET', 'AF_PIPE', 'AF_UNIX', 'B', 'Client', 'Listener', 'Pipe', 'PollSelector', 'Should not get here', '\\\\', '\\\\.\\pipe\\pyc-%d-%d-', '_got_empty_message', 'ascii', 'bad message length', 'close', 'fileno', 'handle is closed', 'invalid handle', 'listener is closed', 'listener-', 'localhost', 'md5', 'negative maxlength', 'negative offset', 'offset is negative', 'offset too large', 'poll', 'posix', 'protocol constraint', 'recv_bytes', 'send_bytes', 'sha256', 'size is negative', 'unrecognized family', 'utf-8', 'wait', 'win32']

@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/pkgutil.py
+# hypothesis_version: 6.151.10
+
+['#', '.', '.pkg', '/', "Can't open %s: %s\n", 'ModuleInfo', '__file__', '__init__', '__init__.py', '__loader__', '__path__', '__spec__', 'cln', 'extend_path', 'find_loader', 'find_spec', 'get_data', 'get_importer', 'get_loader', 'iter_importers', 'iter_modules', 'obj', 'pkg', 'pkgutil.find_loader', 'pkgutil.get_loader', 'read_code', 'walk_packages']

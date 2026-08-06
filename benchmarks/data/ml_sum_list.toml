@@ -13,5 +13,6 @@ text = "let rec sum : int list -> int ="
 text = "let rec sum : int list -> int = fun (xs : int list) -> match xs with [] -> 0 | h :: t -> h + sum(t) in sum(1 :: 2 :: [])"
 
 [resolution]
-mode = "type"
+mode = "eval"
 type = "int"
+expected_value = "3"

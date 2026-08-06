@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import proposition7
 import pytest
 import benchmarks.run as bench_run
+from hypothesis import given, settings, strategies as st
 
 from benchmarks.api import (
     BenchmarkTask,
@@ -147,15 +148,15 @@ def test_toml_tasks_have_resolution_for_every_task():
         if row.language == "stlc"
     )
     assert all(
-        row.resolution.get("mode") in {"type", "exact", "equivalence"}
+        row.resolution.get("mode") in {"eval", "type", "exact", "equivalence"}
         for row in rows
         if row.language == "ml"
     )
 
 
 def test_ml_type_oracle_checks_well_typedness_and_type():
-    # The ml oracle grades with aufbau: output must be well-typed and carry the
-    # declared type, compared modulo the grammar's rewrite theory.
+    # The "type" mode is deprecated (circular: aufbau both constrains and
+    # grades).  Kept for backward compat — new tasks should use "eval".
     task = make_task(
         grammar="ml",
         expected="fun (x : int) -> x",
@@ -167,8 +168,72 @@ def test_ml_type_oracle_checks_well_typedness_and_type():
     assert not check_resolution(task, "fun (x : int) -> true").ok
     # ill-typed program is rejected, not crashed
     assert not check_resolution(task, "1 + true").ok
-    # divergence inhabits the demanded type (the inhabited-grammar property)
+    # divergence inhabits the demanded type — this is why type mode is
+    # deprecated: assert false : 'a unifies with any type, so it passes
+    # the well-typedness check without actually being a valid program.
     assert check_resolution(task, "assert false").ok
+
+
+@given(
+    argument_type=st.sampled_from(["int", "bool"]),
+    return_type=st.sampled_from(["int", "bool"]),
+)
+@settings(max_examples=4, deadline=None)
+def test_ml_eval_oracle_enforces_declared_function_type(argument_type, return_type):
+    values = {"int": "1", "bool": "true"}
+    wrong_type = "bool" if return_type == "int" else "int"
+    expected = f"fun (x : {argument_type}) -> {values[return_type]}"
+    task = make_task(
+        grammar="ml",
+        expected=expected,
+        resolution={
+            "mode": "eval",
+            "type": f"{argument_type} -> {return_type}",
+            "expected_value": "<fun>",
+        },
+    )
+
+    assert check_resolution(task, expected).ok
+    wrong = f"fun (x : {argument_type}) -> {values[wrong_type]}"
+    assert not check_resolution(task, wrong).ok
+
+
+def test_ml_eval_oracle_rejects_runtime_failure():
+    task = make_task(
+        grammar="ml",
+        expected="fun (x : int) -> x",
+        resolution={"mode": "eval", "type": "int -> int", "expected_value": "<fun>"},
+    )
+    assert not check_resolution(task, "assert false").ok
+
+
+@given(left=st.integers(0, 1000), right=st.integers(0, 1000))
+@settings(max_examples=8, deadline=None)
+def test_ml_eval_oracle_compares_arithmetic_values(left, right):
+    total = left + right
+    task = make_task(
+        grammar="ml",
+        expected=f"{left} + {right}",
+        resolution={"mode": "eval", "type": "int", "expected_value": str(total)},
+    )
+
+    assert check_resolution(task, f"{left} + {right}").ok
+    assert check_resolution(task, str(total)).ok
+    assert not check_resolution(task, str(total + 1)).ok
+
+
+@given(values=st.lists(st.integers(0, 100), max_size=5))
+@settings(max_examples=8, deadline=None)
+def test_ml_eval_oracle_round_trips_int_lists(values):
+    program = "[]" if not values else " :: ".join(map(str, values)) + " :: []"
+    rendered = "[" + "; ".join(map(str, values)) + "]"
+    task = make_task(
+        grammar="ml",
+        expected=program,
+        resolution={"mode": "eval", "type": "int list", "expected_value": rendered},
+    )
+
+    assert check_resolution(task, program).ok
 
 
 def test_toml_expected_outputs_parse_and_pass_resolution():

@@ -6,6 +6,7 @@ from ..llm import ConstrainedModel
 from .chat import ChatConstrainedModel
 from .deepseek import DeepseekConstrainedModel
 from .glm import GlmConstrainedModel
+from .gptoss import GptOssConstrainedModel
 from .llama import LlamaConstrainedModel
 from .mistral import MistralConstrainedModel
 from .pleias import PleiasConstrainedModel
@@ -41,6 +42,8 @@ def get_model_class(model_name: str) -> Type[ConstrainedModel]:
         return PleiasConstrainedModel
     if "deepseek" in lower_name:
         return DeepseekConstrainedModel
+    if "gpt-oss" in lower_name or "gpt_oss" in lower_name:
+        return GptOssConstrainedModel
     if "qwen" in lower_name and "base" not in lower_name:
         return ChatConstrainedModel
     if "glm" in lower_name:
@@ -57,6 +60,7 @@ __all__ = [
     "ChatConstrainedModel",
     "DeepseekConstrainedModel",
     "GlmConstrainedModel",
+    "GptOssConstrainedModel",
     "LlamaConstrainedModel",
     "MistralConstrainedModel",
     "PleiasConstrainedModel",

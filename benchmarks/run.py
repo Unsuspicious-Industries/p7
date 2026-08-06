@@ -622,12 +622,18 @@ def run_job(
             # model's construction-time grammar -- job.grammar_name only
             # needs to be *a* valid registered name so make_model() above
             # doesn't have to special-case agent tasks.
+            # args.think_budget is a per-*program* budget (2048 in main.toml)
+            # but an agent episode spends it once per *turn*, so an uncapped
+            # value burns the whole job timeout on thinking. Clamp it, and
+            # give steps a workable cap (the 32-token task default truncates
+            # real `let` steps mid-token).
             return run_agent_interaction(
                 model,
                 job.task,
                 job.mode,
                 seed=args.seed + job.attempt,
-                think_budget=args.think_budget,
+                think_budget=min(args.think_budget, 192),
+                max_tokens_per_step=64,
             )
         return run_interaction(
             model,

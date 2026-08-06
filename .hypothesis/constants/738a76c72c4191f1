@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/multiprocessing/spawn.py
+# hypothesis_version: 6.151.10
+
+['%s=%r', ', ', '-c', '.__main__', '=', 'None', 'Not forking', '__file__', '__main__', '__mp_main__', '_inheriting', '_main', 'authkey', 'dir', 'freeze_support', 'frozen', 'get_command_line', 'get_executable', 'get_preparation_data', 'import_main_path', 'init_main_from_name', 'init_main_from_path', 'ipython', 'log_level', 'log_to_stderr', 'name', 'orig_dir', 'python.exe', 'pythonservice.exe', 'rb', 'set_executable', 'start_method', 'sys_argv', 'sys_path', 'win32']

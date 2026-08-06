@@ -13,5 +13,6 @@ text = "let a : int ="
 text = "let a : int = assert false in a"
 
 [resolution]
-mode = "type"
-type = "int"
+mode = "eval"
+type = "assert_false"
+expected_value = "assert_failure"

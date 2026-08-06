@@ -1,0 +1,4 @@
+# file: /workspace/p7/src/proposition7/agentic/context.py
+# hypothesis_version: 6.151.10
+
+['"', ', ', '__args__', '__name__', '__origin__', 'bool', 'float', 'int', 'string', 'unit']

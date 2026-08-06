@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/string.py
+# hypothesis_version: 6.151.10
+
+['$', '01234567', '0123456789', 'ABCDEF', 'Formatter', 'Template', 'a', 'abcdef', 'ascii_letters', 'ascii_lowercase', 'ascii_uppercase', 'braced', 'capwords', 'digits', 'escaped', 'hexdigits', 'invalid', 'named', 'octdigits', 'pattern', 'printable', 'punctuation', 'r', 's', 'whitespace']

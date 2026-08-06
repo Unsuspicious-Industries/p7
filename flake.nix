@@ -34,9 +34,10 @@
           setuptools
           wheel
           
-          # Development
-          pytest
-          numpy
+           # Development
+           pytest
+           hypothesis
+           numpy
           accelerate
           ipykernel
           flask
@@ -68,6 +69,9 @@
 
             # Python with all packages
             pythonEnv
+
+            # Compilers used as oracles/goldens by the benchmarks
+            pkgs.ocaml
             
             # Build essentials
             pkgs.pkg-config

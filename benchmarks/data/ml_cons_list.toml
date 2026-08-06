@@ -13,5 +13,6 @@ text = ""
 text = "1 :: 2 :: 3 :: []"
 
 [resolution]
-mode = "type"
+mode = "eval"
 type = "int list"
+expected_value = "[1; 2; 3]"

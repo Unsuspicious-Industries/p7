@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/multiprocessing/util.py
+# hypothesis_version: 6.151.10
+
+[-100, 256, '\x00', ', args=', ', exitpriority=', ', kwargs=', '<%s object, dead>', '>', 'Finalize', 'ForkAwareLocal', 'ForkAwareThreadLock', 'SC_OPEN_MAX', 'SUBDEBUG', 'SUBWARNING', '__name__', 'calling %s', 'close_all_fds_except', 'debug', 'fd too large', 'get_logger', 'get_temp_dir', 'getandroidapilevel', 'info', 'is_exiting', 'linux', 'log_to_stderr', 'multiprocessing', 'pymp-', 'register_after_fork', 'sub_debug', 'sub_warning', 'tempdir', 'unregister', 'utf-8']

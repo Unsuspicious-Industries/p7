@@ -1,0 +1,4 @@
+# file: /workspace/p7/src/proposition7/models/chat.py
+# hypothesis_version: 6.151.10
+
+['\\s*', '\\s*$', 'apply_chat_template', 'content', 'enable_thinking', 'pt', 'role', 'user']

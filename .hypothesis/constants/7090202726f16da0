@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/difflib.py
+# hypothesis_version: 6.151.10
+
+[b'\n', 0.0, 0.6, 0.74, 0.75, 1.0, 2.0, 100, 200, '\x00', '\x00+', '\x00-', '\x00^', '\x01', '\t{}', ' id="%s%s"', '! ', '%d', '%s %s', '&', '&amp;', '&gt;', '&lt;', '&nbsp;', '(\\++|\\-+|\\^+)', '*** {} ****{}', '*** {}{}{}', '***************', '+', '+ ', '+++ {}{}{}', '+-', '+--', '-', '- ', '-+?', '--+', '--++', '--- {} ----{}', '--- {}{}{}', '--?+', '-?+', '-?+?', '<', '</span>', '>', '?', '@@ -{} +{} @@{}', 'Differ', 'HtmlDiff', 'IS_CHARACTER_JUNK', 'IS_LINE_JUNK', 'Match', 'SequenceMatcher', 'X', '\\s*(?:#\\s*)?$', '^', '__main__', 'a b size', 'ascii', 'context_diff', 'delete', 'diff_bytes', 'equal', 'from%d_', 'get_close_matches', 'insert', 'n must be > 0: %r', 'ndiff', 'replace', 'restore', 'surrogateescape', 'to%d_', 'unified_diff', 'unknown tag %r', 'utf-8', 'xmlcharrefreplace', '{}', '{},{}']

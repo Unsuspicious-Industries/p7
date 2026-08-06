@@ -13,5 +13,6 @@ text = "let a : int = 5 in"
 text = "let a : int = 5 in a + 1"
 
 [resolution]
-mode = "type"
+mode = "eval"
 type = "int"
+expected_value = "6"

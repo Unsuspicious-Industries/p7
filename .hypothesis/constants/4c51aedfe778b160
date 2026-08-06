@@ -1,0 +1,4 @@
+# file: /workspace/p7/src/grammars/__init__.py
+# hypothesis_version: 6.151.10
+
+[', ', '//', '=', 'Application: f(arg)', 'C', 'ML', 'Tool-call pipeline', 'Toy: Beep Boop', '_syntactic', 'add', 'apply', 'beep:Fizz', 'c', 'concat', 'const', 'count_format', 'deref', 'description', 'examples', 'fun (x : int) -> x', 'helper', 'identity', 'let', 'ml', 'name', 'search_summarize', 'short', 'single', 'spec', 'stlc', 'sum', 'summary', 'syntax_hints', 'tool', 'tool_sexpr', 'toy', 'typed nonsense', 'typing rules', 'utf-8', 'λx:Int.x', 'λx:Int.λy:Bool.x']

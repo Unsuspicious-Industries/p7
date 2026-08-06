@@ -13,5 +13,6 @@ text = "fst"
 text = "fst (1, true)"
 
 [resolution]
-mode = "type"
+mode = "eval"
 type = "int"
+expected_value = "1"

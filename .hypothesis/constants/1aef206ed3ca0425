@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/ctypes/__init__.py
+# hypothesis_version: 6.151.10
+
+[-2147221231, 65535, '%s(%s)', '%s(<NULL>)', ')', '*', '.', '.a(', '/', '1.1.0', '<uninitialized>', '?', 'B', 'CFUNCTYPE', 'H', 'I', 'L', 'O', 'P', 'Q', 'WINFUNCTYPE', "What's this???", 'Z', '\\', '_', '__', 'aix', 'b', 'c', 'cygwin', 'd', 'darwin', 'f', 'g', 'h', 'i', 'l', 'libpython%d.%d.dll', 'nt', 'posix', 'python dll', 'q', 'u', 'use_errno', 'use_last_error', 'z']

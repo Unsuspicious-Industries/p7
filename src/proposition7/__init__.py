@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib import import_module
+
 from aufbau import Synthesizer
 
 from grammars import (
@@ -12,17 +14,6 @@ from grammars import (
     strip_typing_rules,
 )
 from .inference import GenerationResult
-from .llm import ConstrainedModel
-from . import agents
-from .models import (
-    get_model_class,
-    PleiasConstrainedModel,
-    DeepseekConstrainedModel,
-    LlamaConstrainedModel,
-    MistralConstrainedModel,
-    GlmConstrainedModel,
-    ChatConstrainedModel,
-)
 from .environment import (
     ReasoningEnvironment,
     EnvironmentResult,
@@ -35,11 +26,37 @@ from .environment import (
     build_task_prompt,
 )
 
-# High-level API
-from .api import Session, generate, Result
+
+_LAZY_EXPORTS = {
+    "ConstrainedModel": (".llm", "ConstrainedModel"),
+    "get_model_class": (".models", "get_model_class"),
+    "ChatConstrainedModel": (".models", "ChatConstrainedModel"),
+    "DeepseekConstrainedModel": (".models", "DeepseekConstrainedModel"),
+    "LlamaConstrainedModel": (".models", "LlamaConstrainedModel"),
+    "MistralConstrainedModel": (".models", "MistralConstrainedModel"),
+    "GlmConstrainedModel": (".models", "GlmConstrainedModel"),
+    "PleiasConstrainedModel": (".models", "PleiasConstrainedModel"),
+    "Session": (".api", "Session"),
+    "generate": (".api", "generate"),
+    "Result": (".api", "Result"),
+}
+
+
+def __getattr__(name: str):
+    """Load model-backed APIs only when a caller actually requests them."""
+    target = _LAZY_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attribute = target
+    value = getattr(import_module(module_name, __name__), attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))
 
 __all__ = [
-    "agents",
     "generate",
     "Session",
     "Result",

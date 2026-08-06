@@ -3,7 +3,9 @@
 The actual mechanism -- the typed tool registry, grammar generation, and the
 turn-by-turn constrained session driver -- lives in `proposition7.agents`
 (a real, reusable library, not benchmark-only code: the same `ToolRegistry`/
-`AgentSession` back an interactive CLI too, see `proposition7.agents.cli`).
+`AgentSession` back an interactive CLI in paid product repos too,
+e.g. the `code7` agent, which talks to the library through
+`proposition7.agentic`).
 This module is just the benchmark's use of it: a fixed mock registry graded
 by executed value (not typedness -- see lmpl-plan.md section 5.2), and a
 thin `run_agent_episode` wrapper matching the shape `benchmarks/run.py`'s

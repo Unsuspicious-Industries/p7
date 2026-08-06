@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover - Python < 3.11
 
 import proposition7
 from proposition7 import build_task_prompt
-from benchmarks.oracles import check_resolution
+from benchmarks.oracles import check_resolution, validate_resolution
 
 
 ROOT = Path(__file__).resolve().parent
@@ -141,55 +141,7 @@ def _validate_task_resolution(
             )
         return
 
-    if grammar == "stlc":
-        if mode not in {"exact", "equivalence"}:
-            raise ValueError(
-                f"{path}: {task_id}: unsupported stlc resolution mode {mode!r}"
-            )
-        if "normalization" in resolution and not isinstance(
-            resolution["normalization"], list
-        ):
-            raise ValueError(
-                f"{path}: {task_id}: resolution.normalization must be a list"
-            )
-        if "type" in resolution and not str(resolution["type"]).strip():
-            raise ValueError(f"{path}: {task_id}: resolution.type must be non-empty")
-        return
-
-    if grammar == "ml":
-        if mode not in {"exact", "type", "equivalence"}:
-            raise ValueError(
-                f"{path}: {task_id}: unsupported ml resolution mode {mode!r}"
-            )
-        if mode in {"type", "equivalence"} and "type" in resolution:
-            if not str(resolution.get("type") or "").strip():
-                raise ValueError(
-                    f"{path}: {task_id}: resolution.type must be a non-empty string"
-                )
-        return
-
-    if grammar == "c":
-        if mode not in {"exact", "type"}:
-            raise ValueError(
-                f"{path}: {task_id}: unsupported c resolution mode {mode!r}"
-            )
-        return
-
-    if grammar in {"tool", "tool_sexpr"}:
-        if mode not in {"exact", "type", "value"}:
-            raise ValueError(
-                f"{path}: {task_id}: unsupported {grammar} resolution mode {mode!r}"
-            )
-        if mode == "value" and "expected_value" not in resolution:
-            raise ValueError(
-                f"{path}: {task_id}: value mode requires resolution.expected_value"
-            )
-        return
-
-    if mode not in {"exact", "equivalence"}:
-        raise ValueError(
-            f"{path}: {task_id}: unsupported {grammar} resolution mode {mode!r}"
-        )
+    validate_resolution(path, task_id, grammar, resolution, kind=kind)
 
 
 def load_all_tasks() -> list[BenchmarkTask]:
@@ -223,12 +175,15 @@ def load_tasks(names: Iterable[str]) -> list[BenchmarkTask]:
     raise SystemExit(f"Unknown task selectors: {', '.join(sorted(selectors))}")
 
 
+_GRAMMAR_ALIASES = {
+    "stlc_union": "stlc",
+}
+
+
 def grammar_name(task_grammar: str) -> str:
     if task_grammar in proposition7.list_grammars():
         return task_grammar
-    if task_grammar == "stlc_union" and "stlc" in proposition7.list_grammars():
-        return "stlc"
-    return task_grammar
+    return _GRAMMAR_ALIASES.get(task_grammar, task_grammar)
 
 
 # build_prompt is kept as an alias so existing callers keep working.
@@ -645,6 +600,7 @@ def run_agent_interaction(
     *,
     seed: Optional[int] = None,
     think_budget: int = 64,
+    max_tokens_per_step: Optional[int] = None,
 ) -> dict[str, Any]:
     """The `kind == "agent"` analogue of `run_interaction`: drives one
     multi-turn episode (benchmarks/agent.run_agent_episode, itself a thin
@@ -664,7 +620,11 @@ def run_agent_interaction(
             model,
             task.prompt,
             max_turns=task.max_turns,
-            max_tokens_per_step=task.max_tokens_per_step,
+            max_tokens_per_step=(
+                max_tokens_per_step
+                if max_tokens_per_step is not None
+                else task.max_tokens_per_step
+            ),
             think_budget=think_budget,
             seed=seed,
             mode=mode,
@@ -715,6 +675,11 @@ def run_agent_interaction(
         "turns": len(result.turns),
         "turn_kinds": [t.kind for t in result.turns],
         "turn_tools": [t.tool for t in result.turns if t.tool],
+        # Post-hoc audit trail: why each turn stopped and what it actually
+        # produced (truncated -- raw.jsonl must stay small).
+        "turn_stop_reasons": [t.stopped_reason for t in result.turns],
+        "turn_texts": [t.text[:120] for t in result.turns],
+        "think_chars": [len(t.think_text) for t in result.turns],
         "think_tokens_total": sum(t.think_tokens for t in result.turns),
         "error": error,
         "reject_reason": "" if passed else (resolution_result.reason or "rejected"),

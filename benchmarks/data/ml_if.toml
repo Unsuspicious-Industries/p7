@@ -13,5 +13,6 @@ text = "if 1 < 2 then"
 text = "if 1 < 2 then 1 else 0"
 
 [resolution]
-mode = "type"
+mode = "eval"
 type = "int"
+expected_value = "1"

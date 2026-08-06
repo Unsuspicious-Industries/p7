@@ -1,0 +1,4 @@
+# file: /workspace/p7/src/proposition7/models/__init__.py
+# hypothesis_version: 6.151.10
+
+['ChatConstrainedModel', 'ConstrainedModel', 'GLM-4-9B', 'GPT-2 (124M)', 'GPT-2 Medium (355M)', 'GlmConstrainedModel', 'Mistral-7B', 'PleIAs Monad (56.7M)', 'PleIAs/Baguettotron', 'PleIAs/Monad', 'Pythia-1.4B', 'Pythia-160M', 'Pythia-2.8B', 'Pythia-410M', 'Pythia-6.9B', 'Qwen 3.5 9B', 'Qwen/Qwen3.5-9B', 'THUDM/glm-4-9b', 'baguettotron', 'base', 'deepseek', 'display_name', 'get_model_class', 'glm', 'gpt-oss', 'gpt2', 'gpt2-medium', 'gpt_oss', 'list_models', 'llama', 'mistral', 'monad', 'name', 'pleias', 'qwen']

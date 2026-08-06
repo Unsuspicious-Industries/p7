@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/csv.py
+# hypothesis_version: 6.151.10
+
+[0.01, 0.9, 1.0, 127, '"', '%c ', ',', ', ', ':', ';', 'Dialect', 'DictReader', 'DictWriter', 'Error', 'QUOTE_ALL', 'QUOTE_MINIMAL', 'QUOTE_NONE', 'QUOTE_NONNUMERIC', 'QUOTE_NOTNULL', 'QUOTE_STRINGS', 'Sniffer', '__doc__', '__version__', 'delim', 'excel', 'excel-tab', 'excel_tab', 'field_size_limit', 'get_dialect', 'ignore', 'list_dialects', 'quote', 'raise', 'reader', 'register_dialect', 'sniffed', 'space', 'unix', 'unix_dialect', 'unregister_dialect', 'writer']

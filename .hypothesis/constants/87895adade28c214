@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/timeit.py
+# hypothesis_version: 6.151.10
+
+[1e-09, 1e-06, 0.001, 0.2, 1.0, 1000000, '%.*g %s', ', ', ', _setup=_setup', ', _stmt=_stmt', '--help', '--number', '--process', '--repeat', '--setup', '--unit', '--verbose', '-h', '-n', '-p', '-r', '-s', '-u', '-v', '<timeit-src>', 'Timer', '__main__', '_setup', '_setup()', '_stmt', '_stmt()', 'default_timer', 'exec', 'help', 'inner', 'msec', 'n:u:s:r:pvh', 'nsec', 'number=', 'pass', 'process', 'raw times: %s', 'repeat', 'repeat=', 's', 'sec', 'setup=', 'timeit', 'unit=', 'usec', 'verbose']

@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/importlib/_bootstrap.py
+# hypothesis_version: 6.151.10
+
+['#', '# ', '*', '.', '.__all__', '/', '<', '?', 'Empty module name', 'No module named ', '\\', '_ORIGIN', '__all__', '__cached__', '__doc__', '__file__', '__loader__', '__module__', '__name__', '__origname__', '__package__', '__path__', '__qualname__', '__spec__', '_initializing', '_stdlib_dir', '_thread', '_warnings', '_weakref', "``from list''", 'built-in', 'create_module', 'exec_module', 'filename', 'frozen', 'get_filename', 'import ', 'import {!r} # {!r}', 'is_package', 'key', 'level must be >= 0', 'missing loader', 'origname', 'win32', '{!r}']

@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/asyncio/selector_events.py
+# hypothesis_version: 6.151.10
+
+[b'\x00', 100, 256, 1024, 4096, '%r pauses reading', '%r received EOF', '%r resumes reading', '%r: %s', '<{}>', 'SC_IOV_MAX', 'Using selector: %s', 'closed', 'closing', 'exception', 'idle', 'message', 'peername', 'polling', 'protocol', 'read=idle', 'read=polling', 'sendmsg', 'socket', 'sockname', 'transport']

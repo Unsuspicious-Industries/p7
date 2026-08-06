@@ -1,0 +1,4 @@
+# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/collections/__init__.py
+# hypothesis_version: 6.151.10
+
+['%s(%r)', '%s()', '(', ')', ',', ', ', 'ChainMap', 'Counter', 'OrderedDict', 'UserDict', 'UserList', 'UserString', '_', '__builtins__', '__doc__', '__getnewargs__', '__main__', '__match_args__', '__missing__', '__name__', '__new__', '__repr__', '__slots__', '__weakref__', '_asdict', '_field_defaults', '_fields', '_make', '_replace', '_tuple_new', 'data', 'defaultdict', 'deque', 'dictionary is empty', 'key', 'namedtuple', 'next', 'prev', 'strict', 'utf-8']

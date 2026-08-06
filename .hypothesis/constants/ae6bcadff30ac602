@@ -1,0 +1,4 @@
+# file: /workspace/p7/src/proposition7/llm.py
+# hypothesis_version: 6.151.10
+
+[0.0, 1e-40, 1e-06, 2048, '-inf', '</s>', '</think>', '<role>', '<think>', '<|end|>', '<|eot_id|>', 'ConstrainedModel', 'bos_token', 'bos_token_id', 'complete', 'config', 'cpu', 'cuda', 'dead', 'device_map', 'eog_token_id', 'eog_token_ids', 'eos_token', 'eos_token_id', 'eos_token_ids', 'generation_config', 'max_tokens', 'no_valid', 'none', 'pad_token', 'pad_token_id', 'past_key_values', 'pt', 'sep_token', 'sep_token_id', 'stop_token_id', 'stop_token_ids', 'tolist', 'torch_dtype', 'typed', 'unk_token', 'unk_token_id']
