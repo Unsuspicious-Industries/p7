@@ -26,7 +26,6 @@ One primitive table, two projections, so they cannot drift (ARCHITECTURE I2).
 - `scheme`     `Primitive`/`Param`/`Effect`/`Scheme` + the JSON wire format
 - `grammar`    scheme → `.auf` fragment, composed with a core language
 - `gamma`      `Gamma`: client-side (name → value), wire view (name → type)
-- `ir`         the IR the evaluator runs, so D3 supplies only a lowering
 - `result`     `Result`/`Ok`/`Err` — failure is a value, never an exit
 - `evaluator`  `Dispatch`, effect audit, atomic turns
 - `turn`       the turn loop and `PromptLayout`
@@ -44,7 +43,6 @@ from .evaluator import (
     EvaluationError,
     Evaluator,
     TurnOutcome,
-    audit,
 )
 from .context import Binding, Gamma
 from .grammar import (
@@ -56,7 +54,6 @@ from .grammar import (
     fragment,
     validate_binding,
 )
-from .ir import Bind, Call, Do, Lit, Program, Todo, Var
 from .result import Err, Ok, PrimitiveFailure, Result
 from .scheme import SCHEME_VERSION, Effect, Param, Primitive, Scheme, TypeSource
 from .session import (
@@ -85,13 +82,6 @@ __all__ = [
     "CompositionError",
     "Gamma",
     "Binding",
-    "Program",
-    "Bind",
-    "Do",
-    "Call",
-    "Var",
-    "Lit",
-    "Todo",
     "Result",
     "Ok",
     "Err",
@@ -100,7 +90,6 @@ __all__ = [
     "Evaluator",
     "EffectAudit",
     "TurnOutcome",
-    "audit",
     "DispatchError",
     "EvaluationError",
     "Session",

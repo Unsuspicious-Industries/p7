@@ -70,6 +70,24 @@ class LanguageBinding:
     #: label in `core_source`.
     rule_prefix: str = "prim_"
 
+    # ── Node names the evaluator dispatches on ──────────────────────────
+    #
+    # The evaluator walks aufbau's Ast and identifies productions by
+    # `nt_name()`. Primitive calls need no entry here — their nonterminals are
+    # generated from the scheme and inverted automatically. These are the core
+    # language's own productions, and this is the single place D3 names them.
+
+    #: Production for one statement in the sequence.
+    statement_nt: str = "Stmt"
+    #: Production for a bound name on a statement's left-hand side.
+    identifier_nt: str = "Identifier"
+    #: Production for a variable reference.
+    variable_nt: str = "Variable"
+    #: Productions whose text is their value.
+    literal_nts: tuple[str, ...] = ("StringLit", "IntLit")
+    #: The universal inhabitant (ARCHITECTURE §2.2).
+    todo_nt: str = "Todo"
+
     def wrap_return(self, primitive: Primitive) -> str:
         """The type a call to `primitive` has.
 

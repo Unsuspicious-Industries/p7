@@ -6,10 +6,9 @@ One turn, end to end:
     2. gamma   renders   prompt (mutable-last)   ->  model_context
     3. gamma   projects  Γ                       ->  aufbau_context  (types only)
     4. provider7  decodes under the mask         ->  completion, Γ′-types
-    5. gamma   lowers    completion              ->  ir.Program      (D3 supplies)
-    6. gamma   audits    Program                 ->  EffectAudit, approval
-    7. gamma   evaluates Program                 ->  values
-    8. gamma   commits   Γ′                      ->  Γ for the next turn
+    5. gamma   audits    the parse tree          ->  EffectAudit, approval
+    6. gamma   evaluates the parse tree      ->  values
+    7. gamma   commits   Γ′                      ->  Γ for the next turn
 
 Steps 1-3 and 5-8 are the client's. Step 4 is the only thing that crosses the
 wire, and it carries no values and no session identity — provider7 holds
@@ -24,7 +23,6 @@ from typing import Any, Callable, Mapping, Protocol
 from .context import Gamma
 from .evaluator import Dispatch, EffectAudit, Evaluator, Host, TurnOutcome
 from .grammar import LanguageBinding, compose
-from .ir import Program
 from .scheme import Scheme, TypeSource
 
 
@@ -104,8 +102,6 @@ class PromptLayout:
 
 # ── Session ──────────────────────────────────────────────────────────────
 
-#: D3 supplies this: completion text -> IR. See `proposition7.satz.ir`.
-Lowering = Callable[[str], Program]
 
 
 class Session:
@@ -116,7 +112,6 @@ class Session:
         client: ConstraintClient,
         binding: LanguageBinding,
         dispatch: Dispatch,
-        lower: Lowering,
         *,
         model: str,
         layout: PromptLayout | None = None,
@@ -125,10 +120,9 @@ class Session:
         self.client = client
         self.binding = binding
         self.dispatch = dispatch
-        self.lower = lower
         self.model = model
         self.layout = layout or PromptLayout()
-        self.evaluator = Evaluator(dispatch, approve=approve)
+        self.evaluator = Evaluator(dispatch, binding, spg, approve=approve)
         self.gamma = Gamma()
         self.turn_index = 0
 
@@ -170,10 +164,9 @@ class Session:
             self.turn_index += 1
             return record
 
-        program = self.lower(response.completion)
-        record.program = program
-
-        outcome = self.evaluator.run(program, self.gamma, turn=self.turn_index)
+        outcome = self.evaluator.run(
+            response.completion, self.gamma, turn=self.turn_index
+        )
         record.outcome = outcome
 
         if outcome.ok:
@@ -191,7 +184,6 @@ class TurnRecord:
     turn: int
     completion: str = ""
     is_complete: bool = True
-    program: Program | None = None
     outcome: TurnOutcome | None = None
 
     @property
@@ -207,7 +199,6 @@ def build(
     binding: LanguageBinding,
     scheme: Scheme,
     hosts: dict[str, Host],
-    lower: Lowering,
     *,
     model: str,
     layout: PromptLayout | None = None,
@@ -225,7 +216,6 @@ def build(
         client,
         binding,
         dispatch,
-        lower,
         model=model,
         layout=layout,
         approve=approve,
