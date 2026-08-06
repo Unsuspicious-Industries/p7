@@ -199,7 +199,12 @@ class Evaluator:
     def _type(self, ast: Any, node: Any) -> TypeSource:
         """The engine's type for a node, rendered back to type source."""
         term = ast.type_of(node.evidence)
-        return "" if term is None else self.spg.show(term)
+        if term is None:
+            return ""
+        # `type_of` may hand back an already-rendered type or a Term, depending
+        # on the evidence. Either way the *engine* produced it — this branch
+        # chooses a spelling, it never derives a type.
+        return term if isinstance(term, str) else self.spg.show(term)
 
     def _walk(self, node: Any):
         yield node
@@ -275,7 +280,10 @@ class Evaluator:
                 args = [evaluate(child, env) for child in self._nodes(node)]
                 return self._call(prim, args)
 
-            if name == self.binding.variable_nt:
+            # A single-alternative production is transparent in aufbau's tree,
+            # so `Expression -> Variable -> Identifier` can collapse and the
+            # bare identifier is what a variable reference looks like here.
+            if name in (self.binding.variable_nt, self.binding.identifier_nt):
                 return value_of(node.text.strip(), env)
 
             if name in self.binding.literal_nts:
