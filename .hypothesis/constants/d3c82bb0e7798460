@@ -1,4 +1,0 @@
-# file: /workspace/p7/src/proposition7/api.py
-# hypothesis_version: 6.151.10
-
-[200, 'T4', 'auto', 'cpu', 'device', 'device_map', 'gpt2', 'stlc', 'think_budget']

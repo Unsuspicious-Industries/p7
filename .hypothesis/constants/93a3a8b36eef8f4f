@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/gettext.py
-# hypothesis_version: 6.151.10
-
-[b'\x00', b'\n', 100, 1000, 65535, 2500072158, 3725722773, '!', '!=', '#-#-#-#-#', '%', '%s\x04%s', '%s %s %s', '%s if %s else %s', '%s%d', '%s%s', '%s(%s)', '%s.mo', '&&', '(', '(%s)', ')', '*', '+', '-', '.', '/', '//', ':', ';', '<', '<4I', '<=', '<I', '<II', '==', '>', '>4I', '>=', '>II', '?', '@', 'Bad magic number', 'Bad version number ', 'C', 'Catalog', 'File is corrupt', 'GNUTranslations', 'INVALID', 'LANG', 'LANGUAGE', 'LC_ALL', 'LC_MESSAGES', 'NullTranslations', 'WHITESPACES', '_', '__name__', '_as_int', 'and', 'ascii', 'bindtextdomain', 'charset=', 'content-type', 'dgettext', 'dngettext', 'dnpgettext', 'dpgettext', 'find', 'func', 'gettext', 'install', 'locale', 'messages', 'n', 'name', 'ngettext', 'not ', 'npgettext', 'or', 'pgettext', 'plural-forms', 'plural=', 'rb', 'share', 'textdomain', 'translation', '||']

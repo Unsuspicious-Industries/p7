@@ -1,4 +1,0 @@
-# file: /workspace/p7/benchmarks/oracles.py
-# hypothesis_version: 6.151.10
-
-[1000, '(', ')', '->', '.', '.ml', ':', '<default>', '[A-Za-z_]', '_syntactic', 'agent', 'alpha', 'app', 'assert_failure', 'assert_false', 'beta', 'beta_alpha_mismatch', 'bool', 'bool ->', 'bound', 'c', 'default', 'episode', 'equivalence', 'equivalence_mismatch', 'eval', 'exact', 'exact_mismatch', 'expected', 'expected_value', 'free', 'grammar', 'int', 'int * bool', 'int * int', 'int ->', 'int list', 'lam', 'ml', 'ml_eval_', 'mode', 'normalization', 'ocaml', 'print_endline "()";;', 'reason', 'resolution', 'return_value', 'single_shot', 'stlc', 'success', 'tool', 'tool_sexpr', 'type', 'type_mismatch', 'typed', 'unit', 'value', 'w', 'λ', '→']

@@ -1,4 +1,0 @@
-# file: /workspace/p7/benchmarks/utils.py
-# hypothesis_version: 6.151.10
-
-[0.0, 0.082, 0.124, 0.15, 0.5, 0.75, 0.8, 2.0, 4.0, 1000.0, 1024, 1000000000, 'HF_HOME', 'HF_HUB_CACHE', 'agent', 'auto', 'backend', 'constrained_direct', 'cpu', 'device', 'device_map', 'distilgpt2', 'float32', 'gemma', 'gpt2', 'hub', 'kind', 'local', 'model_kwargs', 'model_kwargs_json', 'none', 'openrouter', 'outlines', 'outlines_mixed', 'qwen/qwen3.5-0.8b', 'single_shot', 'torch_dtype', 'unconstrained', 'vram', '~/.cache/huggingface']

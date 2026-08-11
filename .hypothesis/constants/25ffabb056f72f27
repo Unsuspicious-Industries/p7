@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/asyncio/locks.py
-# hypothesis_version: 6.151.10
-
-['Barrier', 'Barrier aborted', 'BoundedSemaphore', 'Condition', 'Event', 'Lock', 'Semaphore', 'broken', 'draining', 'filling', 'locked', 'parties must be >= 1', 'resetting', 'set', 'unlocked', 'unset']

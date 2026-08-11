@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/traceback.py
-# hypothesis_version: 6.151.10
-
-[750, '    {}\n', '    {}{}', ' ({})', '%s\n', '%s: %s\n', ')#', '+', '+-', '.', '...', '<implicit>', '<string>', '<unknown>', 'FrameSummary', 'StackSummary', 'TracebackException', 'WF', '[', ']', '^', '_Anchors', '__main__', '__notes__', '_line', 'builtins', 'clear_frames', 'colno', 'end_colno', 'end_lineno', 'exception', 'extract_stack', 'extract_tb', 'filename', 'format_exc', 'format_exception', 'format_list', 'format_stack', 'format_tb', 'last_exc', 'last_type', 'left_end_offset', 'lineno', 'local', 'locals', 'name', 'name_from', 'no last exception', 'note', 'primary_char', 'print_exc', 'print_exception', 'print_last', 'print_stack', 'print_tb', 'replace', 'right_start_offset', 's', 'secondary_char', 'self', 'tracebacklimit', 'utf-8', 'walk_stack', 'walk_tb', '{}\n', '{}: {}{}\n', '|', '~']

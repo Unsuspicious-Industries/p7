@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/tomllib/_parser.py
-# hypothesis_version: 6.151.10
-
-[127, 55295, 57344, 1114111, '\x08', '"', '"""', '"\'', '#', "'", "'''", '+inf', '+nan', ',', '-_', '-inf', '-nan', '.', '=', 'Invalid hex value', 'Invalid statement', 'Invalid value', 'Unclosed array', 'Unterminated string', '[', '\\', '\\\t', '\\\n', '\\ ', '\\"', '\\U', '\\\\', '\\b', '\\f', '\\n', '\\r', '\\t', '\\u', ']', ']]', 'end of document', 'f', 'false', 'flags', 'inf', 'nan', 'nested', 'recursive_flags', 't', 'true', '{', '}']

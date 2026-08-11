@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/unittest/suite.py
-# hypothesis_version: 6.151.10
-
-['<%s tests=%s>', '__unittest_skip__', '_classSetupFailed', '_moduleSetUpFailed', '_previousTestClass', '_restoreStdout', '_setupStdout', '_testRunEntered', 'addSkip', 'countTestCases', 'doClassCleanups', 'setUpClass', 'setUpModule', 'tearDownClass', 'tearDownModule', '{} is not callable']

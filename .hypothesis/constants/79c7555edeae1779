@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/code.py
-# hypothesis_version: 6.151.10
-
-['\nKeyboardInterrupt\n', '%s\n', '-q', '... ', '<console>', '<input>', '>>> ', 'InteractiveConsole', '__console__', '__doc__', '__main__', '__name__', 'compile_command', 'interact', 'now exiting %s...\n', 'single', 'store_true']

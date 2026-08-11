@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/asyncio/tasks.py
-# hypothesis_version: 6.151.10
-
-[1000, 'ALL_COMPLETED', 'FIRST_COMPLETED', 'FIRST_EXCEPTION', 'Task', '_enter_task', '_leave_task', '_register_task', '_unregister_task', 'all_tasks', 'as_completed', 'create_task', 'current_task', 'eager_task_factory', 'ensure_future', 'gather', 'message', 'shield', 'sleep', 'source_traceback', 'task', 'wait', 'wait_for']

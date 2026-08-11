@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/__future__.py
-# hypothesis_version: 6.151.10
-
-[131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, '_Feature', 'absolute_import', 'all_feature_names', 'alpha', 'annotations', 'barry_as_FLUFL', 'beta', 'division', 'final', 'generator_stop', 'generators', 'nested_scopes', 'print_function', 'unicode_literals', 'with_statement']

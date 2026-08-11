@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/bdb.py
-# hypothesis_version: 6.151.10
-
-['\n\tstop only if %s', '%s(%r)', '()', ')', '+++', '+++ call', '+++ exception', '+++ return', '->', ':', ': ', '<', '<lambda>', '<string>', '>', '???', 'Bdb', 'BdbQuit', 'Breakpoint', '__name__', '__return__', 'bar returned', 'bar(', 'c_call', 'c_exception', 'c_return', 'call', 'del  ', 'exception', 'exec', 'foo(', 'keep ', 'line', 'no   ', 'return', 's', 'yes  ']

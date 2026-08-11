@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/json/scanner.py
-# hypothesis_version: 6.151.10
-
-['"', '-', '-Infinity', 'I', 'Infinity', 'N', 'NaN', '[', 'f', 'false', 'make_scanner', 'n', 'null', 't', 'true', '{']

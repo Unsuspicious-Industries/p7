@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/email/_parseaddr.py
-# hypothesis_version: 6.151.10
-
-[-800, -700, -600, -500, -400, -300, 100, 1900, 2000, 3600, ' (', '"', '"\r', '"%s"', '(', '()<>@,:;."[]', ')', ')\r', '+', ',', ', ', '-', '.', '.@', '0', ':', ';', '<', '>', '@', 'ADT', 'AST', 'CDT', 'CST', 'EDT', 'EST', 'GMT', 'MDT', 'MST', 'PDT', 'PST', 'UT', 'UTC', 'Z', '[', '[%s]', '\\', '\\"', '\\\\', ']\r', 'apr', 'april', 'aug', 'august', 'dec', 'december', 'feb', 'february', 'fri', 'jan', 'january', 'jul', 'july', 'jun', 'june', 'mar', 'march', 'may', 'mktime_tz', 'mon', 'nov', 'november', 'oct', 'october', 'parsedate', 'parsedate_tz', 'quote', 'sat', 'sep', 'september', 'sun', 'thu', 'tue', 'wed']

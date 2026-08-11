@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/re/__init__.py
-# hypothesis_version: 6.151.10
-
-[b'()[]{}?*+-|^$\\.&~# \t\n\r\x0b\x0c', 256, 512, '2.2.1', 'A', 'ASCII', 'DOTALL', 'I', 'IGNORECASE', 'L', 'LOCALE', 'M', 'MULTILINE', 'Match', 'NOFLAG', 'Pattern', 'RegexFlag', 'S', 'U', 'UNICODE', 'VERBOSE', 'X', '\\', 'compile', 'error', 'escape', 'findall', 'finditer', 'fullmatch', 'ignore', 'latin1', 'match', 'purge', 'search', 'split', 'sub', 'subn', 'template']

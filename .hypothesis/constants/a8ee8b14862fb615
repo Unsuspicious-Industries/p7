@@ -1,4 +1,0 @@
-# file: /workspace/p7/src/proposition7/environment.py
-# hypothesis_version: 6.151.10
-
-[0.0, 100, 200, '</think>', '<think>', 'Examples:', 'Syntax:', 'c', 'complete', 'constrained_direct', 'constrained_mixed', 'description', 'examples', 'formal', 'max_tokens', 'ml', 'outlines', 'outlines_mixed', 'stlc', 'summary', 'syntactic_only', 'syntax_hints', 'think', 'tool', 'tool_sexpr', 'unconstrained']

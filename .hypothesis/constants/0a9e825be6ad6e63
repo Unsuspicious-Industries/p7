@@ -1,4 +1,0 @@
-# file: /workspace/p7/benchmarks/providers.py
-# hypothesis_version: 6.151.10
-
-[0.0, 300, '"', '#', "'", '.env', '/', '=', 'Authorization', 'Content-Type', 'HTTP-Referer', 'OPENROUTER_API_KEY', 'POST', 'X-Title', '[DONE]', 'application/json', 'choices', 'completion_tokens', 'content', 'cpu', 'data:', 'delta', 'export ', 'finish_reason', 'max_tokens', 'message', 'messages', 'model', 'replace', 'role', 'seed', 'stop', 'stream', 'temperature', 'usage', 'user', 'utf-8']

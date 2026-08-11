@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/copy.py
-# hypothesis_version: 6.151.10
-
-['Error', '__copy__', '__deepcopy__', '__reduce__', '__reduce_ex__', '__setstate__', 'copy', 'deepcopy']

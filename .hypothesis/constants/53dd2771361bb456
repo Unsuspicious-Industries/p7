@@ -1,4 +1,0 @@
-# file: /workspace/p7/benchmarks/__init__.py
-# hypothesis_version: 6.151.10
-
-['BenchmarkInteraction', 'BenchmarkTask', 'DEFAULT_MODELS', 'build_token_log', 'load_tasks', 'run_interaction', 'summarize_records', 'write_jsonl']

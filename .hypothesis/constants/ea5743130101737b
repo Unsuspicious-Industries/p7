@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/email/base64mime.py
-# hypothesis_version: 6.151.10
-
-['=?%s?b?%s?=', 'ascii', 'body_decode', 'body_encode', 'decode', 'decodestring', 'header_encode', 'header_length', 'iso-8859-1', 'raw-unicode-escape']

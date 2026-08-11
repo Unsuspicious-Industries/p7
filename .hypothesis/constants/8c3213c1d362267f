@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/multiprocessing/resource_tracker.py
-# hypothesis_version: 6.151.10
-
-[b'PROBE:0:noop\n', 512, '-c', ':', 'PROBE', 'REGISTER', 'UNREGISTER', 'ascii', 'ensure_running', 'msg too long', 'noop', 'posix', 'pthread_sigmask', 'rb', 'register', 'sem_unlink', 'semaphore', 'shared_memory', 'unregister', '{0}:{1}:{2}\n']

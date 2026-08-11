@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/importlib/_bootstrap_external.py
-# hypothesis_version: 6.151.10
-
-[b'\r\n', b'PYTHONCASEOK', 128, 438, 3531, 16384, 32768, 61440, 4294967295, '%d.%d', '.', '.py', '.pyc', '.pyw', '/', ':', '<string>', '<unknown>', 'PYTHONCASEOK', '\\', '\\\\', '__cached__', '__doc__', '__file__', '__init__', '__loader__', '__module__', '__name__', '__path__', '__pycache__', '__qualname__', '__spec__', '_d.pyd', 'always', 'code object from {}', 'created {!r}', 'cygwin', 'darwin', 'exec', 'get_filename', 'invalidate_caches', 'is_package', 'little', 'loader', 'mtime', 'name', 'never', 'opt-', 'path', 'py', 'r', 'size', 'spec missing loader', 'sys', 'trying {}', 'wb', 'win', 'win32', '{}', '{} matches {}']

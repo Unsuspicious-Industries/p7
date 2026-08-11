@@ -1,4 +1,0 @@
-# file: /nix/store/pq9797ldj823c4zy63s23bwkanc9sz6v-python3-3.12.13-env/lib/python3.12/re/_compiler.py
-# hypothesis_version: 6.151.10
-
-[b'\x00', b'0', b'1', 255, 256, 65280, 65535, 65536, '  overlap', '  prefix', '  prefix_skip', '%#0*x', '%#02x', '%#02x %#02x (%r-%r)', '%#02x (%r)', '%*d%s ', '(%r)', '(to %d)', ', ', '.', ':', 'AT_', 'CATEGORY_', 'I', 'MAXREPEAT', 'SRE module mismatch', '[%s]', 'branch', 'in']
