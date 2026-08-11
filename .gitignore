@@ -25,3 +25,4 @@ benchmarks/out
 .vscode/
 *.swp
 experimental/
+.hypothesis/
