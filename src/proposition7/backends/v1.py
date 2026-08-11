@@ -34,7 +34,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 @runtime_checkable
 class ConstraintBackend(Protocol):
-    """What provider7 needs from a constrained-decoding backend.
+    """What a consumer needs from a constrained-decoding backend.
 
     `ConstrainedModel` implements this directly; there is no adapter class.
     The Protocol exists for injection, fakes, and static checks.

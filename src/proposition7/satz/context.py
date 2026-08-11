@@ -1,9 +1,10 @@
-"""Γ. The client owns it; the server borrows its types for one request.
+"""Γ. It lives here, whole; only its types are ever lent out.
 
-    client (here)      name -> (type source, value)
-    wire `.types()`    name -> type source
+    here            name -> (type source, value)
+    `.types()`      name -> type source
 
-Values never cross: the client is what executes (ARCHITECTURE I1).
+Types are what the mask needs, so they are what a decode is given. Values stay
+because this is where execution happens (ARCHITECTURE I1).
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ class Gamma:
         return len(self.bindings)
 
     def types(self) -> dict[str, TypeSource]:
-        """The `aufbau_context` sent to provider7."""
+        """The `aufbau_context` a decode is masked against."""
         return {n: t for n, (t, _) in sorted(self.bindings.items())}
 
     def render(self) -> str:

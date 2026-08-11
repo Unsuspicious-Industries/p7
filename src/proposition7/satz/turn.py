@@ -1,52 +1,24 @@
-"""One turn, end to end. The client half of the loop.
+"""One turn, end to end. The session half of the loop.
 
     compose scheme+core -> constraint_scheme_auf ─┐
-    Γ.types()           -> aufbau_context         ├─> provider7 (masks, decodes)
+     Γ.types()           -> aufbau_context         ├─> generation callable
     prompt pairs        -> model_context          ─┘
                                                    │
     evaluate the parse tree, commit Γ′  <──────────┘
 
-provider7 holds nothing between calls; session identity, history, and approval
-are all here.
+Session identity, history, Γ and approval all live here. The generation callable
+holds nothing between calls, which is what lets a remote one be substituted for
+the local default without this file knowing the difference.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping, Protocol
+from typing import Any, Callable, Mapping
 
 from .context import Gamma
-from .evaluator import Audit, Dispatch, Evaluator, Outcome
+from .evaluator import Audit, Dispatch, EvaluationError, Evaluator, Outcome
 from .grammar import LanguageBinding, compose
 from .scheme import Scheme, TypeSource
-
-
-@dataclass(frozen=True)
-class Request:
-    model: str
-    #: Ordered (kind, content) pairs. The server owns chat templating; the
-    #: client owns ordering. Γ renders last — it changes every turn, and
-    #: anything before it stays in the cacheable prefix (ARCHITECTURE §3.1).
-    model_context: tuple[tuple[str, str], ...] = ()
-    aufbau_context: Mapping[str, TypeSource] = field(default_factory=dict)
-    constraint_scheme_auf: str = ""
-    max_tokens: int = 512
-    temperature: float = 0.0
-
-
-@dataclass(frozen=True)
-class Response:
-    completion: str
-    updated_aufbau_context: Mapping[str, TypeSource] = field(default_factory=dict)
-    is_complete: bool = True
-    stopped_reason: str = ""
-    retries: int = 0
-
-
-class Client(Protocol):
-    """provider7's core surface: the only thing that crosses the wire."""
-
-    def generate(self, request: Request) -> Response: ...
 
 
 def prompt(
@@ -75,50 +47,89 @@ class Session:
 
     def __init__(
         self,
-        client: Client,
+        scheme: Scheme,
+        hosts: Mapping[str, Callable[..., Any]],
         binding: LanguageBinding,
-        dispatch: Dispatch,
-        spg: Any,
         *,
         model: str,
         system: str = "",
         task: str = "",
         approve: Callable[[Audit], bool] | None = None,
+        generation: Callable[..., Any] | None = None,
     ):
-        self.client = client
-        self.scheme = dispatch.scheme
+        if generation is None:
+            from proposition7.api import generate
+
+            generation = generate
+        self.generation = generation
+        self.scheme = scheme
         self.model = model
         self.system = system
         self.task = task
         self.history: list[str] = []
         self.gamma = Gamma()
-        self.evaluator = Evaluator(dispatch, binding, spg, approve=approve)
         # Composed once: the SPG cache is keyed by content hash, so a stable
         # string compiles the grammar once for the whole session.
-        self.grammar_source = compose(dispatch.scheme, binding)
+        self.grammar_source = compose(scheme, binding)
+        import aufbau
+
+        self.evaluator = Evaluator(
+            Dispatch(scheme, dict(hosts)), binding, aufbau.SPG(self.grammar_source), approve=approve
+        )
 
     def turn(self, instruction: str = "", **generation: Any) -> Outcome:
-        response = self.client.generate(
-            Request(
-                model=self.model,
-                model_context=prompt(
-                    self.scheme,
-                    self.gamma,
-                    system=self.system,
-                    task=self.task,
-                    history=tuple(self.history),
-                    instruction=instruction,
-                ),
-                aufbau_context=self.gamma.types(),
-                constraint_scheme_auf=self.grammar_source,
-                **generation,
-            )
+        result = self.generation(
+            prompt(
+                self.scheme,
+                self.gamma,
+                system=self.system,
+                task=self.task,
+                history=tuple(self.history),
+                instruction=instruction,
+            ),
+            model=self.model,
+            grammar=self.grammar_source,
+            aufbau_context=self.gamma.types(),
+            **generation,
         )
-        if not response.is_complete:
-            return Outcome(aborted=True, reason=f"incomplete:{response.stopped_reason}")
+        if not result.complete:
+            return Outcome(aborted=True, reason=f"incomplete:{result.reason}")
 
-        outcome = self.evaluator.run(response.completion, self.gamma)
+        outcome = self.evaluator.run(result.text, self.gamma)
         if outcome.ok:
-            self.gamma.commit(outcome.updates)
-        self.history.append(response.completion)
+            self.gamma.commit(self._reconcile(outcome.updates, result.exported_context))
+        self.history.append(result.text)
         return outcome
+
+    def _reconcile(
+        self,
+        updates: Mapping[str, tuple[TypeSource, Any]],
+        exported: Mapping[str, TypeSource],
+    ) -> dict[str, tuple[TypeSource, Any]]:
+        """Types come from the decode, values from here (ARCHITECTURE I1a).
+
+        The evaluator re-parses the completion and derives the same types
+        independently, which makes it a cross-check rather than a second
+        opinion: where both sides speak they must agree, and a clash means the
+        typing rules and the evaluator have drifted. Agreement is checked by
+        unification, not string equality — the engine renders types in a
+        normal form (`Result[A, B]` comes back as `Result [ A , B ]`), so the
+        spellings differ while the types do not.
+
+        Names the decode did not export keep their locally derived type. That
+        is the degraded path, not the design: it covers a grammar whose rules
+        export nothing, and it is why this merges rather than replaces.
+        """
+        merged: dict[str, tuple[TypeSource, Any]] = {}
+        for name, (local, value) in updates.items():
+            served = exported.get(name)
+            if served is None:
+                merged[name] = (local, value)
+                continue
+            if self.evaluator.spg.unify(local, served) is None:
+                raise EvaluationError(
+                    f"{name}: evaluator typed it {local!r}, the decode exported "
+                    f"{served!r}; the typing rules and the evaluator disagree"
+                )
+            merged[name] = (served, value)
+        return merged

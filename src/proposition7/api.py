@@ -1,8 +1,8 @@
 """High-level API — one function to rule them all."""
 
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Mapping, Optional
 
 from grammars import get_grammar, list_grammars, GRAMMARS
 from .llm import ConstrainedModel
@@ -21,6 +21,7 @@ class Result:
     tokens: int
     reason: str
     thoughts: str = ""
+    exported_context: Mapping[str, str] = field(default_factory=dict)
 
 
 class Session:
@@ -80,34 +81,17 @@ class Session:
 
 
 def generate(
-    prompt: str,
+    model_context: tuple[tuple[str, str], ...],
     *,
-    model: str = "gpt2",
-    grammar: str = "stlc",
-    initial: str = "",
-    max_tokens: int = 50,
-    reason: bool = False,
-    remote: bool = False,
-    gpu: str = "T4",
+    model: str,
+    grammar: str,
+    aufbau_context: Mapping[str, str],
+    max_tokens: int = 512,
+    temperature: float = 0.0,
+    seed: int | None = None,
     **kwargs,
 ) -> Result:
-    """Generate typed, constrained output from a prompt.
-
-    Args:
-        prompt: What to generate.
-        model: HuggingFace model id.
-        grammar: Built-in grammar name or raw spec string.
-        initial: Partial output to continue.
-        max_tokens: Max tokens to generate.
-        reason: Enable chain-of-thought before constrained output.
-        remote: Deprecated remote path.
-        gpu: Reserved for remote container launchers.
-    """
-    if remote:
-        raise NotImplementedError(
-            "Remote generation is no longer exposed through the Python API."
-        )
-    think_budget = kwargs.pop("think_budget", 200)
+    """Generate against a raw grammar and typing context using a local model."""
     if "device" not in kwargs and "device_map" not in kwargs:
         try:
             import torch
@@ -118,31 +102,28 @@ def generate(
     mdl = get_model_class(model).from_pretrained(
         model, grammar=_resolve_grammar(grammar), **kwargs
     )
-    if reason:
-        env = ReasoningEnvironment(
-            mdl,
-            grammar,
-            think_budget=think_budget,
-            formal_budget=max_tokens,
+    template = getattr(mdl.tokenizer, "apply_chat_template", None)
+    if template is None:
+        raise ValueError(
+            f"model {model!r} has no chat template for structured model_context"
         )
-        r = env.generate(prompt, initial=initial)
-        out = r.final_output
-        return Result(
-            text=out.content if out else "",
-            complete=r.is_complete,
-            tokens=r.total_tokens,
-            reason=r.stopped_reason,
-            thoughts=r.all_thoughts,
-        )
+    prompt = template(
+        [{"role": role, "content": content} for role, content in model_context],
+        tokenize=False,
+        add_generation_prompt=True,
+    )
     r = mdl.generate_constrained(
         prompt=prompt,
-        initial=initial,
         max_tokens=max_tokens,
         grammar_name=grammar,
+        context=dict(aufbau_context),
+        temperature=temperature,
+        seed=seed,
     )
     return Result(
         text=r.text,
         complete=r.is_complete,
         tokens=r.tokens_generated,
         reason=r.stopped_reason,
+        exported_context=r.exported_context,
     )

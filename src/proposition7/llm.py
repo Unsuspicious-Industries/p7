@@ -610,6 +610,7 @@ class ConstrainedModel:
             is_complete=synth.status() == "typed",
             tokens_generated=tokens_generated,
             stopped_reason=stopped_reason,
+            exported_context=dict(synth.context()),
             step_token_ids=step_token_ids,
             step_pre_entropies=step_pre_entropies,
             step_entropies=step_entropies,

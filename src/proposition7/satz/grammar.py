@@ -24,7 +24,10 @@ PRIMITIVE_NT = "PrimitiveCall"
 
 @dataclass(frozen=True)
 class LanguageBinding:
-    """How a core language spells what satz generates and walks."""
+    """How a core language spells what satz generates and walks.
+
+    Temporary public API while D3, the core language, remains unresolved.
+    """
 
     core_source: str
 

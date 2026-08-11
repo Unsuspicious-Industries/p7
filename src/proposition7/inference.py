@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Mapping
 
 
 @dataclass
@@ -12,6 +12,7 @@ class GenerationResult:
     is_complete: bool
     tokens_generated: int
     stopped_reason: str
+    exported_context: Mapping[str, str] = field(default_factory=dict)
     diagnostics: dict[str, Any] = field(default_factory=dict)
     # Per-step arrays (parallel, length == tokens_generated).
     # Populated by constrained generation; empty for unconstrained.

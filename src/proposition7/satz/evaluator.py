@@ -11,8 +11,8 @@ Isolation:
   - cannot acquire one: a primitive absent from the scheme is absent from both
     the grammar and the dispatch table (ARCHITECTURE I7)
   - blast radius is enumerable before execution, via `Evaluator.audit`
-  - provider7 must never import it; that is what keeps the inference host
-    non-executing (ARCHITECTURE I3)
+  - nothing that merely constrains or decodes may import it; that is what keeps
+    everything below this line non-executing (ARCHITECTURE I3)
 
 Structure comes from the FFI, never from a second model: `node.nt_name()`,
 `node.children`, `ast.type_of(evidence)`, `ast.input[start:end]`. No type is
@@ -93,7 +93,9 @@ class Outcome:
 
 
 class Evaluator:
-    """Runs a decoded turn against client-side Γ. Atomic: all or nothing.
+    """Runs a decoded turn against Γ. Bindings are all-or-nothing; effects are
+    not — a program that wrote two files before failing has written two files
+    (ARCHITECTURE §2.1).
 
     `spg` must be the grammar the decode was masked under. Re-parsing the
     completion with it is what makes every type in the tree the engine's answer.

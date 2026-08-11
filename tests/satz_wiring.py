@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from proposition7.satz import (
-    Dispatch, DispatchError, Effect, Err, Gamma, LanguageBinding, Ok, Param,
-    Primitive, PrimitiveFailure, Scheme, Session, compose, prompt, validate_binding,
+    Effect, LanguageBinding, Param, Primitive, PrimitiveFailure, Scheme, Session,
 )
-from proposition7.satz.evaluator import Evaluator
+from proposition7.satz.context import Gamma
+from proposition7.satz.evaluator import Dispatch, DispatchError, EvaluationError, Evaluator
+from proposition7.satz.grammar import compose, validate_binding
+from proposition7.satz.result import Err, Ok
+from proposition7.satz.turn import prompt
 
 aufbau = pytest.importorskip("aufbau")
 
@@ -226,30 +231,71 @@ def test_denied_approval_runs_nothing():
 
 # ── session ─────────────────────────────────────────────────────────────
 
-class FakeClient:
-    def __init__(self, completion):
-        self.completion, self.requests = completion, []
+class FakeGeneration:
+    def __init__(self, completion, exported_context=None):
+        self.completion, self.calls = completion, []
+        self.exported_context = exported_context
 
-    def generate(self, request):
-        self.requests.append(request)
-        from proposition7.satz import Response
-        return Response(self.completion, dict(request.aufbau_context))
+    def __call__(self, model_context, **kwargs):
+        self.calls.append({"model_context": model_context, **kwargs})
+        return SimpleNamespace(
+            text=self.completion,
+            complete=True,
+            reason="",
+            exported_context=(kwargs["aufbau_context"] if self.exported_context is None
+                              else self.exported_context),
+        )
 
 
-def session(completion, **over):
-    spg = aufbau.SPG(compose(SCHEME, BINDING))
-    client = FakeClient(completion)
-    return client, Session(client, BINDING, Dispatch(SCHEME, hosts(**over)), spg,
-                           model="test", system="SYS", task="TASK")
+def session(completion, exported_context=None, **over):
+    generation = FakeGeneration(completion, exported_context)
+    return generation, Session(SCHEME, hosts(**over), BINDING, model="test",
+                               system="SYS", task="TASK", generation=generation)
 
 
 def test_turn_commits_and_threads_gamma():
-    client, s = session('files = list_dir("src");')
+    generation, s = session('files = list_dir("src");')
     assert s.gamma.types() == {}
     assert s.turn("go").ok
     assert s.gamma.types() == {"files": "PathSet"}
     s.turn("again")
-    assert client.requests[-1].aufbau_context == {"files": "PathSet"}
+    assert generation.calls[-1]["aufbau_context"] == {"files": "PathSet"}
+
+
+def test_reconcile_uses_evaluator_type_when_server_exports_nothing():
+    """The degraded path supports grammars whose declaration rule exports nothing."""
+    generation, s = session('f = glob("s");', exported_context={})
+    s.gamma.bind("f", "Text", "placeholder")
+    assert s.turn("go").ok
+    assert s.gamma.types() == {"f": "Result(PathSet, IoError)"}
+    assert s.gamma.value("f") == Ok(["c.py"])
+
+
+def test_reconcile_keeps_ffi_rendered_type():
+    """Types remain the engine's rendering; satz never rewrites their syntax."""
+    generation, s = session('f = glob("s");', exported_context={})
+    s.gamma.bind("f", "Text", "placeholder")
+    assert s.turn("go").ok
+    assert s.gamma.types() == {"f": "Result(PathSet, IoError)"}
+
+
+def test_reconcile_real_disagreement_raises():
+    """A served type that cannot unify with the evaluator's is drift, not a
+    re-spelling; it aborts the commit and leaves Γ untouched."""
+    generation, s = session('x = list_dir("src");')
+    s.gamma.bind("x", "Text", "placeholder")
+    with pytest.raises(EvaluationError):
+        s.turn("go")
+    assert s.gamma.types() == {"x": "Text"}
+
+
+def test_reconcile_absent_from_gamma_keeps_local_type():
+    """A name the decode did not export keeps the evaluator's type: the
+    degraded path for grammars whose rules export nothing."""
+    generation, s = session('x = list_dir("src");')
+    assert s.turn("go").ok
+    assert s.gamma.types() == {"x": "PathSet"}
+    assert s.gamma.value("x") == ["a.py"]
 
 
 def test_gamma_renders_last():

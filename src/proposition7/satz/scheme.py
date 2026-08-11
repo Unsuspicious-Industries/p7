@@ -14,7 +14,7 @@ import json
 from dataclasses import dataclass, replace
 from typing import Any, Iterable, Mapping
 
-SCHEME_VERSION = "provider7.constraints/v1"
+SCHEME_VERSION = "proposition7.scheme/v1"
 
 TypeSource = str
 
