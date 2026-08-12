@@ -21,11 +21,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 
-#: Names the whole contract. A backend advertising this identifier guarantees
-#: semantic mask/feed, atomic typed context, strict goal verification, and
-#: request-local state.
-BACKEND_API = "proposition7.backend/v1"
-
 if TYPE_CHECKING:  # pragma: no cover
     from aufbau import Verification
 
@@ -81,4 +76,4 @@ class ConstraintBackend(Protocol):
         ...
 
 
-__all__ = ["BACKEND_API", "ConstraintBackend"]
+__all__ = ["ConstraintBackend"]

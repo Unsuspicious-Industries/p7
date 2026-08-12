@@ -71,10 +71,6 @@ def evaluator(scheme=SCHEME, approve=None, **over):
 
 # ── scheme ──────────────────────────────────────────────────────────────
 
-def test_json_roundtrip():
-    assert Scheme.from_json(SCHEME.to_json()).to_json() == SCHEME.to_json()
-
-
 def test_duplicate_names_rejected():
     with pytest.raises(ValueError, match="duplicate"):
         Scheme((GLOB, GLOB))

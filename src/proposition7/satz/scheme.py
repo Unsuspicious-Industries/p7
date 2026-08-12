@@ -10,11 +10,8 @@ here parses them or branches on their constructors (ARCHITECTURE I4).
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, replace
 from typing import Any, Iterable, Mapping
-
-SCHEME_VERSION = "proposition7.scheme/v1"
 
 TypeSource = str
 
@@ -73,7 +70,6 @@ class Scheme:
     """
 
     primitives: tuple[Primitive, ...] = ()
-    version: str = SCHEME_VERSION
 
     def __post_init__(self) -> None:
         names = [p.name for p in self.primitives]
@@ -114,7 +110,6 @@ class Scheme:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "version": self.version,
             "primitives": [
                 {
                     "name": p.name,
@@ -127,16 +122,9 @@ class Scheme:
             ],
         }
 
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
-
     @staticmethod
     def from_dict(data: Mapping[str, Any]) -> "Scheme":
-        version = data.get("version", SCHEME_VERSION)
-        if version != SCHEME_VERSION:
-            raise ValueError(f"unsupported scheme version {version!r}")
         return Scheme(
-            version=version,
             primitives=tuple(
                 Primitive(
                     name=p["name"],
@@ -150,7 +138,3 @@ class Scheme:
                 for p in data.get("primitives", ())
             ),
         )
-
-    @staticmethod
-    def from_json(text: str) -> "Scheme":
-        return Scheme.from_dict(json.loads(text))

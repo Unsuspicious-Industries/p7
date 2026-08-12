@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from importlib import import_module
 
+import aufbau
 from aufbau import Synthesizer
+
+# aufbau is an independently-built native artifact: the compiled wheel can be
+# older or newer than the Python that imports it. A stale wheel has bitten this
+# project before, so fail here, at the first import, rather than three layers up.
+_ENGINE_API = getattr(aufbau, "ENGINE_API", None)
+if _ENGINE_API != "aufbau.engine/v1":
+    raise ImportError(
+        f"aufbau engine API mismatch: expected 'aufbau.engine/v1', found {_ENGINE_API!r}"
+    )
 
 from grammars import (
     GRAMMARS,

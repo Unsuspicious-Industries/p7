@@ -2,7 +2,7 @@
 
 Import the versioned module directly::
 
-    from proposition7.backends.v1 import ConstraintBackend, BACKEND_API
+    from proposition7.backends.v1 import ConstraintBackend
 
 Importing this package must not pull in Torch: a consumer may depend on the
 contract without depending on a model runtime.
