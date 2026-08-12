@@ -617,9 +617,8 @@ def run_job(
         nonlocal model
         model = model or make_model(args, job.model_name, job.grammar_name, job.mode)
         if job.task.kind == "agent":
-            # An agent episode's actual per-turn grammar is generated
-            # dynamically by AgentSession from its tool registry, not the
-            # model's construction-time grammar -- job.grammar_name only
+            # An agent episode's per-turn grammar is dynamically composed by
+            # satz.Session, not the model's construction-time grammar -- job.grammar_name only
             # needs to be *a* valid registered name so make_model() above
             # doesn't have to special-case agent tasks.
             # args.think_budget is a per-*program* budget (2048 in main.toml)

@@ -1,0 +1,15 @@
+id = "find_function_definition"
+grammar = "tool"
+category = "agent:world"
+kind = "agent"
+max_tokens = 200
+max_turns = 4
+max_tokens_per_step = 96
+[prompt]
+text = "Find the .py file defining target and write its relative path to answer.txt."
+[initial]
+text = ""
+[expected]
+text = ""
+[resolution]
+mode = "episode"

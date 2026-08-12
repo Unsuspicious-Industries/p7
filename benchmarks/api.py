@@ -135,10 +135,6 @@ def _validate_task_resolution(
             raise ValueError(
                 f"{path}: {task_id}: agent tasks require resolution.mode = 'episode', got {mode!r}"
             )
-        if "expected_value" not in resolution:
-            raise ValueError(
-                f"{path}: {task_id}: episode mode requires resolution.expected_value"
-            )
         return
 
     validate_resolution(path, task_id, grammar, resolution, kind=kind)
@@ -602,32 +598,22 @@ def run_agent_interaction(
     think_budget: int = 64,
     max_tokens_per_step: Optional[int] = None,
 ) -> dict[str, Any]:
-    """The `kind == "agent"` analogue of `run_interaction`: drives one
-    multi-turn episode (benchmarks/agent.run_agent_episode, itself a thin
-    wrapper over the real proposition7.agents library) and grades it on
-    task accomplishment via `check_episode_resolution` -- not on whether it
-    merely reached a well-typed `return` (lmpl-plan.md section 5.2). The
-    record shape is intentionally not forced into run_interaction's
-    single-shot fields (parse_ok/exact/output, ...): an episode is a
-    genuinely different kind of interaction, and pretending otherwise would
-    just paper over which fields are actually meaningful for it."""
-    from benchmarks.agent import run_agent_episode
-    from benchmarks.oracles import check_episode_resolution
+    """Run an isolated world-state episode; its oracle never sees program text."""
+    from benchmarks.agent import TASK_BY_NAME, run_agent_episode
 
     started_at = time.time()
     try:
+        generation = model.generate_constrained if mode == "constrained_direct" else model.generate_unconstrained
         result = run_agent_episode(
-            model,
-            task.prompt,
+            TASK_BY_NAME[task.task_id], generation,
+            mode="constrained" if mode == "constrained_direct" else "unconstrained",
             max_turns=task.max_turns,
             max_tokens_per_step=(
                 max_tokens_per_step
                 if max_tokens_per_step is not None
                 else task.max_tokens_per_step
             ),
-            think_budget=think_budget,
-            seed=seed,
-            mode=mode,
+            model=getattr(model, "model_name", "benchmark"),
         )
     except Exception as error:
         seconds = time.time() - started_at
@@ -642,9 +628,7 @@ def run_agent_interaction(
             "mode": mode,
             "kind": "agent",
             "episode_success": False,
-            "episode_reason": f"model_error:{error}",
-            "return_value": None,
-            "expected_value": task.resolution.get("expected_value"),
+            "episode_reason": f"transport_error:{error}",
             "turns": 0,
             "turn_kinds": [],
             "error": "model_error",
@@ -655,9 +639,8 @@ def run_agent_interaction(
         }
 
     seconds = time.time() - started_at
-    resolution_result = check_episode_resolution(task, result)
-    passed = resolution_result.ok
-    error = "ok" if passed else ("episode_incomplete" if not result.success else "task_failed")
+    passed = result["success"]
+    error = "ok" if passed else ("transport_error" if result["error"] else "task_failed")
     return {
         "task_id": task.task_id,
         "language": task.language,
@@ -668,21 +651,15 @@ def run_agent_interaction(
         "resolution_mode": "episode",
         "mode": mode,
         "kind": "agent",
-        "episode_success": result.success,
-        "episode_reason": result.reason,
-        "return_value": resolution_result.observed,
-        "expected_value": resolution_result.expected,
-        "turns": len(result.turns),
-        "turn_kinds": [t.kind for t in result.turns],
-        "turn_tools": [t.tool for t in result.turns if t.tool],
-        # Post-hoc audit trail: why each turn stopped and what it actually
-        # produced (truncated -- raw.jsonl must stay small).
-        "turn_stop_reasons": [t.stopped_reason for t in result.turns],
-        "turn_texts": [t.text[:120] for t in result.turns],
-        "think_chars": [len(t.think_text) for t in result.turns],
-        "think_tokens_total": sum(t.think_tokens for t in result.turns),
+        "episode_success": passed,
+        "episode_reason": result["error"],
+        "turns": result["turns"],
+        "todo": result["todo"],
+        "approval_denied": result["approval_denied"],
+        "transport_or_evaluation_error": result["error"],
+        "unconstrained_failure": result["unconstrained_failure"],
         "error": error,
-        "reject_reason": "" if passed else (resolution_result.reason or "rejected"),
+        "reject_reason": "" if passed else (result["error"] or "world_oracle_failed"),
         "seed": seed,
         "passed": passed,
         "seconds": round(seconds, 4),

@@ -1,114 +1,125 @@
-"""Whole-program interpreter for the `tool`/`tool_sexpr` single-shot DSLs,
-built on the same canonical registry `benchmarks/agent.py`'s multi-turn
-episodes use (`proposition7.agents.Tool`/`ToolRegistry`) -- one place either
-could go stale, not two (lmpl-plan.md section 5.4).
+"""Temporary agent-language binding for benchmark episodes.
 
-Used by benchmarks/oracles.py's `mode == "value"` grading: a single-shot
-`tool`/`tool_sexpr` program is a whole `let`-chain generated at once (unlike
-the agent's one-step-per-turn loop), so grading it needs to execute the
-*entire* program, not one step.
+This is a D3 placeholder, expected to disappear when the public core language
+lands. `tests/satz_wiring.py` deliberately carries the other small stand-in.
 """
 
-from __future__ import annotations
-
 import re
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Callable
 
-from proposition7.agents import Tool, ToolRegistry
+from proposition7.satz import Effect, LanguageBinding, Param, Primitive, Scheme
 
-MOCK_REGISTRY = ToolRegistry(
-    [
-        Tool.unary("search", "string", "docs", lambda arg: f"docs_about_{arg}"),
-        Tool.unary("summarize", "docs", "string", lambda arg: f"summary_of_{arg}"),
-        Tool.unary("count", "docs", "int", lambda arg: 3),
-        Tool.unary("format", "int", "string", lambda arg: f"formatted_{arg}"),
-    ]
-)
 
+CORE = r'''Identifier ::= /[a-z_][a-z0-9_]*/
+Type* ::= TAtom
+TAtom ::= 'PathSet' | 'Text' | 'IoError' | 'ProcError' | Result
+Result ::= 'Result' '[' Type ',' Type ']'
+Variable(var) ::= Identifier[x]
+StringLit(str_lit) ::= /"[a-zA-Z0-9_]*"/
+Todo(todo) ::= 'todo'
+Expression ::= Variable | StringLit | Todo | @PRIMITIVES@
+Stmt(decl) ::= Identifier[name] '=' Expression[value] ';'
+StatementList ::= Stmt StatementList | Stmt
+Program ::= StatementList
+
+x ∈ Γ
+----------- (var)
+Γ(x)
+
+----------- (str_lit)
+'Text'
+
+----------- (todo)
+?A
+
+Γ ⊢ value : ?t
+----------------------- (decl)
+Γ → Γ[name:?t] ⊢ 'void'
+'''
+
+
+BINDING = LanguageBinding(core_source=CORE)
+CAPABILITIES = Scheme((
+    Primitive("read_file", (Param("path", "Text"),), "Text", "IoError", (Effect("read", "<path>"),)),
+    Primitive("write_file", (Param("path", "Text"), Param("content", "Text")), "Text", "IoError", (Effect("write", "<path>"),)),
+    Primitive("list_dir", (Param("path", "Text"),), "PathSet", "IoError", (Effect("read", "<path>"),)),
+    Primitive("search", (Param("pattern", "Text"), Param("root", "Text")), "PathSet", "IoError", (Effect("read", "<root>"),)),
+    Primitive("run", (Param("command", "Text"),), "Text", "ProcError", (Effect("execute"),)),
+))
+
+
+def scheme_without(*names: str) -> Scheme:
+    return CAPABILITIES.restrict({p.name for p in CAPABILITIES.primitives} - set(names))
+
+
+# Single-completion value oracles use this deliberately separate fixed world.
+@dataclass(frozen=True)
+class _Tool:
+    name: str
+    call: Callable[..., Any]
+
+
+class _Registry:
+    def __init__(self):
+        self.tools = {
+            "search": _Tool("search", lambda arg: f"docs_about_{arg}"),
+            "summarize": _Tool("summarize", lambda arg: f"summary_of_{arg}"),
+            "count": _Tool("count", lambda arg: 3),
+            "format": _Tool("format", lambda arg: f"formatted_{arg}"),
+        }
+
+    def execute(self, name: str, args: list[Any]) -> Any:
+        return self.tools[name].call(*args)
+
+
+MOCK_REGISTRY = _Registry()
 _LET_RE = re.compile(r"^let\s+(\w+)\s*=\s*(\w+)\s*\(\s*(.*?)\s*\)\s*;$")
 _RETURN_RE = re.compile(r"^return\s+(.*?)\s*;$")
-
 _LET_SEXPR_RE = re.compile(r"^\(let\s+(\w+)\s*\(\s*(\w+)(?:\s+(.*?))?\s*\)\s*\)$")
 _RETURN_SEXPR_RE = re.compile(r"^\(return\s+(.*?)\s*\)$")
 
-_STRING_RE = re.compile(r'^"([a-zA-Z0-9_]*)"$')
-_INT_RE = re.compile(r"^[0-9]+$")
-
 
 class InterpretError(Exception):
-    """The program didn't parse/execute against the fixed registry -- should
-    be unreachable for a genuinely well-typed program, but the interpreter
-    never assumes that and reports clearly rather than crashing silently."""
+    pass
 
 
-def eval_value(token: str, env: dict[str, Any]) -> Any:
-    if m := _STRING_RE.match(token):
-        return m.group(1)
-    if _INT_RE.match(token):
+def _value(token: str, env: dict[str, Any]) -> Any:
+    if re.fullmatch(r'"[a-zA-Z0-9_]*"', token):
+        return token[1:-1]
+    if token.isdigit():
         return int(token)
     if token in env:
         return env[token]
     raise InterpretError(f"unbound variable {token!r}")
 
 
-def _split_args(arg_list: str, syntax: str) -> list[str]:
-    """Split a call's argument-list interior into individual Value tokens.
-    Safe as a naive split: no Value alternative (Variable/StringLit/IntLit)
-    can itself contain a comma or embedded whitespace."""
-    if not arg_list.strip():
-        return []
+def run_program(program: str, syntax: str = "tool") -> tuple[Any, dict[str, Any]]:
     if syntax == "tool":
-        return [part.strip() for part in arg_list.split(",")]
-    return arg_list.split()
-
-
-def _split_statements(program: str, syntax: str) -> list[str]:
-    if syntax == "tool":
-        return [s.strip() + ";" for s in program.split(";") if s.strip()]
-    if syntax == "tool_sexpr":
-        statements = []
-        depth = 0
-        start = None
-        for i, ch in enumerate(program):
-            if ch == "(":
-                if depth == 0:
-                    start = i
-                depth += 1
-            elif ch == ")":
+        statements = [part.strip() + ";" for part in program.split(";") if part.strip()]
+        let_re, return_re, split = _LET_RE, _RETURN_RE, lambda value: [x.strip() for x in value.split(",") if x.strip()]
+    elif syntax == "tool_sexpr":
+        statements, depth, start = [], 0, None
+        for index, char in enumerate(program):
+            if char == "(":
+                start = index if depth == 0 else start; depth += 1
+            elif char == ")":
                 depth -= 1
                 if depth == 0 and start is not None:
-                    statements.append(program[start : i + 1])
-                    start = None
-        return statements
-    raise ValueError(f"unknown tool DSL syntax: {syntax}")
-
-
-def run_program(program: str, syntax: str = "tool") -> tuple[Any, dict[str, Any]]:
-    """Execute a complete `tool`/`tool_sexpr` program against the mock
-    registry. Returns (executed_return_value, final_bindings). Raises
-    InterpretError if a statement doesn't match the grammar's own shape or
-    calls a tool outside the fixed registry -- this is the grading-side
-    twin of what the type checker already guarantees for well-typed input,
-    kept independent so a checker bug can't also corrupt the value grade."""
-    let_re, return_re = (_LET_RE, _RETURN_RE) if syntax == "tool" else (_LET_SEXPR_RE, _RETURN_SEXPR_RE)
-
-    env: dict[str, Any] = {}
-    statements = _split_statements(program, syntax)
+                    statements.append(program[start:index + 1]); start = None
+        let_re, return_re, split = _LET_SEXPR_RE, _RETURN_SEXPR_RE, lambda value: value.split()
+    else:
+        raise ValueError(f"unknown tool DSL syntax: {syntax}")
     if not statements:
         raise InterpretError("empty program")
-
+    env: dict[str, Any] = {}
     for statement in statements[:-1]:
-        m = let_re.match(statement)
-        if not m:
-            raise InterpretError(f"expected a let statement, got {statement!r}")
-        name, tool_name = m.group(1), m.group(2)
-        arg_list = m.group(3) or ""
-        if tool_name not in MOCK_REGISTRY.tools:
-            raise InterpretError(f"unknown tool {tool_name!r}")
-        args = [eval_value(token, env) for token in _split_args(arg_list, syntax)]
-        env[name] = MOCK_REGISTRY.execute(tool_name, args)
-
-    m = return_re.match(statements[-1])
-    if not m:
-        raise InterpretError(f"expected a return statement, got {statements[-1]!r}")
-    return eval_value(m.group(1), env), env
+        match = let_re.match(statement)
+        if match is None or match.group(2) not in MOCK_REGISTRY.tools:
+            raise InterpretError(f"invalid tool statement {statement!r}")
+        args = [] if not (match.group(3) or "").strip() else [_value(x, env) for x in split(match.group(3) or "")]
+        env[match.group(1)] = MOCK_REGISTRY.execute(match.group(2), args)
+    match = return_re.match(statements[-1])
+    if match is None:
+        raise InterpretError(f"invalid return {statements[-1]!r}")
+    return _value(match.group(1), env), env

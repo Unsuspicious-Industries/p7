@@ -237,9 +237,8 @@ def test_ml_eval_oracle_round_trips_int_lists(values):
 
 
 def test_toml_expected_outputs_parse_and_pass_resolution():
-    # Agent tasks are graded by episode (accumulated over turns, against
-    # resolution.expected_value), not by a single-shot `expected` program
-    # text -- see tests/agent_tasks.py for their equivalent coverage.
+    # Agent tasks are graded by an isolated final-world oracle, never by a
+    # single-shot completion or a recorded expected program.
     for row in load_tasks(["all"]):
         if row.kind == "agent":
             continue
