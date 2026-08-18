@@ -20,10 +20,24 @@ class GenerationResult:
     # Pre-mask entropy in bits: model's raw uncertainty before grammar filtering.
     # H = -∑ p_i·log₂(p_i) over all finite-logit tokens (no grammar mask applied).
     step_pre_entropies: list[float] = field(default_factory=list)
-    # Post-mask entropy in bits: uncertainty over grammar-valid tokens only.
-    # Same formula but restricted to tokens that pass grammar validation.
-    # High value → many competing valid continuations (good future branch point).
-    # Difference (pre − post) measures how much the grammar mask shapes the distribution.
+    # Residual entropy in bits: the distribution left once the candidates the
+    # grammar actually refused at this step have been removed.
+    #
+    # Read the name carefully, because the obvious reading is wrong. This is
+    # NOT entropy over the grammar-valid tokens: establishing that set means
+    # asking the engine about every token in the vocabulary, ~150k calls at
+    # milliseconds each, which is minutes per token. Only the candidates the
+    # retry loop actually tried are known to be invalid, so those are what is
+    # excluded. The support is therefore an over-approximation of the valid
+    # set, and this number an upper bound on true post-mask entropy.
+    #
+    # It is still the interesting quantity, and it is frequently HIGHER than
+    # `step_pre_entropies` rather than lower — which surprises people until
+    # they see why. A peaked model with its top choice vetoed goes from near
+    # certainty to a flat field of alternatives: measured here, 0.01 bits
+    # before, 10.14 bits after. That is the grammar refusing the thing the
+    # model was sure about, which is exactly the story worth telling; it is
+    # just not "the mask reduced uncertainty".
     step_entropies: list[float] = field(default_factory=list)
     # Grammar-rejected candidates before the accepted token at each step.
     step_retries: list[int] = field(default_factory=list)

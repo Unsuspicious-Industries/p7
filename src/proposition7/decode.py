@@ -122,9 +122,10 @@ def sample(
 
     `pre_entropy` is computed once, before the retry loop, so it measures the
     model's own uncertainty rather than how many attempts this position took.
-    `post_entropy` is measured at acceptance, over grammar-valid tokens minus
-    those already excluded — a lower bound on the true grammar-valid entropy
-    whenever there were retries.
+    `post_entropy` is measured at acceptance over whatever the retry loop had
+    not yet excluded — an upper bound on true post-mask entropy, never the
+    thing itself, since knowing the valid set means asking the engine about the
+    whole vocabulary. See `inference.GenerationResult.step_entropies`.
     """
     valid = np.isfinite(logits)
     step = Step(pre_entropy=_entropy_bits(logits))
