@@ -15,6 +15,8 @@ the reasoning below.
 from __future__ import annotations
 
 import hashlib
+import logging
+import time
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
@@ -24,7 +26,22 @@ from .inference import GenerationResult
 from .mask_cache import DEFAULT_MASK_CACHE_SIZE, mask_candidates
 from .runtime import Runtime
 
+log = logging.getLogger(__name__)
+
+DEADLINE_OVERSHOOT_NOTE = """A deadline is checked between steps, never inside one.
+
+A single step can call the engine up to `MAX_RETRIES` times and then `_scan`
+the whole vocabulary, so the real bound is `deadline_seconds` plus one step.
+Interrupting mid-step is not available to us and would not be wanted: the
+alternative is abandoning a thread that keeps running, holds the GIL and never
+releases the caller's slot, which is the failure this bound exists to prevent."""
+
 MAX_RETRIES = 2048
+"""Sampled draws before `_scan` takes over.
+
+Not a correctness bound -- `_scan` is what makes `no_valid` mean what it says.
+This is how long the *sampled* distribution gets to find an admissible token
+before the search stops respecting temperature and simply takes the best one."""
 
 
 def _entropy_bits(logits: np.ndarray) -> float:
@@ -101,6 +118,14 @@ class Step:
     pre_entropy: float = 0.0
     post_entropy: float = 0.0
     retries: int = 0
+    scanned: int = 0
+    """Tokens examined by the exhaustive fallback, 0 if it was not needed.
+
+    Non-zero means the sampled retry loop exhausted `MAX_RETRIES` without
+    finding an admissible token and `_scan` had to be asked. That is a fallback,
+    so it is recorded rather than hidden: a run where it fires often is a run
+    whose grammar and model disagree about almost every token.
+    """
 
 
 def sample(
@@ -176,6 +201,96 @@ def sample(
         step.post_entropy = _entropy_bits(masked)
         return step
 
+    # The retry loop ran out of budget, which is NOT the grammar admitting
+    # nothing. `valid` still holds every token the loop never happened to draw:
+    # `MAX_RETRIES` is 2048 against a ~152k vocabulary, so at most 1.3% of it
+    # was examined. Returning an empty step here reports "no_valid" and blames
+    # the model for the search giving up -- and it fires exactly where this loop
+    # is most needed, at step 0 of a reasoning model, whose distribution is
+    # concentrated on the `<think>` the grammar refuses.
+    #
+    # A productive grammar at a live prefix always admits some token, so the
+    # only correct way to conclude otherwise is to have looked.
+    return _scan(runtime, synth, logits, valid, step, grammar_hash, mask_cache_size)
+
+
+def _scan(
+    runtime: Runtime,
+    synth: Any,
+    logits: np.ndarray,
+    valid: np.ndarray,
+    step: Step,
+    grammar_hash: bytes,
+    mask_cache_size: int,
+    *,
+    block: int = 256,
+) -> Step:
+    """The most probable admissible token, found by looking at all of them.
+
+    Reached only when the sampled retry loop exhausted its budget. Walks the
+    tokens that loop never examined in descending-logit order, so the token
+    returned is still the highest-probability one the grammar admits, and stops
+    at the first hit. `synth.mask` answers a whole list in one engine call, so
+    this costs one call per `block` tokens rather than one per token.
+
+    Deterministic: no draw from `rng`, so two identical `generate()` calls still
+    return identical results. It is a fallback rather than the main path because
+    it abandons the temperature -- at this point the alternative is emitting
+    nothing at all.
+
+    An empty step from *here* means the grammar genuinely admits no token at
+    this position. For a productive grammar and a live prefix that is an
+    invariant violation rather than a model outcome, so it is logged as one.
+    """
+    order = [int(t) for t in np.argsort(logits, kind="stable")[::-1] if valid[t]]
+    for start in range(0, len(order), block):
+        chunk = order[start : start + block]
+        offered: list[str] = []
+        spans: list[tuple[int, int, int, str]] = []
+        for token_id in chunk:
+            token = runtime.token_text(token_id)
+            # Same admissibility rules as the retry loop: whitespace-only tokens
+            # carry no content, and a stop token only ends a *finished* program.
+            if not token or not token.strip():
+                continue
+            if runtime.is_stop(token_id):
+                if synth.status() == "typed":
+                    step.token_id, step.token, step.is_stop = token_id, token, True
+                    step.post_entropy = _entropy_bits(np.where(valid, logits, -np.inf))
+                    step.scanned = start + len(chunk)
+                    return step
+                continue
+            candidates = _spellings(token, synth.input())
+            spans.append((len(offered), len(candidates), token_id, token))
+            offered.extend(candidates)
+        if not offered:
+            continue
+        admitted = mask_candidates(synth, grammar_hash, offered, mask_cache_size)
+        for begin, count, token_id, token in spans:
+            verdicts = admitted[begin : begin + count]
+            content = next(
+                (c for c, ok in zip(offered[begin : begin + count], verdicts) if ok),
+                None,
+            )
+            if content is None:
+                continue
+            step.token_id, step.token, step.content = token_id, token, content
+            step.post_entropy = _entropy_bits(np.where(valid, logits, -np.inf))
+            step.scanned = start + len(chunk)
+            log.warning(
+                "retry budget exhausted; exhaustive scan admitted %r after "
+                "examining %d token(s). The grammar and the model disagree "
+                "about nearly every token at this position.",
+                content, step.scanned,
+            )
+            return step
+    log.error(
+        "no token in the vocabulary is admissible at prefix %r (status %s). "
+        "A productive grammar at a live prefix always admits something, so "
+        "this is a grammar or engine fault, not a model outcome.",
+        synth.input()[-80:], synth.status(),
+    )
+    step.scanned = len(order)
     return step
 
 
@@ -190,8 +305,16 @@ def generate(
     temperature: float = 0.0,
     seed: int | None = None,
     mask_cache_size: int = DEFAULT_MASK_CACHE_SIZE,
+    deadline_seconds: float | None = None,
 ) -> GenerationResult:
-    """Decode under `grammar`, returning the text aufbau itself validated."""
+    """Decode under `grammar`, returning the text aufbau itself validated.
+
+    `deadline_seconds` bounds the wall time this loop may spend. It exists
+    because a constrained step is not bounded by `max_tokens` alone: each one
+    may retry up to `MAX_RETRIES` times and then scan the vocabulary, so a
+    model far from its grammar can decode for hours. Exceeding it stops the
+    loop and reports `deadline`, which is a measured outcome; the alternative
+    is a caller that waits forever. See `DEADLINE_OVERSHOOT_NOTE`."""
     import aufbau
 
     rng = np.random.default_rng(seed)
@@ -219,8 +342,12 @@ def generate(
     pre_entropies: list[float] = []
     entropies: list[float] = []
     retries: list[int] = []
+    started = time.monotonic()
 
     for _ in range(max_tokens):
+        if deadline_seconds is not None and time.monotonic() - started > deadline_seconds:
+            reason = "deadline"
+            break
         try:
             step = sample(
                 runtime,
@@ -279,6 +406,7 @@ def generate_unconstrained(
     max_tokens: int = 512,
     temperature: float = 0.0,
     seed: int | None = None,
+    deadline_seconds: float | None = None,
 ) -> GenerationResult:
     """The comparison arm: the same model and prompt with no grammar at all.
 
@@ -291,8 +419,14 @@ def generate_unconstrained(
     pieces: list[str] = []
     reason = "max_tokens"
     generated = 0
+    started = time.monotonic()
 
     for _ in range(max_tokens):
+        # Bounded for the same reason as the constrained arm, so that the two
+        # arms of one experiment fail the same way and stay comparable.
+        if deadline_seconds is not None and time.monotonic() - started > deadline_seconds:
+            reason = "deadline"
+            break
         token_id = _draw(runtime.logits(), temperature, rng)
         if token_id < 0:
             reason = "no_valid"

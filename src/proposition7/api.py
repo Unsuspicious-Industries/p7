@@ -53,6 +53,7 @@ def _via_runtime(
     temperature: float,
     seed: int | None,
     constrained: bool = True,
+    deadline_seconds: float | None = None,
 ) -> "Result":
     """Decode against a runtime the caller already has.
 
@@ -73,6 +74,7 @@ def _via_runtime(
                 max_tokens=max_tokens,
                 temperature=temperature,
                 seed=seed,
+                deadline_seconds=deadline_seconds,
             )
         )
     return _result(
@@ -82,6 +84,7 @@ def _via_runtime(
             max_tokens=max_tokens,
             temperature=temperature,
             seed=seed,
+            deadline_seconds=deadline_seconds,
         )
     )
 
@@ -157,6 +160,7 @@ def generate(
     temperature: float = 0.0,
     seed: int | None = None,
     runtime=None,
+    deadline_seconds: float | None = None,
     **kwargs,
 ) -> Result:
     """Generate against a raw grammar and typing context using a local model."""
@@ -164,6 +168,7 @@ def generate(
         return _via_runtime(
             runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
             max_tokens=max_tokens, temperature=temperature, seed=seed, constrained=True,
+            deadline_seconds=deadline_seconds,
         )
     if "device" not in kwargs and "device_map" not in kwargs:
         try:
@@ -218,6 +223,7 @@ def generate_unconstrained(
     temperature: float = 0.0,
     seed: int | None = None,
     runtime=None,
+    deadline_seconds: float | None = None,
     **kwargs,
 ) -> Result:
     """Generate without a grammar mask using the constrained run's prompt setup."""
@@ -225,6 +231,7 @@ def generate_unconstrained(
         return _via_runtime(
             runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
             max_tokens=max_tokens, temperature=temperature, seed=seed, constrained=False,
+            deadline_seconds=deadline_seconds,
         )
     if "device" not in kwargs and "device_map" not in kwargs:
         try:
