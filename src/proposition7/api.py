@@ -23,6 +23,17 @@ class Result:
     tokens: int
     reason: str
     thoughts: str = ""
+    """The mixed arm's reasoning, which is not part of the answer.
+
+    Empty for every other arm. Kept beside the answer rather than inside it so
+    the same grader can face all four arms without knowing which produced its
+    input, while the reasoning stays available to analyse."""
+    think_tokens: int = 0
+    think_closed: bool = False
+    """Whether the model closed its own reasoning channel before the grammar
+    switched on. False means the budget ran out mid-thought, which makes the
+    program that follows conditioned on an unfinished sentence -- so it has to
+    be visible in the data rather than inferred from a duration."""
     exported_context: Mapping[str, str] = field(default_factory=dict)
     step_token_ids: list[int] = field(default_factory=list)
     step_pre_entropies: list[float] = field(default_factory=list)
@@ -30,11 +41,15 @@ class Result:
     step_retries: list[int] = field(default_factory=list)
 
 def _result(r) -> "Result":
+    diagnostics = getattr(r, "diagnostics", None) or {}
     return Result(
         text=r.text,
         complete=r.is_complete,
         tokens=r.tokens_generated,
         reason=r.stopped_reason,
+        thoughts=str(diagnostics.get("think_text", "")),
+        think_tokens=int(diagnostics.get("think_tokens", 0)),
+        think_closed=bool(diagnostics.get("think_closed", False)),
         exported_context=r.exported_context,
         step_token_ids=r.step_token_ids,
         step_pre_entropies=r.step_pre_entropies,
@@ -52,8 +67,9 @@ def _via_runtime(
     max_tokens: int,
     temperature: float,
     seed: int | None,
-    constrained: bool = True,
+    mode: str = "constrained",
     deadline_seconds: float | None = None,
+    think_budget: int | None = None,
 ) -> "Result":
     """Decode against a runtime the caller already has.
 
@@ -64,90 +80,37 @@ def _via_runtime(
     from . import decode
 
     prompt_ids = runtime.encode_prompt(tuple(model_context))
-    if constrained:
+    if mode == "unconstrained":
         return _result(
-            decode.generate(
+            decode.generate_unconstrained(
                 runtime,
-                grammar=_resolve_grammar(grammar),
                 prompt_ids=prompt_ids,
-                aufbau_context=aufbau_context,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 seed=seed,
                 deadline_seconds=deadline_seconds,
             )
         )
+    if mode not in ("constrained", "mixed"):
+        raise ValueError(f"unknown decode mode {mode!r}")
+    extra = {}
+    if mode == "mixed" and think_budget is not None:
+        extra["think_budget"] = think_budget
+    decoder = decode.generate if mode == "constrained" else decode.generate_mixed
     return _result(
-        decode.generate_unconstrained(
+        decoder(
             runtime,
+            grammar=_resolve_grammar(grammar),
             prompt_ids=prompt_ids,
+            aufbau_context=aufbau_context,
             max_tokens=max_tokens,
             temperature=temperature,
             seed=seed,
             deadline_seconds=deadline_seconds,
+            **extra,
         )
     )
 
-
-
-class Session:
-    """Reusable constrained generation session."""
-
-    def __init__(self, model_name: str = "gpt2", grammar: str = "stlc", **hf_kwargs):
-        from .models import get_model_class
-
-        cls = get_model_class(model_name)
-        if "device" not in hf_kwargs and "device_map" not in hf_kwargs:
-            try:
-                import torch
-
-                hf_kwargs["device_map"] = "auto" if torch.cuda.is_available() else "cpu"
-            except Exception:
-                hf_kwargs["device_map"] = "cpu"
-        self.model = cls.from_pretrained(
-            model_name, grammar=_resolve_grammar(grammar), **hf_kwargs
-        )
-        self.grammar = grammar
-
-    def generate(
-        self,
-        prompt: str,
-        *,
-        initial: str = "",
-        max_tokens: int = 50,
-        reason: bool = False,
-        think_budget: int = 200,
-    ) -> Result:
-        if reason:
-            from .environment import ReasoningEnvironment
-
-            env = ReasoningEnvironment(
-                self.model,
-                self.grammar,
-                think_budget=think_budget,
-                formal_budget=max_tokens,
-            )
-            r = env.generate(prompt, initial=initial)
-            out = r.final_output
-            return Result(
-                text=out.content if out else "",
-                complete=r.is_complete,
-                tokens=r.total_tokens,
-                reason=r.stopped_reason,
-                thoughts=r.all_thoughts,
-            )
-        r = self.model.generate_constrained(
-            prompt=prompt,
-            initial=initial,
-            max_tokens=max_tokens,
-            grammar_name=self.grammar,
-        )
-        return Result(
-            text=r.text,
-            complete=r.is_complete,
-            tokens=r.tokens_generated,
-            reason=r.stopped_reason,
-        )
 
 
 def generate(
@@ -167,7 +130,7 @@ def generate(
     if runtime is not None:
         return _via_runtime(
             runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
-            max_tokens=max_tokens, temperature=temperature, seed=seed, constrained=True,
+            max_tokens=max_tokens, temperature=temperature, seed=seed, mode="constrained",
             deadline_seconds=deadline_seconds,
         )
     if "device" not in kwargs and "device_map" not in kwargs:
@@ -230,7 +193,7 @@ def generate_unconstrained(
     if runtime is not None:
         return _via_runtime(
             runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
-            max_tokens=max_tokens, temperature=temperature, seed=seed, constrained=False,
+            max_tokens=max_tokens, temperature=temperature, seed=seed, mode="unconstrained",
             deadline_seconds=deadline_seconds,
         )
     if "device" not in kwargs and "device_map" not in kwargs:
@@ -367,3 +330,35 @@ def verify(
         synth.add_to_ctx(name, type_source)
     synth.set_input(text)
     return synth.verify()
+
+
+def generate_mixed(
+    model_context: tuple[tuple[str, str], ...],
+    *,
+    model: str,
+    grammar: str,
+    aufbau_context: Mapping[str, str],
+    max_tokens: int = 512,
+    temperature: float = 0.0,
+    seed: int | None = None,
+    runtime=None,
+    deadline_seconds: float | None = None,
+    think_budget: int | None = None,
+    **kwargs,
+) -> Result:
+    """Reason freely, then emit a program the grammar vouches for.
+
+    Server-side only. The two phases have to share one runtime for the program
+    to be written in the context of the reasoning, and the `from_pretrained`
+    path below rebuilds its own generation loop per call, so there is nothing
+    there to hand a half-finished sequence to. A caller without a runtime is
+    asking for something this arm cannot mean, so it is refused rather than
+    quietly served as an ordinary constrained decode.
+    """
+    if runtime is None:
+        raise ValueError("mixed decoding needs a runtime; the local model path cannot resume a sequence")
+    return _via_runtime(
+        runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
+        max_tokens=max_tokens, temperature=temperature, seed=seed, mode="mixed",
+        deadline_seconds=deadline_seconds, think_budget=think_budget,
+    )

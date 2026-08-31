@@ -107,3 +107,85 @@ def test_constrained_decode_stops_at_the_deadline():
 
     assert result.stopped_reason == "deadline"
     assert elapsed < 10.0, f"loop ran {elapsed:.1f}s past a 0.2s deadline"
+
+
+class SlowVocabRuntime:
+    """A model whose every candidate is expensive to even look at.
+
+    `token_text` is called once per candidate in the retry loop and once per
+    token in `_scan`, so making it slow makes a *single step* slow -- which is
+    the shape of the failure this guards. No aufbau call is slowed: the point is
+    that a step can outlive a deadline without any one call doing so.
+    """
+
+    def __init__(self, vocab_size: int = 4096, token_seconds: float = 0.002) -> None:
+        self.vocab_size = vocab_size
+        self.token_seconds = token_seconds
+
+    def encode_prompt(self, model_context, *, initial: str = ""):
+        return [0]
+
+    def reset(self, prompt_ids) -> None:
+        pass
+
+    def extend(self, token_id: int) -> None:
+        pass
+
+    def logits(self):
+        scores = np.linspace(1.0, 0.0, self.vocab_size).astype(np.float32)
+        return scores
+
+    def token_text(self, token_id: int) -> str:
+        time.sleep(self.token_seconds)
+        # Nothing the grammar below will take, so the retry loop never succeeds
+        # and the exhaustive scan is reached.
+        return "z"
+
+    def is_stop(self, token_id: int) -> bool:
+        return False
+
+
+def test_one_step_cannot_outlive_the_deadline():
+    """The regression: a step, not a loop, is what overran in production.
+
+    A constrained step ran 1200s against a 600s deadline because the bound was
+    only checked between steps. The client timed out first, the server kept the
+    generation slot it was still holding, and every later request became a 429 --
+    so the cell died in the same way the between-steps bound was added to
+    prevent. `MAX_RETRIES` alone is 2048 candidates before `_scan` even starts.
+    """
+    runtime = SlowVocabRuntime()
+    started = time.monotonic()
+    result = decode.generate(
+        runtime,
+        grammar='Start ::= Digits\nDigits ::= "a" Digits | "a"\n',
+        prompt_ids=[0],
+        max_tokens=4,
+        deadline_seconds=0.3,
+    )
+    elapsed = time.monotonic() - started
+
+    assert result.stopped_reason == "deadline"
+    # Unbounded, the first step alone is 2048 x 2ms of retries plus a 4096-token
+    # scan. Finishing near the deadline is the whole claim.
+    assert elapsed < 5.0, f"one step ran {elapsed:.1f}s past a 0.3s deadline"
+
+
+def test_a_step_cut_short_is_not_reported_as_an_empty_grammar():
+    """`no_valid` is a claim about the grammar; a stopped clock cannot make it.
+
+    The search never finished, so nothing was established about what the grammar
+    admits. Recording that as `no_valid` would put "we ran out of time" and "the
+    grammar admits nothing here" in one column, and the second is an invariant
+    violation worth noticing on its own.
+    """
+    runtime = SlowVocabRuntime()
+    result = decode.generate(
+        runtime,
+        grammar='Start ::= Digits\nDigits ::= "a" Digits | "a"\n',
+        prompt_ids=[0],
+        max_tokens=4,
+        deadline_seconds=0.3,
+    )
+    assert result.stopped_reason == "deadline"
+    assert result.stopped_reason != "no_valid"

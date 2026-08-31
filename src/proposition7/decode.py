@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -28,13 +28,30 @@ from .runtime import Runtime
 
 log = logging.getLogger(__name__)
 
-DEADLINE_OVERSHOOT_NOTE = """A deadline is checked between steps, never inside one.
+DEADLINE_OVERSHOOT_NOTE = """A deadline is checked between engine calls, never inside one.
 
-A single step can call the engine up to `MAX_RETRIES` times and then `_scan`
-the whole vocabulary, so the real bound is `deadline_seconds` plus one step.
-Interrupting mid-step is not available to us and would not be wanted: the
+Checking only between *steps* was not enough, and the way that failed is worth
+keeping. One step may call the engine up to `MAX_RETRIES` times and then `_scan`
+a ~152k-token vocabulary a block at a time; on a real run a single constrained
+step ran 1200s against a 600s deadline, the client gave up first, and the
+generation slot it still held turned the whole server into a 429 -- the exact
+outage the deadline exists to prevent, reached by overshooting the deadline
+rather than by ignoring it.
+
+So `sample` and `_scan` take the deadline too and give up between engine calls.
+The bound is `deadline_seconds` plus one call, not plus one step. Interrupting
+*inside* a call is still not available to us and still would not be wanted: the
 alternative is abandoning a thread that keeps running, holds the GIL and never
-releases the caller's slot, which is the failure this bound exists to prevent."""
+releases the caller's slot."""
+
+THINK_MARKER = "</think>"
+"""Where a reasoning model stops thinking and starts answering.
+
+The marker is the model's own, not something this loop imposes: these models
+open a reasoning channel unprompted and close it with this token before the
+answer proper. `generate_mixed` switches the grammar on at that boundary, and
+graders strip everything before it, so the two agree on what counts as the
+answer. A model that never closes the channel has not produced one."""
 
 MAX_RETRIES = 2048
 """Sampled draws before `_scan` takes over.
@@ -118,6 +135,12 @@ class Step:
     pre_entropy: float = 0.0
     post_entropy: float = 0.0
     retries: int = 0
+    timed_out: bool = False
+    """The deadline passed while this step was still looking for a token.
+
+    Distinct from an empty step, which claims the grammar admits nothing here.
+    A search that was cut short has not established that, and recording it as
+    `no_valid` would blame the grammar for the clock."""
     scanned: int = 0
     """Tokens examined by the exhaustive fallback, 0 if it was not needed.
 
@@ -137,6 +160,7 @@ def sample(
     temperature: float = 0.0,
     grammar_hash: bytes = b"",
     mask_cache_size: int = DEFAULT_MASK_CACHE_SIZE,
+    deadline: float | None = None,
 ) -> Step:
     """Draw a token the grammar will accept, retrying past the ones it will not.
 
@@ -156,6 +180,9 @@ def sample(
     step = Step(pre_entropy=_entropy_bits(logits))
 
     for _ in range(MAX_RETRIES):
+        if deadline is not None and time.monotonic() > deadline:
+            step.timed_out = True
+            return step
         if not valid.any():
             return step
         masked = np.where(valid, logits, -np.inf)
@@ -211,7 +238,10 @@ def sample(
     #
     # A productive grammar at a live prefix always admits some token, so the
     # only correct way to conclude otherwise is to have looked.
-    return _scan(runtime, synth, logits, valid, step, grammar_hash, mask_cache_size)
+    return _scan(
+        runtime, synth, logits, valid, step, grammar_hash, mask_cache_size,
+        deadline=deadline,
+    )
 
 
 def _scan(
@@ -224,6 +254,7 @@ def _scan(
     mask_cache_size: int,
     *,
     block: int = 256,
+    deadline: float | None = None,
 ) -> Step:
     """The most probable admissible token, found by looking at all of them.
 
@@ -244,6 +275,12 @@ def _scan(
     """
     order = [int(t) for t in np.argsort(logits, kind="stable")[::-1] if valid[t]]
     for start in range(0, len(order), block):
+        # One check per block is one check per engine call: the whole scan is
+        # ~600 calls, and it is the scan that overran the deadline in practice.
+        if deadline is not None and time.monotonic() > deadline:
+            step.timed_out = True
+            step.scanned = start
+            return step
         chunk = order[start : start + block]
         offered: list[str] = []
         spans: list[tuple[int, int, int, str]] = []
@@ -294,6 +331,95 @@ def _scan(
     return step
 
 
+@dataclass
+class _Steps:
+    """What one run of the masked loop produced, before it becomes a result."""
+
+    reason: str
+    generated: int = 0
+    token_ids: list[int] = field(default_factory=list)
+    pre_entropies: list[float] = field(default_factory=list)
+    entropies: list[float] = field(default_factory=list)
+    retries: list[float] = field(default_factory=list)
+
+
+def _constrained_loop(
+    runtime: Runtime,
+    synth: Any,
+    rng: np.random.Generator,
+    *,
+    grammar_hash: bytes,
+    max_tokens: int,
+    temperature: float,
+    mask_cache_size: int,
+    deadline_seconds: float | None,
+    started: float | None = None,
+) -> _Steps:
+    """The masked loop itself, without deciding where the model starts.
+
+    `generate` calls this with a runtime holding only the prompt; `generate_mixed`
+    calls it with one that already holds the model's own reasoning, so the
+    grammar governs the program while the thinking before it stays in context.
+    Sharing the loop is the point rather than a tidiness: an arm decoding through
+    a second copy of it would be measuring a different decoder, and the
+    comparison between arms is the entire experiment.
+    """
+    steps = _Steps("max_tokens")
+    if started is None:
+        started = time.monotonic()
+    deadline = None if deadline_seconds is None else started + deadline_seconds
+
+    for _ in range(max_tokens):
+        if deadline is not None and time.monotonic() > deadline:
+            steps.reason = "deadline"
+            break
+        try:
+            step = sample(
+                runtime,
+                synth,
+                runtime.logits(),
+                rng,
+                temperature=temperature,
+                grammar_hash=grammar_hash,
+                mask_cache_size=mask_cache_size,
+                deadline=deadline,
+            )
+        except Exception as error:  # noqa: BLE001 - becomes the stop reason
+            steps.reason = f"type_error: {error}"
+            break
+
+        if step.timed_out:
+            # The search was cut short, so it never established anything about
+            # the grammar. Reported as the clock, not as the grammar.
+            steps.reason = "deadline"
+            break
+        if step.token is None:
+            # Nothing admissible. At a complete program that is success; mid
+            # prefix it means the model's lattice and the grammar diverged.
+            steps.reason = "complete" if synth.status() == "typed" else "no_valid"
+            break
+        if step.is_stop:
+            steps.reason = (
+                "complete" if synth.status() == "typed" else f"stop_token:{step.token}"
+            )
+            break
+
+        try:
+            synth.feed(step.content)
+        except RuntimeError as error:  # mask() admitted it; defensive only
+            steps.reason = f"type_error: {error}"
+            break
+
+        steps.token_ids.append(step.token_id)
+        steps.pre_entropies.append(step.pre_entropy)
+        steps.entropies.append(step.post_entropy)
+        steps.retries.append(step.retries)
+        steps.generated += 1
+        runtime.extend(step.token_id)
+
+    return steps
+
+
 def generate(
     runtime: Runtime,
     *,
@@ -335,67 +461,27 @@ def generate(
             )
 
     runtime.reset(list(prompt_ids))
-
-    generated = 0
-    reason = "max_tokens"
-    token_ids: list[int] = []
-    pre_entropies: list[float] = []
-    entropies: list[float] = []
-    retries: list[int] = []
-    started = time.monotonic()
-
-    for _ in range(max_tokens):
-        if deadline_seconds is not None and time.monotonic() - started > deadline_seconds:
-            reason = "deadline"
-            break
-        try:
-            step = sample(
-                runtime,
-                synth,
-                runtime.logits(),
-                rng,
-                temperature=temperature,
-                grammar_hash=grammar_hash,
-                mask_cache_size=mask_cache_size,
-            )
-        except Exception as error:  # noqa: BLE001 - becomes the stop reason
-            reason = f"type_error: {error}"
-            break
-
-        if step.token is None:
-            # Nothing admissible. At a complete program that is success; mid
-            # prefix it means the model's lattice and the grammar diverged.
-            reason = "complete" if synth.status() == "typed" else "no_valid"
-            break
-        if step.is_stop:
-            reason = (
-                "complete" if synth.status() == "typed" else f"stop_token:{step.token}"
-            )
-            break
-
-        try:
-            synth.feed(step.content)
-        except RuntimeError as error:  # mask() admitted it; defensive only
-            reason = f"type_error: {error}"
-            break
-
-        token_ids.append(step.token_id)
-        pre_entropies.append(step.pre_entropy)
-        entropies.append(step.post_entropy)
-        retries.append(step.retries)
-        generated += 1
-        runtime.extend(step.token_id)
+    steps = _constrained_loop(
+        runtime,
+        synth,
+        rng,
+        grammar_hash=grammar_hash,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        mask_cache_size=mask_cache_size,
+        deadline_seconds=deadline_seconds,
+    )
 
     return GenerationResult(
         text=synth.input(),
         is_complete=synth.status() == "typed",
-        tokens_generated=generated,
-        stopped_reason=reason,
+        tokens_generated=steps.generated,
+        stopped_reason=steps.reason,
         exported_context=dict(synth.context()),
-        step_token_ids=token_ids,
-        step_pre_entropies=pre_entropies,
-        step_entropies=entropies,
-        step_retries=retries,
+        step_token_ids=steps.token_ids,
+        step_pre_entropies=steps.pre_entropies,
+        step_entropies=steps.entropies,
+        step_retries=steps.retries,
     )
 
 
@@ -443,4 +529,132 @@ def generate_unconstrained(
         is_complete=reason == "stop_token",
         tokens_generated=generated,
         stopped_reason=reason,
+    )
+
+
+def generate_mixed(
+    runtime: Runtime,
+    *,
+    grammar: str,
+    prompt_ids: Sequence[int],
+    aufbau_context: Mapping[str, str] | None = None,
+    initial: str = "",
+    max_tokens: int = 512,
+    temperature: float = 0.0,
+    seed: int | None = None,
+    mask_cache_size: int = DEFAULT_MASK_CACHE_SIZE,
+    deadline_seconds: float | None = None,
+    think_marker: str = THINK_MARKER,
+    think_budget: int | None = None,
+) -> GenerationResult:
+    """Free reasoning, then a grammar-constrained program.
+
+    The model decodes unconstrained until it closes its own reasoning channel
+    with `think_marker`; every token after that is masked by `grammar`. The two
+    phases share one runtime, so the program is written in the context of the
+    thinking that produced it -- that sharing is the arm's whole claim, and it is
+    why this cannot be two calls stitched together by a caller.
+
+    They do not share a budget, and that is deliberate. `max_tokens` in this
+    corpus is sized for a program -- 256 to 600 tokens -- and a reasoning model
+    does not finish a thought in that. Splitting it would spend half on a
+    truncated thought and then mask a program onto the wreckage: measured on a
+    0.8b model, a 128-token thinking half never once reached `</think>`, and the
+    program that followed was conditioned on a sentence stopped mid-word. So
+    `think_budget` defaults to a full `max_tokens` of its own, and the
+    constrained phase gets its own `max_tokens` after it. `deadline_seconds`,
+    not the token count, is what bounds the pair.
+
+    `text` is the program alone. The reasoning is not part of the answer, so it
+    is reported in `diagnostics` instead -- which is also what lets this arm face
+    the same compiler as every other arm without a grader that knows about it.
+    """
+    import aufbau
+
+    rng = np.random.default_rng(seed)
+    grammar_hash = hashlib.blake2b(grammar.encode(), digest_size=16).digest()
+    synth = aufbau.Synthesizer(grammar, "")
+
+    for name, type_source in (aufbau_context or {}).items():
+        synth.add_to_ctx(name, type_source)
+
+    if initial:
+        synth.set_input(initial)
+        if synth.status() == "dead":
+            return GenerationResult(
+                initial, False, 0, "type_error: initial text is not a live prefix"
+            )
+
+    if think_budget is None:
+        think_budget = max_tokens
+    started = time.monotonic()
+    runtime.reset(list(prompt_ids))
+
+    thought: list[str] = []
+    think_tokens = 0
+    closed = False
+    stopped_thinking = ""
+    # Only the tail can complete the marker, and keeping just the tail is what
+    # makes this check O(1) per step instead of rescanning the whole thought.
+    tail = ""
+
+    # Not `min(think_budget, max_tokens)`: the two phases have separate budgets
+    # (see above), and taking the smaller one hands the thinking phase the
+    # program's budget -- 256 where the caller asked for 1280 -- which is the
+    # truncated-thought failure this arm exists to avoid.
+    for _ in range(max(0, think_budget)):
+        if deadline_seconds is not None and time.monotonic() - started > deadline_seconds:
+            stopped_thinking = "deadline"
+            break
+        token_id = _draw(runtime.logits(), temperature, rng)
+        if token_id < 0:
+            stopped_thinking = "no_valid"
+            break
+        if runtime.is_stop(token_id):
+            # The model ended its turn without ever opening a program. The
+            # grammar still gets its phase: this arm's output is constrained by
+            # construction, so an early stop shortens the thinking rather than
+            # cancelling the answer.
+            stopped_thinking = "stop_token"
+            break
+        text = runtime.token_text(token_id)
+        thought.append(text)
+        think_tokens += 1
+        runtime.extend(token_id)
+        tail = (tail + text)[-2 * len(think_marker) :]
+        if think_marker in tail:
+            closed = True
+            stopped_thinking = "closed"
+            break
+    else:
+        stopped_thinking = stopped_thinking or "think_budget"
+
+    steps = _constrained_loop(
+        runtime,
+        synth,
+        rng,
+        grammar_hash=grammar_hash,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        mask_cache_size=mask_cache_size,
+        deadline_seconds=deadline_seconds,
+        started=started,
+    )
+
+    return GenerationResult(
+        text=synth.input(),
+        is_complete=synth.status() == "typed",
+        tokens_generated=steps.generated,
+        stopped_reason=steps.reason,
+        exported_context=dict(synth.context()),
+        diagnostics={
+            "think_tokens": think_tokens,
+            "think_closed": closed,
+            "think_stopped_reason": stopped_thinking,
+            "think_text": "".join(thought),
+        },
+        step_token_ids=steps.token_ids,
+        step_pre_entropies=steps.pre_entropies,
+        step_entropies=steps.entropies,
+        step_retries=steps.retries,
     )
