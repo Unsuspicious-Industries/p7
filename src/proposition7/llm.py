@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 from typing import Any, Callable, Dict, List, Optional
 import torch
 
 from .inference import GenerationResult
+from .mask_cache import DEFAULT_MASK_CACHE_SIZE, clear as clear_mask_cache
+from .mask_cache import mask_candidates, stats as mask_cache_stats
+from .spelling import candidate_spellings
 
 
 def _dedupe(tokens: List[str]) -> List[str]:
@@ -77,6 +81,7 @@ class ConstrainedModel:
         grammar: str,
         device: str = "cpu",
         model_name: Optional[str] = None,
+        mask_cache_size: int = DEFAULT_MASK_CACHE_SIZE,
     ):
         self.model = model
         self.tokenizer = tokenizer
@@ -90,6 +95,7 @@ class ConstrainedModel:
         # grammar and its typing rules, so it must happen once per grammar,
         # never per step.
         self._spg_cache: Dict[str, Any] = {}
+        self.mask_cache_size = mask_cache_size
 
     def _spg(self, grammar_spec: str):
         """The compiled aufbau grammar for a spec, built once and reused."""
@@ -151,6 +157,7 @@ class ConstrainedModel:
         model_name: str,
         grammar: str,
         device: str = "cpu",
+        mask_cache_size: int = DEFAULT_MASK_CACHE_SIZE,
         **model_kwargs,
     ) -> "ConstrainedModel":
         tokenizer, model = cls.load_model_and_tokenizer(model_name, **model_kwargs)
@@ -166,7 +173,14 @@ class ConstrainedModel:
             model.to(device)
 
         model.eval()
-        return cls(model, tokenizer, grammar, device=device, model_name=model_name)
+        return cls(
+            model,
+            tokenizer,
+            grammar,
+            device=device,
+            model_name=model_name,
+            mask_cache_size=mask_cache_size,
+        )
 
     def format_prompt(self, prompt_text: str) -> str:
         return prompt_text
@@ -377,6 +391,7 @@ class ConstrainedModel:
         greedy=False,
         max_retries=2048,
         temperature=0.0,
+        grammar_hash: bytes = b"",
     ) -> tuple[Optional[int], Optional[str], bool, Optional[str], float, float, int]:
         """Sample the next token under grammar constraints.
 
@@ -409,9 +424,9 @@ class ConstrainedModel:
         SPACING: LM tokenizers prefix most tokens with a leading space (' x',
         ' 3'). The space is meaningful at keyword/identifier boundaries
         ('let' + ' x' → 'let x') but fatal inside a regex terminal
-        ('4' + ' 3' must mean '43', not the two tokens '4 3'). So each sampled
-        token is offered in both spellings — raw first, lstripped as fallback —
-        in one Synthesizer.mask call, and the first admissible one is kept.
+        ('4' + ' 3' must mean '43', not the two tokens '4 3'). `candidate_spellings`
+        decides which spellings to offer; they are screened in one
+        Synthesizer.mask call and the first admissible one is kept.
         """
         finite = torch.isfinite(logits)
         valid_mask = finite.clone()
@@ -469,21 +484,10 @@ class ConstrainedModel:
             # The first admissible one wins, so the space-join never overrides a
             # spelling the model actually emitted.
             prefix = synth.input()
-            candidates: list[str] = []
-            for c in (token, token.lstrip()):
-                if c and c not in candidates:
-                    candidates.append(c)
-            stripped = token.lstrip()
-            if (
-                stripped
-                and prefix
-                and not prefix[-1].isspace()
-                and not token[:1].isspace()
-            ):
-                joined = " " + stripped
-                if joined not in candidates:
-                    candidates.append(joined)
-            admissible = synth.mask(candidates)
+            candidates = candidate_spellings(token, prefix)
+            admissible = mask_candidates(
+                synth, grammar_hash, candidates, self.mask_cache_size
+            )
             token_content = next(
                 (c for c, ok in zip(candidates, admissible) if ok), None
             )
@@ -535,13 +539,10 @@ class ConstrainedModel:
             from grammars import strip_typing_rules
 
             spec = strip_typing_rules(spec)
+        grammar_hash = hashlib.blake2b(spec.encode(), digest_size=16).digest()
         spg = self._spg(spec)
         synth = aufbau.Synthesizer.from_grammar(spg, "")
 
-        # A multi-turn agent (benchmarks/agent.py) pre-populates Γ with
-        # bindings from prior turns before generating the next one, so a
-        # step can reference an earlier tool call's result and have its
-        # type checked, without re-parsing all the prior steps' text.
         if context:
             for name, ty in context.items():
                 synth.add_to_ctx(name, ty)
@@ -570,6 +571,7 @@ class ConstrainedModel:
                         stop_tokens,
                         stop_token_ids,
                         temperature=temperature,
+                        grammar_hash=grammar_hash,
                     )
                 )
             except Exception as error:
@@ -618,7 +620,14 @@ class ConstrainedModel:
         )
 
     def _sample_unconstrained(self, temperature: float) -> int:
-        logits = self._get_logits_tensor().float()
+        return self._sample_unconstrained_from_logits(
+            self._get_logits_tensor(), temperature
+        )
+
+    def _sample_unconstrained_from_logits(
+        self, logits: torch.Tensor, temperature: float
+    ) -> int:
+        logits = logits.float()
         if temperature == 0.0:
             return torch.argmax(logits).item()
         logits = logits / max(temperature, 1e-6)
@@ -646,9 +655,12 @@ class ConstrainedModel:
         generated_ids: List[int] = []
         tokens_generated = 0
         stopped_reason = "max_tokens"
+        step_token_ids: list[int] = []
+        step_entropies: list[float] = []
 
         for _ in range(max_tokens):
-            sampled = self._sample_unconstrained(temperature)
+            logits = self._get_logits_tensor()
+            sampled = self._sample_unconstrained_from_logits(logits, temperature)
             if sampled in stop_token_ids:
                 stopped_reason = f"stop_token:{self._stop_token_label(sampled, None)}"
                 break
@@ -666,6 +678,8 @@ class ConstrainedModel:
             token = next_text[len(prev_text) :]
             generated_ids = next_ids
             tokens_generated += 1
+            step_token_ids.append(sampled)
+            step_entropies.append(_entropy_bits(logits))
             self._append_token(token)
 
         return GenerationResult(
@@ -673,4 +687,9 @@ class ConstrainedModel:
             is_complete=False,
             tokens_generated=tokens_generated,
             stopped_reason=stopped_reason,
+            step_token_ids=step_token_ids,
+            # With no mask, the post-mask distribution is the raw distribution.
+            step_pre_entropies=step_entropies,
+            step_entropies=step_entropies,
+            step_retries=[0] * tokens_generated,
         )
