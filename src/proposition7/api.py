@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Mapping, Optional
+from typing import TYPE_CHECKING, Mapping, Optional
+
+if TYPE_CHECKING:
+    from .decode import SettlePolicy
 
 from grammars import get_grammar, list_grammars, GRAMMARS
 
@@ -82,6 +85,7 @@ def _via_runtime(
     trace: bool = False,
     assistant_prefix: str | None = None,
     stop_at_complete: bool = False,
+    settle: "SettlePolicy | None" = None,
 ) -> "Result":
     """Decode against a runtime the caller already has.
 
@@ -99,6 +103,10 @@ def _via_runtime(
     # silently dropping it would change the prompt without changing the result.
     framing = {} if assistant_prefix is None else {"assistant_prefix": assistant_prefix}
     prompt_ids = runtime.encode_prompt(tuple(model_context), **framing)
+    # The policy crossed as thresholds; the closure is built here, next to the
+    # logits it reads, so the same block boundary happens whether the caller is
+    # in this process or on the other end of a request.
+    hook = {} if settle is None else {"stop": settle.hook()}
     if mode == "unconstrained":
         return _result(
             decode.generate_unconstrained(
@@ -109,6 +117,7 @@ def _via_runtime(
                 seed=seed,
                 deadline_seconds=deadline_seconds,
                 trace=trace,
+                **hook,
             )
         )
     if mode not in ("constrained", "mixed"):
@@ -129,6 +138,7 @@ def _via_runtime(
             deadline_seconds=deadline_seconds,
             trace=trace,
             stop_at_complete=stop_at_complete,
+            **hook,
             **extra,
         )
     )
@@ -149,6 +159,7 @@ def generate(
     trace: bool = False,
     assistant_prefix: str | None = None,
     stop_at_complete: bool = False,
+    settle: "SettlePolicy | None" = None,
     **kwargs,
 ) -> Result:
     """Generate against a raw grammar and typing context using a local model."""
@@ -158,6 +169,7 @@ def generate(
             max_tokens=max_tokens, temperature=temperature, seed=seed, mode="constrained",
             deadline_seconds=deadline_seconds, trace=trace,
             assistant_prefix=assistant_prefix, stop_at_complete=stop_at_complete,
+            settle=settle,
         )
     if "device" not in kwargs and "device_map" not in kwargs:
         try:
@@ -215,6 +227,7 @@ def generate_unconstrained(
     deadline_seconds: float | None = None,
     trace: bool = False,
     assistant_prefix: str | None = None,
+    settle: "SettlePolicy | None" = None,
     **kwargs,
 ) -> Result:
     """Generate without a grammar mask using the constrained run's prompt setup."""
@@ -223,7 +236,7 @@ def generate_unconstrained(
             runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
             max_tokens=max_tokens, temperature=temperature, seed=seed, mode="unconstrained",
             deadline_seconds=deadline_seconds, trace=trace,
-            assistant_prefix=assistant_prefix,
+            assistant_prefix=assistant_prefix, settle=settle,
         )
     if "device" not in kwargs and "device_map" not in kwargs:
         try:

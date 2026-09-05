@@ -18,7 +18,7 @@ import hashlib
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
 
@@ -374,6 +374,74 @@ def _scan(
     return step
 
 
+@dataclass(frozen=True)
+class StepInfo:
+    """What a `stop` callback sees about one accepted position.
+
+    The cross-repository shape of the per-step hook, so keep it additive. A
+    caller that drives multi-block turns decides where a block ends from these
+    numbers, which is why the decode loop reports them rather than deciding
+    anything itself: the mechanism is here, the policy is the caller's.
+    """
+
+    index: int
+    token_id: int
+    text: str
+    pre_entropy: float
+    post_entropy: float
+    retries: int
+
+
+StopHook = Callable[[StepInfo], str | None]
+"""Called after each accepted token. A string closes the loop as that reason."""
+
+
+@dataclass(frozen=True)
+class SettlePolicy:
+    """Close a block once the distribution stops moving.
+
+    While a model is genuinely searching, the next-token distribution stays
+    broad. A sustained run of low-entropy steps means the search has collapsed
+    and what follows is restatement, which is the point to hand over to the next
+    block. `settle` consecutive steps are required so that one confident token
+    inside an otherwise open distribution does not end the block.
+
+    Thresholds rather than a closure, because the decode this governs may be on
+    the other side of an HTTP boundary from the caller that chose them. A
+    closure cannot cross it; these fields can, and `hook` rebuilds the same
+    behaviour wherever the logits actually are.
+    """
+
+    entropy_floor: float
+    settle: int = 8
+    reason: str = "settled"
+
+    def hook(self) -> StopHook:
+        run = 0
+
+        def stop(step: StepInfo) -> str | None:
+            nonlocal run
+            run = run + 1 if step.post_entropy <= self.entropy_floor else 0
+            return self.reason if run >= self.settle else None
+
+        return stop
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "entropy_floor": self.entropy_floor,
+            "settle": self.settle,
+            "reason": self.reason,
+        }
+
+    @classmethod
+    def from_json(cls, payload: Mapping[str, Any]) -> SettlePolicy:
+        return cls(
+            entropy_floor=float(payload["entropy_floor"]),
+            settle=int(payload.get("settle", 8)),
+            reason=str(payload.get("reason", "settled")),
+        )
+
+
 @dataclass
 class _Steps:
     """What one run of the masked loop produced, before it becomes a result."""
@@ -400,6 +468,7 @@ def _constrained_loop(
     started: float | None = None,
     trace: bool = False,
     stop_at_complete: bool = False,
+    stop: StopHook | None = None,
 ) -> _Steps:
     """The masked loop itself, without deciding where the model starts.
 
@@ -489,6 +558,24 @@ def _constrained_loop(
             steps.reason = "complete"
             break
 
+        if stop is not None:
+            # After the grammar's own verdict, so a block that finished a term
+            # reports `complete` rather than whatever the caller's policy would
+            # have said about the same token.
+            closed = stop(
+                StepInfo(
+                    index=steps.generated - 1,
+                    token_id=step.token_id,
+                    text=step.content,
+                    pre_entropy=step.pre_entropy,
+                    post_entropy=step.post_entropy,
+                    retries=step.retries,
+                )
+            )
+            if closed is not None:
+                steps.reason = closed
+                break
+
     return steps
 
 
@@ -506,6 +593,7 @@ def generate(
     deadline_seconds: float | None = None,
     trace: bool = False,
     stop_at_complete: bool = False,
+    stop: StopHook | None = None,
 ) -> GenerationResult:
     """Decode under `grammar`, returning the text aufbau itself validated.
 
@@ -546,6 +634,7 @@ def generate(
         deadline_seconds=deadline_seconds,
         trace=trace,
         stop_at_complete=stop_at_complete,
+        stop=stop,
     )
 
     return GenerationResult(
@@ -571,12 +660,19 @@ def generate_unconstrained(
     seed: int | None = None,
     deadline_seconds: float | None = None,
     trace: bool = False,
+    stop: StopHook | None = None,
 ) -> GenerationResult:
     """The comparison arm: the same model and prompt with no grammar at all.
 
     Telemetry stays empty rather than being filled with the unmasked
     distribution twice over: pre and post entropy are equal by definition when
     there is no mask, and a chart of that would imply a measurement nobody made.
+
+    A `stop` hook is the exception, and only for the caller that passes one. A
+    think block is unconstrained and its policy still needs the number, so
+    entropy is computed per step when a hook is present and reported on both
+    fields, equal, because that is what they are here. The recorded telemetry
+    stays empty either way, so the arm comparison is unchanged.
     """
     rng = np.random.default_rng(seed)
     runtime.reset(list(prompt_ids))
@@ -592,7 +688,9 @@ def generate_unconstrained(
         if deadline_seconds is not None and time.monotonic() - started > deadline_seconds:
             reason = "deadline"
             break
-        token_id = _draw(runtime.logits(), temperature, rng)
+        logits = runtime.logits()
+        entropy = _entropy_bits(logits) if stop is not None else 0.0
+        token_id = _draw(logits, temperature, rng)
         if token_id < 0:
             reason = "no_valid"
             break
@@ -615,6 +713,21 @@ def generate_unconstrained(
             )
         generated += 1
         runtime.extend(token_id)
+
+        if stop is not None:
+            closed = stop(
+                StepInfo(
+                    index=generated - 1,
+                    token_id=int(token_id),
+                    text=pieces[-1],
+                    pre_entropy=entropy,
+                    post_entropy=entropy,
+                    retries=0,
+                )
+            )
+            if closed is not None:
+                reason = closed
+                break
 
     return GenerationResult(
         text="".join(pieces),
@@ -641,6 +754,7 @@ def generate_mixed(
     think_budget: int | None = None,
     trace: bool = False,
     stop_at_complete: bool = False,
+    stop: StopHook | None = None,
 ) -> GenerationResult:
     """Free reasoning, then a grammar-constrained program.
 
@@ -765,6 +879,7 @@ def generate_mixed(
         started=started,
         trace=trace,
         stop_at_complete=stop_at_complete,
+        stop=stop,
     )
 
     return GenerationResult(
