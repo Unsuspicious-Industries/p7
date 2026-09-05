@@ -1,4 +1,4 @@
-"""High-level API — one function to rule them all."""
+"""High-level API, one function to rule them all."""
 
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -7,7 +7,7 @@ from typing import Mapping, Optional
 from grammars import get_grammar, list_grammars, GRAMMARS
 
 # torch is an optional extra. `llm` and `models` are the transformers backend
-# and importing either drags it in, so they are imported where they are used —
+# and importing either drags it in, so they are imported where they are used,
 # a caller that supplies its own runtime (wirt does) must be able to decode
 # without torch installed at all.
 

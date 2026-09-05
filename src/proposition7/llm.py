@@ -400,7 +400,7 @@ class ConstrainedModel:
 
         Returns (token_id, token, is_stop, token_content, pre_entropy, post_entropy, retries).
 
-        token_content: the canonical spelling of the accepted token — the raw
+        token_content: the canonical spelling of the accepted token, the raw
             decoded string if it extends the grammar prefix, else its lstrip()-ed
             form (SPACING below). None when no token was accepted or on stop.
 
@@ -411,7 +411,7 @@ class ConstrainedModel:
             is independent of how many candidates were tried.
 
         post_entropy: Shannon entropy H (bits) over valid_logits at acceptance
-            time — the distribution after grammar masking and retry exclusions.
+            time, the distribution after grammar masking and retry exclusions.
             H = -∑ p_i · log₂(p_i)  over grammar-valid tokens only.
             For zero-retry steps this equals the true grammar-valid entropy.
             For steps with retries, rejected tokens are absent (masked to -inf),
@@ -476,9 +476,9 @@ class ConstrainedModel:
 
             # Candidate spellings, in priority order, screened in one
             # state-free engine call:
-            #   raw          — preserves the model's own spacing ('let' + ' x')
-            #   lstripped    — digit/operator continuation ('4' + ' 3' → '43')
-            #   space-joined — bare tokenizers with no leading space, where a
+            #   raw          - preserves the model's own spacing ('let' + ' x')
+            #   lstripped    - digit/operator continuation ('4' + ' 3' -> '43')
+            #   space-joined - bare tokenizers with no leading space, where a
             #                  grammar token boundary is still needed
             #                  ('x' then 'y' → 'x y', not 'xy')
             # The first admissible one wins, so the space-join never overrides a
@@ -498,12 +498,12 @@ class ConstrainedModel:
                 retries += 1
                 continue
 
-            # Valid grammar token accepted — compute post-mask entropy at this
+            # Valid grammar token accepted, compute post-mask entropy at this
             # point (grammar-valid tokens only, minus retry-excluded tokens).
             post_entropy = _masked_entropy_bits(valid_logits)
             return token_id, token, False, token_content, pre_entropy, post_entropy, retries
 
-        # Exhausted all retries — no valid token found.
+        # Exhausted all retries, no valid token found.
         return None, None, False, None, pre_entropy, 0.0, retries
 
     def generate_constrained(

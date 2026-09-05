@@ -7,7 +7,7 @@ to reach it: no tensors, no framework types, no weights, no devices.
 A `Runtime` is a *sequence in progress*. `reset` starts one, `extend` accepts a
 token into it, and `logits` reports the model's distribution over the next
 token given everything accepted so far. Implementations are free to keep a KV
-cache — the loop only ever appends, never rewinds, so a cache is always valid.
+cache, the loop only ever appends, never rewinds, so a cache is always valid.
 
 Rejection happens above this line. When the mask rejects a candidate the loop
 simply does not `extend`, and asks for no new logits; a runtime therefore never
@@ -39,14 +39,26 @@ class Runtime(Protocol):
         """Length of every array `logits` returns. Constant for the runtime's life."""
 
     def encode_prompt(
-        self, model_context: Sequence[tuple[str, str]], *, initial: str = ""
+        self,
+        model_context: Sequence[tuple[str, str]],
+        *,
+        initial: str = "",
+        assistant_prefix: str | None = None,
     ) -> list[int]:
         """Turn ordered (role, content) pairs into prompt tokens.
 
         Chat templating lives here because it is a property of the tokenizer,
-        not of the constraint. `initial` is text the caller has already fixed —
+        not of the constraint. `initial` is text the caller has already fixed,
         it is appended after the generation prompt and is subject to the mask
         like anything else.
+
+        `assistant_prefix` is the opposite: it is written into the token context
+        after the generation prompt and is *not* shown to the grammar. It exists
+        for the framing a chat template puts between the assistant header and
+        the model's first real token, for a reasoning model, an opened or an
+        already-closed `<think>` block. That framing is part of the prompt, not
+        part of the answer, so constraining it would be a category error.
+        `None` means "whatever this runtime defaults to".
 
         Raises `ValueError` if the model has no template for these roles.
         """

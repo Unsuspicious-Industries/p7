@@ -1,15 +1,15 @@
-// tool — a minimal typed tool-calling pipeline DSL.
+// tool, a minimal typed tool-calling pipeline DSL.
 //
 // A small, deliberately unfamiliar language: not real-world syntax a model
 // has seen in pretraining (unlike c.auf/ml.auf, which are real C/OCaml), so
 // this is where constrained decoding's effect on pass rate should be
-// largest — an unconstrained model has no memorized syntax to fall back on.
+// largest, an unconstrained model has no memorized syntax to fall back on.
 // The oracle is aufbau's own type system: there is no external ground-truth
 // compiler for an invented DSL, so soundness here means self-consistency,
 // the same role ml.auf's own type system plays before its OCaml cross-check.
 //
 // A fixed registry of tools, each with one typed argument and a fixed
-// return type — no arbitrary arity, no user-defined functions, no
+// return type, no arbitrary arity, no user-defined functions, no
 // polymorphism, so every call's typing rule is a direct premise/conclusion
 // pair with no metavariable machinery at all:
 //   search    : string -> docs

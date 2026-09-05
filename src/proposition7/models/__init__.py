@@ -1,18 +1,10 @@
 from __future__ import annotations
 
-from typing import Dict, List, Type
-
-from ..llm import ConstrainedModel
-from .chat import ChatConstrainedModel
-from .deepseek import DeepseekConstrainedModel
-from .glm import GlmConstrainedModel
-from .gptoss import GptOssConstrainedModel
-from .llama import LlamaConstrainedModel
-from .mistral import MistralConstrainedModel
-from .pleias import PleiasConstrainedModel
+from importlib import import_module
+from typing import Any
 
 
-MODEL_CATALOG: List[Dict[str, str]] = [
+MODEL_CATALOG = [
     {"name": "gpt2", "display_name": "GPT-2 (124M)"},
     {"name": "gpt2-medium", "display_name": "GPT-2 Medium (355M)"},
     {"name": "EleutherAI/pythia-160m", "display_name": "Pythia-160M"},
@@ -25,19 +17,39 @@ MODEL_CATALOG: List[Dict[str, str]] = [
     {"name": "mistralai/Mistral-7B-v0.1", "display_name": "Mistral-7B"},
     {"name": "meta-llama/Meta-Llama-3.1-8B-Instruct", "display_name": "Llama-3.1-8B-Instruct"},
     {"name": "THUDM/glm-4-9b", "display_name": "GLM-4-9B"},
-    # PleIAs SYNTH reasoning series
     {"name": "PleIAs/Monad", "display_name": "PleIAs Monad (56.7M)"},
     {"name": "PleIAs/Baguettotron", "display_name": "PleIAs Baguettotron (321M)"},
 ]
 
 
-def list_models() -> List[Dict[str, str]]:
+_LAZY_EXPORTS = {
+    "ConstrainedModel": ("..llm", "ConstrainedModel"),
+    "ChatConstrainedModel": (".chat", "ChatConstrainedModel"),
+    "DeepseekConstrainedModel": (".deepseek", "DeepseekConstrainedModel"),
+    "GlmConstrainedModel": (".glm", "GlmConstrainedModel"),
+    "GptOssConstrainedModel": (".gptoss", "GptOssConstrainedModel"),
+    "LlamaConstrainedModel": (".llama", "LlamaConstrainedModel"),
+    "MistralConstrainedModel": (".mistral", "MistralConstrainedModel"),
+    "PleiasConstrainedModel": (".pleias", "PleiasConstrainedModel"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    target = _LAZY_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = import_module(target[0], __name__)
+    value = getattr(module, target[1])
+    globals()[name] = value
+    return value
+
+
+def list_models() -> list[dict[str, str]]:
     return list(MODEL_CATALOG)
 
 
-def get_model_class(model_name: str) -> Type[ConstrainedModel]:
+def get_model_class(model_name: str) -> type[Any]:
     lower_name = model_name.lower()
-    # PleIAs models — check before generic llama since they share the arch
     if "pleias" in lower_name or "baguettotron" in lower_name or "monad" in lower_name:
         return PleiasConstrainedModel
     if "deepseek" in lower_name:
@@ -56,14 +68,8 @@ def get_model_class(model_name: str) -> Type[ConstrainedModel]:
 
 
 __all__ = [
-    "ConstrainedModel",
-    "ChatConstrainedModel",
-    "DeepseekConstrainedModel",
-    "GlmConstrainedModel",
-    "GptOssConstrainedModel",
-    "LlamaConstrainedModel",
-    "MistralConstrainedModel",
-    "PleiasConstrainedModel",
-    "get_model_class",
+    "ConstrainedModel", "ChatConstrainedModel", "DeepseekConstrainedModel",
+    "GlmConstrainedModel", "GptOssConstrainedModel", "LlamaConstrainedModel",
+    "MistralConstrainedModel", "PleiasConstrainedModel", "get_model_class",
     "list_models",
 ]

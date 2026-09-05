@@ -13,7 +13,7 @@ class ChatConstrainedModel(ConstrainedModel):
         messages = [{"role": "user", "content": prompt_text}]
         # enable_thinking=False produces a pre-closed empty think block
         # (<think>\n\n</think>\n\n) so non-thinking generations start in the
-        # correct context — past the think block, not inside it.  Fall back to
+        # correct context, past the think block, not inside it.  Fall back to
         # the default template for tokenizers that don't support the kwarg.
         for kwargs in ({"enable_thinking": False}, {}):
             try:

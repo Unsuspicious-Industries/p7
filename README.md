@@ -1,13 +1,34 @@
 # proposition7
 
-Type-aware constrained generation for language models. Install and import the package as `proposition7`.
+Type-aware constrained generation for language models. The PyPI package is
+`proposition7` (release 0.3.0) and supports Python 3.10 and newer.
 
 ## Install
 
 ```bash
-pip install -e .
-pip install -e ".[transformers]"  # local Hugging Face generation
+pip install proposition7
+pip install "proposition7[transformers]"  # local Hugging Face generation
 ```
+
+For a source checkout, use `pip install -e .` (or `pip install -e
+".[transformers]"`). The base package depends only on `aufbau-rs>=0.5,<0.6`;
+model integrations remain optional through the `transformers` extra.
+
+## Publishing 0.3.0
+
+Build and publish the `aufbau-rs` 0.5 wheels first. From the sibling Rust
+checkout, maturin builds the extension wheels from the Rust crate:
+
+```bash
+cd ../aufbau
+maturin build --release --features extension-module -o dist/
+# publish the resulting aufbau-rs 0.4 wheels to PyPI
+```
+
+Only after those wheels are available on PyPI should the `proposition7` 0.3.0
+sdist and wheel be built and published. `import proposition7` stays lazy: the
+optional model stack is loaded only when its exports are used. This release
+changes no WIRT frozen API.
 
 ## Local Generation
 
@@ -30,17 +51,6 @@ print(result.text)
 print(result.is_complete)
 ```
 
-The same model object also exposes unconstrained generation:
-
-```python
-result = model.generate_unconstrained(
-    prompt="Write a short typed function example.",
-    max_tokens=64,
-    top_k=50,
-    temperature=0.8,
-)
-```
-
 The high-level helper remains available:
 
 ```python
@@ -53,51 +63,6 @@ result = proposition7.generate(
 )
 ```
 
-## Benchmarks
-
-Build the review artifact through the unified Makefile:
-
-```bash
-make artifact
-```
-
-This produces a reusable Docker image tarball, a source bundle, and a manifest
-under `dist/`. The image contains the repository snapshot, all benchmark configs,
-and Python dependencies, but it does not contain API keys, model weights, model
-caches, benchmark outputs, or `backup/`.
-
-The image has no config-specific entrypoint. Run the benchmark command you want
-explicitly with `python benchmarks/run.py --config ...`.
-
-Dry-run the main benchmark config without GPU or API access:
-
-```bash
-docker load -i dist/proposition7-benchmark-artifact.tar
-docker run --rm proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/main.toml --dry-run
-```
-
-Run the main benchmark config on a GPU host:
-
-```bash
-docker load -i dist/proposition7-benchmark-artifact.tar
-mkdir -p artifact-output hf-cache
-docker run --rm --gpus all \
-  --env-file .env \
-  -v "$PWD/artifact-output:/workspace/benchmarks/out" \
-  -v "$PWD/hf-cache:/cache/huggingface" \
-  proposition7-benchmark-artifact:latest \
-  python benchmarks/run.py --config benchmarks/configs/main.toml --resume
-```
-
-Create `.env` with `OPENROUTER_API_KEY=...` before running configs that include
-OpenRouter rows. Hugging Face models are downloaded at run time into the mounted
-`hf-cache/` directory, not baked into the Docker image.
-
-Run any other included config by changing only `--config`. To test an edited
-config or source checkout, mount it over `/workspace` and keep the output/cache
-mounts.
-
 ## Grammars
 
 Built-in grammars:
@@ -105,10 +70,9 @@ Built-in grammars:
 | Name | Language |
 | --- | --- |
 | `stlc` | Simply typed lambda calculus |
-| `ml` | Typed OCaml subset (checkable with `ocamlc`) |
-| `c` | Typed C subset (checkable with `cc`) |
+| `ml` | Typed OCaml subset |
+| `c` | Typed C subset |
 | `toy` | Small typed toy grammar |
-| `tool` / `tool_sexpr` | Tool-calling DSLs for agent episodes |
 
 Pass a grammar name through high-level APIs, or pass a raw grammar spec to
 `ConstrainedModel.from_pretrained`.
@@ -117,7 +81,6 @@ Pass a grammar name through high-level APIs, or pass a raw grammar spec to
 
 - `proposition7.ConstrainedModel`: local Hugging Face model wrapper.
 - `generate_constrained(...)`: constrained decoding, returning `GenerationResult`.
-- `generate_unconstrained(...)`: standard sampling, returning `GenerationResult`.
 - `proposition7.generate(...)`: high-level convenience function returning `Result`.
 
 ## Project Layout
@@ -125,21 +88,12 @@ Pass a grammar name through high-level APIs, or pass a raw grammar spec to
 ```text
 src/
   proposition7/            # published Python package
-    __init__.py            # public API exports
-    api.py                 # high-level generate() and Session
+    api.py                 # high-level generation API
     llm.py                 # ConstrainedModel
     inference.py           # low-level constrained loop
-    environment.py         # optional reasoning environment
     grammars/              # bundled .auf grammar specs
     models/                # model-specific adapters
-benchmarks/
-  api.py                   # backend-neutral benchmark interaction API
-  run.py                   # TOML-driven benchmark artifact runner
-  configs/                 # benchmark configs
-  agg.py                   # result aggregation
-artifact/                  # Docker artifact image files
-scripts/
-  build_artifact_image.sh  # builds dist/proposition7-benchmark-artifact.tar
+examples/                  # small usage examples
 tests/                     # pytest suite
 ```
 
@@ -147,5 +101,7 @@ tests/                     # pytest suite
 
 ```bash
 nix develop path:. -c make build
-nix develop path:. -c make test
+PYTHONPATH=.:src ./.venv/bin/pytest tests/ -q
 ```
+
+Torch-backed tests skip when the `transformers` extra is absent.

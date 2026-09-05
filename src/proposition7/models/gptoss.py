@@ -7,29 +7,7 @@ from typing import List, Optional
 
 from ..inference import GenerationResult
 from .chat import ChatConstrainedModel
-
-_FINAL_MARKER = "<|channel|>final<|message|>"
-_END_MARKERS = ("<|return|>", "<|end|>", "<|call|>")
-
-
-def extract_harmony_final(text: str) -> str:
-    """The final-channel content of a harmony-format completion.
-
-    gpt-oss models emit channelled output even when decoding is
-    unconstrained: ``<|channel|>analysis<|message|>...<|channel|>final
-    <|message|>...<|return|>``. The benchmark grades the answer itself, so
-    keep only what follows the LAST final-channel marker and cut it at the
-    first end-of-message control token. Text without the marker is returned
-    unchanged."""
-    marker_at = text.rfind(_FINAL_MARKER)
-    if marker_at == -1:
-        return text
-    content = text[marker_at + len(_FINAL_MARKER) :]
-    cut = min(
-        (at for at in (content.find(marker) for marker in _END_MARKERS) if at != -1),
-        default=len(content),
-    )
-    return content[:cut]
+from .harmony import extract_harmony_final
 
 
 class GptOssConstrainedModel(ChatConstrainedModel):

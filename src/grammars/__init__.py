@@ -4,13 +4,52 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
+def _base_library():
+    """`aufbau.examples`, the shared base grammar library, or None.
+
+    aufbau is already a hard dependency -- `proposition7.grammar` cannot build a
+    Synthesizer without it -- so reading the grammars from it costs p7 nothing.
+    """
+    try:
+        from aufbau import examples
+        return examples
+    except ImportError:
+        pass
+    # Monorepo checkout, when the installed wheel predates `aufbau.examples`.
+    # `src/grammars/` -> p7 -> congen; the loader there needs no import to work.
+    local = Path(__file__).resolve().parents[3] / "aufbau" / "examples"
+    if local.is_dir():
+        import types
+        shim = types.SimpleNamespace()
+        shim.spec = lambda name: (local / f"{name}.auf").read_text(encoding="utf-8")
+        shim.names = lambda: sorted(q.stem for q in local.glob("*.auf"))
+        return shim
+    return None
+
+
 def _load_spec(name: str) -> str:
-    """Load a grammar spec from bundled specs, falling back to aufbau repo."""
-    # 1. Bundled in package (works in Docker / pip installs)
-    bundled = Path(__file__).resolve().parent / f"{name}.auf"
-    if not bundled.exists():
-        raise FileNotFoundError(f"Grammar spec '{name}' not found. Checked: {bundled}")
-    return bundled.read_text(encoding="utf-8")
+    """The source text of grammar `name`.
+
+    Base grammars come from `aufbau.examples`, which holds the one copy of each.
+    p7 used to bundle its own snapshots beside this module; `c.auf` drifted sixty
+    lines behind -- missing the return-type constraint and the `ForInit` split --
+    and nothing noticed, because nothing compares two copies. Grammars that are
+    genuinely p7's own (`typescript.auf`) still live here.
+    """
+    library = _base_library()
+    if library is not None:
+        try:
+            return library.spec(name)
+        except (FileNotFoundError, OSError):
+            pass
+    local = Path(__file__).resolve().parent / f"{name}.auf"
+    if local.is_file():
+        return local.read_text(encoding="utf-8")
+    have = ", ".join(library.names()) if library is not None else "<no aufbau>"
+    raise FileNotFoundError(
+        f"grammar spec {name!r} is neither in the aufbau base library ({have}) "
+        f"nor beside {Path(__file__).parent}"
+    )
 
 
 # Unified grammar information: spec content + metadata for prompt construction.
@@ -122,62 +161,6 @@ GRAMMARS: Dict[str, Dict[str, Any]] = {
             (
                 "helper",
                 "int double_it(int x) { return x + x; }\nint sum_doubled(int a, int b) { return double_it(a) + double_it(b); }",
-            ),
-        ],
-    },
-    "tool": {
-        "spec": _load_spec("tool"),
-        "name": "Tool-call pipeline",
-        "short": "typed tool-calling pipelines",
-        "description": (
-            "An invented tool-calling DSL over a fixed typed tool registry: no "
-            "pretraining exposure, so it isolates the effect of grammar constraint "
-            "from memorized syntax"
-        ),
-        "summary": (
-            "A pipeline of typed tool calls against a fixed registry: "
-            "search(string) -> docs, summarize(docs) -> string, count(docs) -> int, "
-            "format(int) -> string. `let name = tool(arg);` binds a call's result "
-            "for later use; the program ends with `return value;`. Arguments are a "
-            "string/int literal or an already-bound variable of the matching type."
-        ),
-        "syntax_hints": [
-            'let r = search("query"); let s = summarize(r); return s;',
-            "Each tool takes exactly one argument of its declared type",
-            "A variable must be bound by an earlier let before it can be used",
-        ],
-        "examples": [
-            ("search_summarize", 'let r = search("agents"); let s = summarize(r); return s;'),
-            (
-                "count_format",
-                'let r = search("agents"); let n = count(r); let s = format(n); return s;',
-            ),
-        ],
-    },
-    "tool_sexpr": {
-        "spec": _load_spec("tool_sexpr"),
-        "name": "Tool-call pipeline (S-expression)",
-        "short": "typed tool-calling pipelines, S-expression syntax",
-        "description": (
-            "The same typed tool registry and typing rules as `tool`, in S-expression "
-            "syntax instead of semicolon-terminated statements — isolates the effect "
-            "of syntax choice from the underlying type discipline"
-        ),
-        "summary": (
-            "The same fixed tool registry as `tool` (search: string -> docs, "
-            "summarize: docs -> string, count: docs -> int, format: int -> string), "
-            "written as S-expressions: `(let name (tool arg))` binds a call's result; "
-            "the program ends with `(return value)`."
-        ),
-        "syntax_hints": [
-            '(let r (search "query")) (let s (summarize r)) (return s)',
-            "Each tool call is `(tool arg)` with exactly one argument",
-            "A variable must be bound by an earlier (let ...) before it can be used",
-        ],
-        "examples": [
-            (
-                "search_summarize",
-                '(let r (search "agents")) (let s (summarize r)) (return s)',
             ),
         ],
     },

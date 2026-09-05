@@ -1,6 +1,6 @@
 """Harmony final-channel extraction (pure function -- no model weights)."""
 
-from proposition7.models.gptoss import extract_harmony_final
+from proposition7.models.harmony import extract_harmony_final
 
 
 def test_analysis_then_final_keeps_only_final_content():

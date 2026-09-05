@@ -32,7 +32,7 @@ class GenerationResult:
     # set, and this number an upper bound on true post-mask entropy.
     #
     # It is still the interesting quantity, and it is frequently HIGHER than
-    # `step_pre_entropies` rather than lower — which surprises people until
+    # `step_pre_entropies` rather than lower, which surprises people until
     # they see why. A peaked model with its top choice vetoed goes from near
     # certainty to a flat field of alternatives: measured here, 0.01 bits
     # before, 10.14 bits after. That is the grammar refusing the thing the
@@ -41,3 +41,12 @@ class GenerationResult:
     step_entropies: list[float] = field(default_factory=list)
     # Grammar-rejected candidates before the accepted token at each step.
     step_retries: list[int] = field(default_factory=list)
+
+    step_trace: list[dict[str, Any]] = field(default_factory=list)
+    """Per-step reconstruction of the decode, empty unless tracing was asked.
+
+    One entry per accepted position, each carrying the token and spelling that
+    was accepted and the full list of candidates this position refused with the
+    reason for each. `step_retries` says a position cost 136 attempts; this says
+    which 136 and why every one of them was turned down.
+    """

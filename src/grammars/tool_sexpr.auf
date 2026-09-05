@@ -1,7 +1,7 @@
-// tool_sexpr — the same typed tool-calling pipeline as tool.auf, in a
+// tool_sexpr, the same typed tool-calling pipeline as tool.auf, in a
 // completely different concrete syntax (S-expressions instead of
 // semicolon-terminated statements). Same tool registry, same types, same
-// typing rules — only the surface grammar differs. This is the point: aufbau
+// typing rules, only the surface grammar differs. This is the point: aufbau
 // constrains whatever syntax a task defines, so a benchmark can vary surface
 // form independently of the underlying type discipline, showing the pass-rate
 // benefit isn't an artifact of one particular syntax choice.

@@ -1,12 +1,4 @@
-"""Primitive declarations. The single source of truth (ARCHITECTURE I2).
-
-Two projections read this and nothing else:
-    grammar.compose()   -> .auf the mask enforces
-    evaluator.Dispatch  -> host calls that run
-
-Types are source text in the active grammar's own `Type*` language. Nothing
-here parses them or branches on their constructors (ARCHITECTURE I4).
-"""
+"""Generic primitive declarations for grammar composition."""
 
 from __future__ import annotations
 
@@ -24,9 +16,6 @@ class Param:
 
 @dataclass(frozen=True)
 class Effect:
-    """`kind` is read/write/execute/network/delete. `scope` narrows it for
-    approval. Both opaque here; gamma's policy interprets them."""
-
     kind: str
     scope: str = "*"
 
@@ -36,13 +25,6 @@ class Effect:
 
 @dataclass(frozen=True)
 class Primitive:
-    """A typed foreign function callable from the agent language.
-
-    `raises` set makes the return type a Result wrapper in both projections, so
-    a fallible primitive cannot return a bare value and no exceptional control
-    flow enters the language through this table (ARCHITECTURE I1a).
-    """
-
     name: str
     params: tuple[Param, ...] = ()
     returns: TypeSource = ""
@@ -62,25 +44,17 @@ class Primitive:
 
 @dataclass(frozen=True)
 class Scheme:
-    """The primitives granted for one request.
-
-    The scheme is the policy (ARCHITECTURE I7): a primitive absent here is
-    absent from the grammar, so the mask cannot emit a call to it. Grant and
-    constraint are the same object.
-    """
+    """The primitive declarations included in one grammar."""
 
     primitives: tuple[Primitive, ...] = ()
 
     def __post_init__(self) -> None:
         names = [p.name for p in self.primitives]
-        dupes = {n for n in names if names.count(n) > 1}
+        dupes = {name for name in names if names.count(name) > 1}
         if dupes:
             raise ValueError(f"duplicate primitives: {sorted(dupes)}")
 
     def ordered(self) -> tuple[Primitive, ...]:
-        """Name-sorted. Every projection iterates through this: the SPG cache is
-        keyed by content hash, so an unstable order recompiles the grammar on
-        every request (ARCHITECTURE §3.1)."""
         return tuple(sorted(self.primitives, key=lambda p: p.name))
 
     def get(self, name: str) -> Primitive | None:
@@ -91,8 +65,6 @@ class Scheme:
         return replace(self, primitives=tuple(p for p in self.primitives if p.name in keep))
 
     def without_effects(self, kinds: Iterable[str]) -> "Scheme":
-        """Drop every primitive carrying any of `kinds`. A read-only agent is
-        `without_effects({"write", "delete", "execute"})`."""
         banned = set(kinds)
         return replace(
             self,
@@ -103,9 +75,9 @@ class Scheme:
 
     def effects(self) -> tuple[Effect, ...]:
         seen: dict[tuple[str, str], Effect] = {}
-        for p in self.ordered():
-            for e in p.effects:
-                seen.setdefault((e.kind, e.scope), e)
+        for primitive in self.ordered():
+            for effect in primitive.effects:
+                seen.setdefault((effect.kind, effect.scope), effect)
         return tuple(seen.values())
 
     def to_dict(self) -> dict[str, Any]:
@@ -131,9 +103,7 @@ class Scheme:
                     params=tuple(Param(q["name"], q["type"]) for q in p.get("params", ())),
                     returns=p["returns"],
                     raises=p.get("raises"),
-                    effects=tuple(
-                        Effect(e["kind"], e.get("scope", "*")) for e in p.get("effects", ())
-                    ),
+                    effects=tuple(Effect(e["kind"], e.get("scope", "*")) for e in p.get("effects", ())),
                 )
                 for p in data.get("primitives", ())
             ),

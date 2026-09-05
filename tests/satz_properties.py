@@ -1,4 +1,4 @@
-"""Property checks for satz's grammar, policy, and wire boundaries."""
+"""Property checks for generic scheme composition and policy."""
 
 from __future__ import annotations
 
@@ -7,11 +7,9 @@ from dataclasses import dataclass
 import aufbau
 from hypothesis import given, settings, strategies as st
 
-from proposition7.satz import Effect, Param, Primitive, Scheme
-from proposition7.satz.context import Gamma
-from proposition7.satz.grammar import compose
+from proposition7.scheme import Effect, Param, Primitive, Scheme, compose
 
-from tests.satz_wiring import BINDING, session
+from tests.scheme import BINDING
 
 
 TYPE_SOURCES = st.sampled_from(("Text", "PathSet", "IoError"))
@@ -86,17 +84,3 @@ PYTHON_VALUES = st.recursive(
     lambda children: st.one_of(st.lists(children, max_size=3), st.dictionaries(st.text(), children, max_size=3)),
     max_leaves=8,
 )
-
-
-@settings(max_examples=50, deadline=None)
-@given(values=st.dictionaries(IDENTIFIER, PYTHON_VALUES, max_size=5))
-def test_values_never_cross_the_wire(values: dict[str, object]) -> None:
-    generation, current_session = session("x = todo;")
-    for name, value in values.items():
-        current_session.gamma.bind(name, "Text", value)
-
-    current_session.turn("go")
-    call = generation.calls[-1]
-
-    assert all(isinstance(type_source, str) for type_source in call["aufbau_context"].values())
-    assert call["aufbau_context"] == current_session.gamma.types()

@@ -1,4 +1,4 @@
-"""`proposition7.backend/v1` — the cross-repository constrained-decode contract.
+"""`proposition7.backend/v1`, the cross-repository constrained-decode contract.
 
 This is the whole of p7's public surface (see `PLAN.md` §4 and
 `../../../ARCHITECTURE.md` §3). Two operations over **raw `.auf` source**:
@@ -56,7 +56,7 @@ class ConstraintBackend(Protocol):
 
         `is_complete` on the result is true only when a fresh final
         verification is typed, unambiguous, and satisfies `expected_type` when
-        one was supplied — never merely because decoding stopped.
+        one was supplied, never merely because decoding stopped.
         """
         ...
 
@@ -70,7 +70,7 @@ class ConstraintBackend(Protocol):
     ) -> "Verification":
         """Check `text` against `grammar_source`, independently of generation.
 
-        Returns aufbau's own `Verification` — p7 does not define a parallel
+        Returns aufbau's own `Verification`; p7 does not define a parallel
         result type.
         """
         ...

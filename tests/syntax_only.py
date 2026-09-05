@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 
-import torch
+import pytest
+
+torch = pytest.importorskip("torch", reason="requires the transformers extra")
 
 import proposition7
 

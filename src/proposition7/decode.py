@@ -2,7 +2,7 @@
 
 This is proposition7's whole contribution, and it is deliberately small. The
 model is behind `Runtime` (see `runtime.py`) and the grammar is behind aufbau's
-`Synthesizer`; what lives here is only the part that belongs to neither — which
+`Synthesizer`; what lives here is only the part that belongs to neither, which
 token to try next, what to do when the grammar refuses it, and what to record
 about the choice.
 
@@ -173,15 +173,15 @@ def sample(
 ) -> Step:
     """Draw a token the grammar will accept, retrying past the ones it will not.
 
-    `synth` holds the accepted prefix and is only *read* here — `mask` is
-    state-free — so a rejected candidate costs nothing to undo. That is also
+    `synth` holds the accepted prefix and is only *read* here; `mask` is
+    state-free, so a rejected candidate costs nothing to undo. That is also
     why the runtime is never told about a rejection: nothing was committed to
     it either.
 
     `pre_entropy` is computed once, before the retry loop, so it measures the
     model's own uncertainty rather than how many attempts this position took.
     `post_entropy` is measured at acceptance over whatever the retry loop had
-    not yet excluded — an upper bound on true post-mask entropy, never the
+    not yet excluded, an upper bound on true post-mask entropy, never the
     thing itself, since knowing the valid set means asking the engine about the
     whole vocabulary. See `inference.GenerationResult.step_entropies`.
     """
@@ -220,7 +220,7 @@ def sample(
         #
         # This is not hypothetical. A reasoning model wants to open with
         # `<think>`, the grammar refuses it, and the next thing it reaches for
-        # is end-of-turn — so honouring that unconditionally returns an empty
+        # is end-of-turn, so honouring that unconditionally returns an empty
         # program on the first step.
         if runtime.is_stop(token_id):
             if synth.status() == "typed":
@@ -575,7 +575,7 @@ def generate_unconstrained(
     """The comparison arm: the same model and prompt with no grammar at all.
 
     Telemetry stays empty rather than being filled with the unmasked
-    distribution twice over — pre and post entropy are equal by definition when
+    distribution twice over: pre and post entropy are equal by definition when
     there is no mask, and a chart of that would imply a measurement nobody made.
     """
     rng = np.random.default_rng(seed)

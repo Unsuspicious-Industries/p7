@@ -1,8 +1,11 @@
 from types import SimpleNamespace
 
-import torch
+import pytest
+
+torch = pytest.importorskip("torch", reason="requires the transformers extra")
 
 import proposition7
+from proposition7.llm import clear_mask_cache, mask_cache_stats
 
 
 class FakeTokenizer:
@@ -26,6 +29,7 @@ class FakeTokenizer:
         3: "<eos>",
         4: "<eog>",
         5: "<role>",
+        6: "z",
     }
     token_to_id = {token: token_id for token_id, token in id_to_token.items()}
 
@@ -127,3 +131,43 @@ def test_unconstrained_generation_stops_on_eos_token_id():
     assert result.text == ""
     assert result.tokens_generated == 0
     assert result.stopped_reason == "stop_token:<eos>"
+
+
+@pytest.mark.parametrize(
+    ("prompt", "grammar", "token_ids", "expected"),
+    [
+        ("write xy", "start ::= 'x' 'y'", [1, 2], "x y"),
+        ("write z", "start ::= 'z'", [6], "z"),
+        ("write xy again", "start ::= 'x' 'y'", [1, 2], "x y"),
+    ],
+)
+def test_mask_cache_is_byte_identical_to_uncached_generation(
+    prompt, grammar, token_ids, expected
+):
+    clear_mask_cache()
+    uncached = proposition7.ConstrainedModel(
+        FakeModel(token_ids), FakeTokenizer(), grammar, mask_cache_size=0
+    ).generate_constrained(prompt=prompt, max_tokens=3)
+    cached = proposition7.ConstrainedModel(
+        FakeModel(token_ids), FakeTokenizer(), grammar
+    ).generate_constrained(prompt=prompt, max_tokens=3)
+
+    assert cached.text == uncached.text == expected
+    assert cached.is_complete == uncached.is_complete
+    assert cached.stopped_reason == uncached.stopped_reason
+    assert cached.step_token_ids == uncached.step_token_ids
+    assert cached.step_retries == uncached.step_retries
+
+
+def test_mask_cache_hits_rejections_on_repeated_generation():
+    clear_mask_cache()
+    grammar = "start ::= 'x' 'y'"
+    for _ in range(2):
+        result = proposition7.ConstrainedModel(
+            FakeModel([0, 2]), FakeTokenizer(), grammar
+        ).generate_constrained(max_tokens=3)
+        assert result.text == "x y"
+
+    stats = mask_cache_stats()
+    assert stats["hits"] > 0
+    assert stats["misses"] > 0
