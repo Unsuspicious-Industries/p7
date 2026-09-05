@@ -2,9 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(ssh *)",
-      "Bash(rsync -av -e 'ssh -p 11740' /home/pkd/code/p7/src/proposition7/llm.py /home/pkd/code/p7/src/proposition7/environment.py /home/pkd/code/p7/benchmarks/configs/minimum.toml root@91.150.160.38:/workspace/p7/src/proposition7/)",
       "Bash(grep -v \"^$\")",
-      "Bash(rsync -av -e 'ssh -p 11740' /home/pkd/code/p7/benchmarks/configs/minimum.toml root@91.150.160.38:/workspace/p7/benchmarks/configs/)",
       "Bash(python -c \"import aufbau; print\\('aufbau', getattr\\(aufbau,'__version__','?'\\)\\); from aufbau import Synthesizer; print\\('has from_grammar:', hasattr\\(Synthesizer,'from_grammar'\\)\\); print\\('methods:', [m for m in dir\\(Synthesizer\\) if not m.startswith\\('__'\\)]\\)\")",
       "Bash(pip show *)"
     ]

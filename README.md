@@ -89,19 +89,28 @@ Pass a grammar name through high-level APIs, or pass a raw grammar spec to
 src/
   proposition7/            # published Python package
     api.py                 # high-level generation API
-    llm.py                 # ConstrainedModel
-    inference.py           # low-level constrained loop
-    grammars/              # bundled .auf grammar specs
+    decode.py              # the masked decode loop
+    runtime.py             # the Runtime protocol a host implements
+    llm.py                 # ConstrainedModel, the transformers backend
+    inference.py           # results and telemetry
+    mask_cache.py          # content-keyed candidate masks
+    scheme/                # primitives, effects, grammar composition
+    backends/              # the cross-repository decode contract
     models/                # model-specific adapters
-examples/                  # small usage examples
+  grammars/                # bundled .auf grammar specs
 tests/                     # pytest suite
 ```
 
 ## Test
 
 ```bash
-nix develop path:. -c make build
-PYTHONPATH=.:src ./.venv/bin/pytest tests/ -q
+nix develop .#test --command pytest -q
 ```
+
+The test shell builds aufbau from the sibling `../aufbau` checkout when the
+installed version does not match its `Cargo.toml`, so the grammars under test
+are the ones in the tree rather than whatever PyPI last published. It also sets
+the loader path the manylinux wheels need, without which `import numpy` fails
+inside collection and takes unrelated tests down with it.
 
 Torch-backed tests skip when the `transformers` extra is absent.

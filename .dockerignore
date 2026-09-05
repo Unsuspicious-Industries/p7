@@ -20,17 +20,6 @@ __pycache__/
 dist/
 build/
 
-# Local benchmark outputs and backups
-artifact-output/
-benchmarks/out/
-backup/
-evals/
-final/
-processed/
-result/
-unified/
-vast_model_matrix/
-
 # Runtime caches. Models are downloaded into mounted cache dirs at run time.
 .cache/
 **/.cache/
@@ -46,7 +35,7 @@ checkpoints/
 **/checkpoints/
 /models/
 
-# Model/checkpoint weights should never be baked into the artifact image.
+# Model/checkpoint weights should never be included in source distributions.
 *.safetensors
 **/*.safetensors
 *.bin

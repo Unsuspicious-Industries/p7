@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proposition7"
-version = "0.2.0"
+version = "0.3.0"
 description = "Type-aware constrained decoding for LLMs using the Proposition 7 grammar format"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Paul Kronlund-Drouault" }
 ]
@@ -17,15 +17,16 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Compilers",
 ]
 keywords = ["llm", "constrained-decoding", "type-systems", "grammar", "code-generation"]
-dependencies = ["aufbau-rs>=0.3.1", "grpcio>=1.65.0", "tomli>=2.0.0; python_version<'3.11'", "rich>=13.0.0"]
+dependencies = ["aufbau-rs>=0.5,<0.6"]
 
 [project.urls]
 Homepage = "https://unsuspicious.org/blog/proposition-7"
@@ -44,7 +45,6 @@ include = ["proposition7", "proposition7.*", "grammars", "grammars.*"]
 
 [tool.setuptools.package-data]
 "grammars" = ["*.auf"]
-"proposition7.agentic" = ["*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
