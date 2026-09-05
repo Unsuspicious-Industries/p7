@@ -18,7 +18,6 @@ dist/
 build/
 */dist/
 */node_modules/
-benchmarks/out
 .nix-pip
 # IDE
 .idea/
@@ -26,3 +25,4 @@ benchmarks/out
 *.swp
 experimental/
 .hypothesis/
+.venv-uv/
