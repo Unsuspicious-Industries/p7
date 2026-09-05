@@ -51,6 +51,19 @@ class ScriptedRuntime:
             scores[VOCAB.index("a")] = 1.0
         return scores
 
+    def encode(self, text: str) -> list[int]:
+        """Token ids for injected text, greedily over the toy vocabulary."""
+        ids, rest = [], text
+        while rest:
+            for index, piece in enumerate(VOCAB):
+                if piece and rest.startswith(piece):
+                    ids.append(index)
+                    rest = rest[len(piece) :]
+                    break
+            else:
+                rest = rest[1:]  # separators the toy vocabulary has no token for
+        return ids
+
     def token_text(self, token_id: int) -> str:
         return VOCAB[token_id]
 
@@ -168,3 +181,97 @@ def test_the_program_budget_does_not_cap_the_thinking_budget():
     assert result.diagnostics["think_tokens"] == 401
     # And the answer still respects its own, separate budget.
     assert result.text and "hmm" not in result.text
+
+
+def test_a_thought_that_never_closes_is_closed_for_the_model():
+    """Phase two must not decode from inside the reasoning block.
+
+    When the thinking budget runs out mid-sentence, the model is still in its
+    reasoning distribution. Handing that context to the grammar produces
+    programs that are well-formed and meaningless, because the mask only
+    constrains shape. Closing the channel first is what makes the second phase
+    an answer instead of more reasoning in a program's clothing.
+    """
+    runtime = ScriptedRuntime([VOCAB.index(" hmm")] * 50)
+    result = decode.generate_mixed(
+        runtime, grammar=GRAMMAR, prompt_ids=[0], max_tokens=8, think_budget=5
+    )
+    assert result.diagnostics["think_closed"] is False
+    assert result.diagnostics["think_stopped_reason"] == "think_budget"
+    assert result.diagnostics["think_forced_close"] is True
+    # The marker really reached the context the constrained phase decodes from.
+    assert VOCAB.index("</think>") in runtime.emitted
+    marker_at = runtime.emitted.index(VOCAB.index("</think>"))
+    assert marker_at == 5, "the marker must land right after the thinking, not later"
+
+
+def test_a_thought_the_model_closes_itself_is_left_alone():
+    runtime = _think_then_answer()
+    result = decode.generate_mixed(
+        runtime, grammar=GRAMMAR, prompt_ids=[0], max_tokens=8
+    )
+    assert result.diagnostics["think_closed"] is True
+    assert result.diagnostics["think_forced_close"] is False
+    # Exactly one marker: the model's own, with nothing appended after it.
+    assert runtime.emitted.count(VOCAB.index("</think>")) == 1
+
+
+def test_a_model_that_ends_its_turn_early_still_gets_its_block_closed():
+    """An early stop leaves the block open just as an exhausted budget does."""
+    class Stopping(ScriptedRuntime):
+        def is_stop(self, token_id: int) -> bool:
+            return token_id == VOCAB.index(" hmm")
+
+    runtime = Stopping([VOCAB.index(" hmm")])
+    result = decode.generate_mixed(
+        runtime, grammar=GRAMMAR, prompt_ids=[0], max_tokens=8, think_budget=20
+    )
+    assert result.diagnostics["think_stopped_reason"] == "stop_token"
+    assert result.diagnostics["think_forced_close"] is True
+    assert VOCAB.index("</think>") in runtime.emitted
+
+
+def test_a_masked_arm_can_stop_where_the_grammar_says_the_program_is_finished():
+    """"Complete" and "finished" are different questions.
+
+    This grammar accepts one "a" and also accepts more, so every position after
+    the first is both a complete program and a prefix of a longer one. Without
+    the flag the decoder runs to its budget and returns a complete term with
+    another growing out of it. Off by default, since a caller who wants the
+    whole translation unit would see silent truncation.
+    """
+    ran_on = decode.generate_mixed(
+        _think_then_answer(), grammar=GRAMMAR, prompt_ids=[0], max_tokens=32
+    )
+    stopped = decode.generate_mixed(
+        _think_then_answer(), grammar=GRAMMAR, prompt_ids=[0], max_tokens=32,
+        stop_at_complete=True,
+    )
+
+    assert ran_on.stopped_reason == "max_tokens"
+    assert ran_on.tokens_generated == 32
+
+    assert stopped.stopped_reason == "complete"
+    assert stopped.tokens_generated == 1
+    assert stopped.text.split() == ["a"]
+    # Both are complete; only one of them is *only* the program asked for.
+    assert ran_on.is_complete and stopped.is_complete
+    # The reasoning still happened, and still is not part of the answer.
+    assert stopped.diagnostics["think_closed"] is True
+    assert "</think>" not in stopped.text
+
+
+def test_stopping_at_complete_applies_to_the_plain_constrained_arm_too():
+    """The two masked arms share `_constrained_loop`, and must share this.
+
+    Otherwise they would differ by more than where the mask applies, which is
+    the one thing the comparison holds fixed.
+    """
+    runtime = ScriptedRuntime([])
+    result = decode.generate(
+        runtime, grammar=GRAMMAR, prompt_ids=[0], max_tokens=32,
+        stop_at_complete=True,
+    )
+    assert result.stopped_reason == "complete"
+    assert result.tokens_generated == 1
+    assert result.text.split() == ["a"]

@@ -149,6 +149,14 @@ class Step:
     so it is recorded rather than hidden: a run where it fires often is a run
     whose grammar and model disagree about almost every token.
     """
+    rejected: list[dict[str, Any]] | None = None
+    """Every candidate this position refused, in the order they were drawn.
+
+    `None` unless tracing was asked for, and off by default for two reasons: a
+    traced step holds one entry per rejection -- 136 of them at step 0 of a
+    reasoning model -- and building them costs work an untraced run never does.
+    A run whose timings are reported must leave it off.
+    """
 
 
 def sample(
@@ -161,6 +169,7 @@ def sample(
     grammar_hash: bytes = b"",
     mask_cache_size: int = DEFAULT_MASK_CACHE_SIZE,
     deadline: float | None = None,
+    trace: bool = False,
 ) -> Step:
     """Draw a token the grammar will accept, retrying past the ones it will not.
 
@@ -178,6 +187,8 @@ def sample(
     """
     valid = np.isfinite(logits)
     step = Step(pre_entropy=_entropy_bits(logits))
+    if trace:
+        step.rejected = []
 
     for _ in range(MAX_RETRIES):
         if deadline is not None and time.monotonic() > deadline:
@@ -192,6 +203,10 @@ def sample(
 
         token = runtime.token_text(token_id)
         if not token or not token.strip():
+            if step.rejected is not None:
+                step.rejected.append(
+                    {"token_id": token_id, "token": token, "why": "whitespace"}
+                )
             valid[token_id] = False
             step.retries += 1
             continue
@@ -212,6 +227,15 @@ def sample(
                 step.token_id, step.token, step.is_stop = token_id, token, True
                 step.post_entropy = _entropy_bits(masked)
                 return step
+            if step.rejected is not None:
+                step.rejected.append(
+                    {
+                        "token_id": token_id,
+                        "token": token,
+                        "why": "stop_before_typed",
+                        "status": synth.status(),
+                    }
+                )
             valid[token_id] = False
             step.retries += 1
             continue
@@ -220,6 +244,15 @@ def sample(
         admitted = mask_candidates(synth, grammar_hash, candidates, mask_cache_size)
         content = next((c for c, ok in zip(candidates, admitted) if ok), None)
         if content is None:
+            if step.rejected is not None:
+                step.rejected.append(
+                    {
+                        "token_id": token_id,
+                        "token": token,
+                        "why": "grammar",
+                        "spellings": list(candidates),
+                    }
+                )
             valid[token_id] = False
             step.retries += 1
             continue
@@ -240,7 +273,7 @@ def sample(
     # only correct way to conclude otherwise is to have looked.
     return _scan(
         runtime, synth, logits, valid, step, grammar_hash, mask_cache_size,
-        deadline=deadline,
+        deadline=deadline, trace=trace,
     )
 
 
@@ -255,6 +288,7 @@ def _scan(
     *,
     block: int = 256,
     deadline: float | None = None,
+    trace: bool = False,
 ) -> Step:
     """The most probable admissible token, found by looking at all of them.
 
@@ -310,6 +344,15 @@ def _scan(
                 None,
             )
             if content is None:
+                if step.rejected is not None:
+                    step.rejected.append(
+                        {
+                            "token_id": token_id,
+                            "token": token,
+                            "why": "grammar_scan",
+                            "spellings": list(offered[begin : begin + count]),
+                        }
+                    )
                 continue
             step.token_id, step.token, step.content = token_id, token, content
             step.post_entropy = _entropy_bits(np.where(valid, logits, -np.inf))
@@ -341,6 +384,7 @@ class _Steps:
     pre_entropies: list[float] = field(default_factory=list)
     entropies: list[float] = field(default_factory=list)
     retries: list[float] = field(default_factory=list)
+    traces: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _constrained_loop(
@@ -354,6 +398,8 @@ def _constrained_loop(
     mask_cache_size: int,
     deadline_seconds: float | None,
     started: float | None = None,
+    trace: bool = False,
+    stop_at_complete: bool = False,
 ) -> _Steps:
     """The masked loop itself, without deciding where the model starts.
 
@@ -383,6 +429,7 @@ def _constrained_loop(
                 grammar_hash=grammar_hash,
                 mask_cache_size=mask_cache_size,
                 deadline=deadline,
+                trace=trace,
             )
         except Exception as error:  # noqa: BLE001 - becomes the stop reason
             steps.reason = f"type_error: {error}"
@@ -414,8 +461,33 @@ def _constrained_loop(
         steps.pre_entropies.append(step.pre_entropy)
         steps.entropies.append(step.post_entropy)
         steps.retries.append(step.retries)
+        if trace:
+            steps.traces.append(
+                {
+                    "index": steps.generated,
+                    "token_id": step.token_id,
+                    "token": step.token,
+                    "content": step.content,
+                    "retries": step.retries,
+                    "scanned": step.scanned,
+                    "pre_entropy": step.pre_entropy,
+                    "post_entropy": step.post_entropy,
+                    "prefix_after": synth.input(),
+                    "status_after": synth.status(),
+                    "rejected": step.rejected or [],
+                }
+            )
         steps.generated += 1
         runtime.extend(step.token_id)
+
+        if stop_at_complete and synth.status() == "typed":
+            # One complete, well-typed term is what the caller asked for.
+            # Off by default: a grammar that accepts more after a complete
+            # term (a translation unit, a longer expression) would be
+            # truncated for a caller who wanted the whole thing.
+            # Checked after extend, so the completing token is counted.
+            steps.reason = "complete"
+            break
 
     return steps
 
@@ -432,6 +504,8 @@ def generate(
     seed: int | None = None,
     mask_cache_size: int = DEFAULT_MASK_CACHE_SIZE,
     deadline_seconds: float | None = None,
+    trace: bool = False,
+    stop_at_complete: bool = False,
 ) -> GenerationResult:
     """Decode under `grammar`, returning the text aufbau itself validated.
 
@@ -470,6 +544,8 @@ def generate(
         temperature=temperature,
         mask_cache_size=mask_cache_size,
         deadline_seconds=deadline_seconds,
+        trace=trace,
+        stop_at_complete=stop_at_complete,
     )
 
     return GenerationResult(
@@ -482,6 +558,7 @@ def generate(
         step_pre_entropies=steps.pre_entropies,
         step_entropies=steps.entropies,
         step_retries=steps.retries,
+        step_trace=steps.traces,
     )
 
 
@@ -493,6 +570,7 @@ def generate_unconstrained(
     temperature: float = 0.0,
     seed: int | None = None,
     deadline_seconds: float | None = None,
+    trace: bool = False,
 ) -> GenerationResult:
     """The comparison arm: the same model and prompt with no grammar at all.
 
@@ -505,6 +583,7 @@ def generate_unconstrained(
     pieces: list[str] = []
     reason = "max_tokens"
     generated = 0
+    traces: list[dict[str, Any]] = []
     started = time.monotonic()
 
     for _ in range(max_tokens):
@@ -521,6 +600,19 @@ def generate_unconstrained(
             reason = "stop_token"
             break
         pieces.append(runtime.token_text(token_id))
+        if trace:
+            # No grammar, so no rejections: the trace here is the token stream
+            # itself, which is what "reconstruct what happened" means for an arm
+            # that turns nothing down.
+            traces.append(
+                {
+                    "index": generated,
+                    "token_id": int(token_id),
+                    "token": pieces[-1],
+                    "retries": 0,
+                    "rejected": [],
+                }
+            )
         generated += 1
         runtime.extend(token_id)
 
@@ -529,6 +621,7 @@ def generate_unconstrained(
         is_complete=reason == "stop_token",
         tokens_generated=generated,
         stopped_reason=reason,
+        step_trace=traces,
     )
 
 
@@ -546,6 +639,8 @@ def generate_mixed(
     deadline_seconds: float | None = None,
     think_marker: str = THINK_MARKER,
     think_budget: int | None = None,
+    trace: bool = False,
+    stop_at_complete: bool = False,
 ) -> GenerationResult:
     """Free reasoning, then a grammar-constrained program.
 
@@ -629,6 +724,35 @@ def generate_mixed(
     else:
         stopped_thinking = stopped_thinking or "think_budget"
 
+    # A thought that stopped without its marker has to be closed *for* the
+    # model, or phase two masks a program onto a context the model still
+    # believes is mid-reasoning. Measured on qwen3.5-0.8b, that is 11 of 13
+    # mixed failures, and what comes back is grammatical and meaningless --
+    # `int x = (int)0; int y = (int)0; ...`, or a run of digits -- because the
+    # distribution is still the thinking one and the grammar only makes it
+    # well-formed. Closing the channel is what makes the second phase an answer
+    # rather than more reasoning wearing a program's shape.
+    #
+    # Every non-closed exit gets this, not just an exhausted budget: a model
+    # that stopped its turn early, or ran the deadline out, is equally still
+    # inside the block.
+    #
+    # The separator matches what these models emit when they close on their own
+    # (`</think>\n\n` in the unconstrained arm's own output), so phase two sees
+    # the boundary in the shape it was trained on.
+    forced_close = False
+    if not closed:
+        encode = getattr(runtime, "encode", None)
+        if encode is None:
+            raise TypeError(
+                "generate_mixed needs a runtime with encode() to close an "
+                "unterminated <think> block; without it the constrained phase "
+                "would decode from inside the model's reasoning"
+            )
+        for token_id in encode(think_marker + "\n\n"):
+            runtime.extend(int(token_id))
+        forced_close = True
+
     steps = _constrained_loop(
         runtime,
         synth,
@@ -639,6 +763,8 @@ def generate_mixed(
         mask_cache_size=mask_cache_size,
         deadline_seconds=deadline_seconds,
         started=started,
+        trace=trace,
+        stop_at_complete=stop_at_complete,
     )
 
     return GenerationResult(
@@ -650,6 +776,7 @@ def generate_mixed(
         diagnostics={
             "think_tokens": think_tokens,
             "think_closed": closed,
+            "think_forced_close": forced_close,
             "think_stopped_reason": stopped_thinking,
             "think_text": "".join(thought),
         },
@@ -657,4 +784,5 @@ def generate_mixed(
         step_pre_entropies=steps.pre_entropies,
         step_entropies=steps.entropies,
         step_retries=steps.retries,
+        step_trace=steps.traces,
     )

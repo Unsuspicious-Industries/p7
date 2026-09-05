@@ -30,6 +30,7 @@ class Result:
     input, while the reasoning stays available to analyse."""
     think_tokens: int = 0
     think_closed: bool = False
+    think_forced_close: bool = False
     """Whether the model closed its own reasoning channel before the grammar
     switched on. False means the budget ran out mid-thought, which makes the
     program that follows conditioned on an unfinished sentence -- so it has to
@@ -39,6 +40,12 @@ class Result:
     step_pre_entropies: list[float] = field(default_factory=list)
     step_entropies: list[float] = field(default_factory=list)
     step_retries: list[int] = field(default_factory=list)
+    step_trace: list[dict] = field(default_factory=list)
+    """Per-step reconstruction of the decode, empty unless tracing was asked.
+
+    `step_retries` says a position cost 136 attempts; this says which 136 and
+    why each was refused -- whitespace, a stop token at an unfinished program,
+    or the grammar turning down every spelling of it."""
 
 def _result(r) -> "Result":
     diagnostics = getattr(r, "diagnostics", None) or {}
@@ -50,11 +57,13 @@ def _result(r) -> "Result":
         thoughts=str(diagnostics.get("think_text", "")),
         think_tokens=int(diagnostics.get("think_tokens", 0)),
         think_closed=bool(diagnostics.get("think_closed", False)),
+        think_forced_close=bool(diagnostics.get("think_forced_close", False)),
         exported_context=r.exported_context,
         step_token_ids=r.step_token_ids,
         step_pre_entropies=r.step_pre_entropies,
         step_entropies=r.step_entropies,
         step_retries=r.step_retries,
+        step_trace=list(getattr(r, "step_trace", []) or []),
     )
 
 
@@ -70,6 +79,9 @@ def _via_runtime(
     mode: str = "constrained",
     deadline_seconds: float | None = None,
     think_budget: int | None = None,
+    trace: bool = False,
+    assistant_prefix: str | None = None,
+    stop_at_complete: bool = False,
 ) -> "Result":
     """Decode against a runtime the caller already has.
 
@@ -79,7 +91,14 @@ def _via_runtime(
     """
     from . import decode
 
-    prompt_ids = runtime.encode_prompt(tuple(model_context))
+    # Passed only when asked for. `encode_prompt` is the Runtime protocol's
+    # oldest method and implementations predate this argument; sending it
+    # unconditionally would break every one of them over a value that means
+    # "leave the framing alone". A runtime that cannot honour a prefix the
+    # caller did ask for still fails loudly here, which is the right outcome --
+    # silently dropping it would change the prompt without changing the result.
+    framing = {} if assistant_prefix is None else {"assistant_prefix": assistant_prefix}
+    prompt_ids = runtime.encode_prompt(tuple(model_context), **framing)
     if mode == "unconstrained":
         return _result(
             decode.generate_unconstrained(
@@ -89,6 +108,7 @@ def _via_runtime(
                 temperature=temperature,
                 seed=seed,
                 deadline_seconds=deadline_seconds,
+                trace=trace,
             )
         )
     if mode not in ("constrained", "mixed"):
@@ -107,6 +127,8 @@ def _via_runtime(
             temperature=temperature,
             seed=seed,
             deadline_seconds=deadline_seconds,
+            trace=trace,
+            stop_at_complete=stop_at_complete,
             **extra,
         )
     )
@@ -124,6 +146,9 @@ def generate(
     seed: int | None = None,
     runtime=None,
     deadline_seconds: float | None = None,
+    trace: bool = False,
+    assistant_prefix: str | None = None,
+    stop_at_complete: bool = False,
     **kwargs,
 ) -> Result:
     """Generate against a raw grammar and typing context using a local model."""
@@ -131,7 +156,8 @@ def generate(
         return _via_runtime(
             runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
             max_tokens=max_tokens, temperature=temperature, seed=seed, mode="constrained",
-            deadline_seconds=deadline_seconds,
+            deadline_seconds=deadline_seconds, trace=trace,
+            assistant_prefix=assistant_prefix, stop_at_complete=stop_at_complete,
         )
     if "device" not in kwargs and "device_map" not in kwargs:
         try:
@@ -187,6 +213,8 @@ def generate_unconstrained(
     seed: int | None = None,
     runtime=None,
     deadline_seconds: float | None = None,
+    trace: bool = False,
+    assistant_prefix: str | None = None,
     **kwargs,
 ) -> Result:
     """Generate without a grammar mask using the constrained run's prompt setup."""
@@ -194,7 +222,8 @@ def generate_unconstrained(
         return _via_runtime(
             runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
             max_tokens=max_tokens, temperature=temperature, seed=seed, mode="unconstrained",
-            deadline_seconds=deadline_seconds,
+            deadline_seconds=deadline_seconds, trace=trace,
+            assistant_prefix=assistant_prefix,
         )
     if "device" not in kwargs and "device_map" not in kwargs:
         try:
@@ -248,21 +277,41 @@ def generate_pair(
     temperature: float = 0.0,
     seed: int | None = None,
     runtime=None,
+    deadline_seconds: float | None = None,
+    stop_at_complete: bool = False,
     **kwargs,
 ) -> tuple[Result, Result]:
-    """Generate masked and unmasked completions from one resident model."""
+    """Generate masked and unmasked completions from one resident model.
+
+    `deadline_seconds` bounds each arm, not the pair. A caller serialised behind
+    a shared slot should size it accordingly: two arms with no bound is how one
+    request holds a GPU indefinitely.
+    """
     if runtime is not None:
         shared = dict(
             grammar=grammar, aufbau_context=aufbau_context,
             max_tokens=max_tokens, temperature=temperature, seed=seed,
+            deadline_seconds=deadline_seconds,
         )
         # Same runtime, same prompt, same seed - the only difference between
         # the arms is whether the mask is applied. That is the comparison the
         # playground exists to show, so it must not also differ by model,
         # device or sampling.
+        # `mode=`, not `constrained=`. This call site was missed when the
+        # boolean became a three-valued mode ("constrained" / "unconstrained" /
+        # "mixed"), and because generate_pair is only reachable through the
+        # runtime path that the playground uses, nothing caught it: every live
+        # /playground/generate raised TypeError inside a blanket except and
+        # came back as a generic 500.
+        # `stop_at_complete` reaches only the constrained arm. It asks the
+        # grammar whether the program is finished, and the unmasked arm has
+        # no grammar to ask.
         return (
-            _via_runtime(runtime, model_context, constrained=True, **shared),
-            _via_runtime(runtime, model_context, constrained=False, **shared),
+            _via_runtime(
+                runtime, model_context, mode="constrained",
+                stop_at_complete=stop_at_complete, **shared,
+            ),
+            _via_runtime(runtime, model_context, mode="unconstrained", **shared),
         )
     if "device" not in kwargs and "device_map" not in kwargs:
         try:
@@ -344,6 +393,9 @@ def generate_mixed(
     runtime=None,
     deadline_seconds: float | None = None,
     think_budget: int | None = None,
+    trace: bool = False,
+    assistant_prefix: str | None = None,
+    stop_at_complete: bool = False,
     **kwargs,
 ) -> Result:
     """Reason freely, then emit a program the grammar vouches for.
@@ -360,5 +412,6 @@ def generate_mixed(
     return _via_runtime(
         runtime, model_context, grammar=grammar, aufbau_context=aufbau_context,
         max_tokens=max_tokens, temperature=temperature, seed=seed, mode="mixed",
-        deadline_seconds=deadline_seconds, think_budget=think_budget,
+        deadline_seconds=deadline_seconds, think_budget=think_budget, trace=trace,
+        assistant_prefix=assistant_prefix, stop_at_complete=stop_at_complete,
     )
