@@ -35,7 +35,6 @@
           wheel
           
            # Development
-           pytest
            hypothesis
            numpy
           accelerate
@@ -69,7 +68,6 @@
           pip
           setuptools
           wheel
-          pytest
           hypothesis
           numpy
         ]);
@@ -116,6 +114,12 @@
             export VIRTUAL_ENV="$P7_TEST_VENV"
             source "$VIRTUAL_ENV/bin/activate"
             export PIP_DISABLE_PIP_VERSION_CHECK=1
+
+            # pytest has to live in the venv, not only in the Nix env. The Nix
+            # `pytest` script hardcodes the Nix interpreter in its shebang, so
+            # running it collects against a python that cannot see anything pip
+            # put here, and every test module fails to import.
+            [ -x "$VIRTUAL_ENV/bin/pytest" ] || python -m pip install --quiet pytest hypothesis
 
             AUFBAU_SRC="$(cd "$PWD/../aufbau" 2>/dev/null && pwd || true)"
             if [ -n "$AUFBAU_SRC" ]; then
