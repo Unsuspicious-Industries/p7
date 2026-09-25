@@ -81,8 +81,13 @@ def _entropy_bits(logits: np.ndarray) -> float:
     return float(-(probabilities * np.log2(np.maximum(probabilities, 1e-40))).sum())
 
 
-def _draw(logits: np.ndarray, temperature: float, rng: np.random.Generator) -> int:
-    """One token from the masked distribution. Greedy at temperature 0."""
+def draw(logits: np.ndarray, temperature: float, rng: np.random.Generator) -> int:
+    """One token from the masked distribution. Greedy at temperature 0.
+
+    Public because the batched serving path in wirt draws with exactly this
+    rule and must not reimplement it -- a second sampler is a place for the two
+    to disagree about what a mask means.
+    """
     if temperature == 0.0:
         return int(np.argmax(logits))
     finite = np.isfinite(logits)
@@ -197,7 +202,7 @@ def sample(
         if not valid.any():
             return step
         masked = np.where(valid, logits, -np.inf)
-        token_id = _draw(masked, temperature, rng)
+        token_id = draw(masked, temperature, rng)
         if token_id < 0:
             return step
 
@@ -690,7 +695,7 @@ def generate_unconstrained(
             break
         logits = runtime.logits()
         entropy = _entropy_bits(logits) if stop is not None else 0.0
-        token_id = _draw(logits, temperature, rng)
+        token_id = draw(logits, temperature, rng)
         if token_id < 0:
             reason = "no_valid"
             break
@@ -815,7 +820,7 @@ def generate_mixed(
         if deadline_seconds is not None and time.monotonic() - started > deadline_seconds:
             stopped_thinking = "deadline"
             break
-        token_id = _draw(runtime.logits(), temperature, rng)
+        token_id = draw(runtime.logits(), temperature, rng)
         if token_id < 0:
             stopped_thinking = "no_valid"
             break

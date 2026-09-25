@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 
 from .declaration import Primitive, Scheme
+from proposition7.errors import CongenError
 
 PRIMITIVE_MARKER = "@PRIMITIVES@"
 PRIMITIVE_NT = "PrimitiveCall"
@@ -26,7 +27,7 @@ class LanguageBinding:
         return self.result_type.format(ok=primitive.returns, err=primitive.raises)
 
 
-class CompositionError(ValueError):
+class CompositionError(CongenError, ValueError):
     pass
 
 

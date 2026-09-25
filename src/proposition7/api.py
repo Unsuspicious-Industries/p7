@@ -20,7 +20,15 @@ def _resolve_grammar(grammar: str) -> str:
 
 
 @dataclass
-class Result:
+class Generation:
+    """What one generation produced: the text, why it stopped, and the telemetry.
+
+    Named `Generation` and not `Generation` because `Generation` in this tree is the
+    Ok/Err sum of `proposition7.types` -- the expected-failure channel. This is
+    not that: a generation that stopped early is still a `Generation`, and it
+    reports the fact in `complete` and `reason` rather than by being an `Err`.
+    """
+
     text: str
     complete: bool
     tokens: int
@@ -50,9 +58,9 @@ class Result:
     why each was refused -- whitespace, a stop token at an unfinished program,
     or the grammar turning down every spelling of it."""
 
-def _result(r) -> "Result":
+def _result(r) -> "Generation":
     diagnostics = getattr(r, "diagnostics", None) or {}
-    return Result(
+    return Generation(
         text=r.text,
         complete=r.is_complete,
         tokens=r.tokens_generated,
@@ -86,7 +94,7 @@ def _via_runtime(
     assistant_prefix: str | None = None,
     stop_at_complete: bool = False,
     settle: "SettlePolicy | None" = None,
-) -> "Result":
+) -> "Generation":
     """Decode against a runtime the caller already has.
 
     This is how wirt serves: it owns the model and hands it in, so nothing here
@@ -161,7 +169,7 @@ def generate(
     stop_at_complete: bool = False,
     settle: "SettlePolicy | None" = None,
     **kwargs,
-) -> Result:
+) -> Generation:
     """Generate against a raw grammar and typing context using a local model."""
     if runtime is not None:
         return _via_runtime(
@@ -201,7 +209,7 @@ def generate(
         temperature=temperature,
         seed=seed,
     )
-    return Result(
+    return Generation(
         text=r.text,
         complete=r.is_complete,
         tokens=r.tokens_generated,
@@ -229,7 +237,7 @@ def generate_unconstrained(
     assistant_prefix: str | None = None,
     settle: "SettlePolicy | None" = None,
     **kwargs,
-) -> Result:
+) -> Generation:
     """Generate without a grammar mask using the constrained run's prompt setup."""
     if runtime is not None:
         return _via_runtime(
@@ -267,7 +275,7 @@ def generate_unconstrained(
         temperature=temperature,
         seed=seed,
     )
-    return Result(
+    return Generation(
         text=r.text,
         complete=r.is_complete,
         tokens=r.tokens_generated,
@@ -293,7 +301,7 @@ def generate_pair(
     deadline_seconds: float | None = None,
     stop_at_complete: bool = False,
     **kwargs,
-) -> tuple[Result, Result]:
+) -> tuple[Generation, Generation]:
     """Generate masked and unmasked completions from one resident model.
 
     `deadline_seconds` bounds each arm, not the pair. A caller serialised behind
@@ -357,7 +365,7 @@ def generate_pair(
         temperature=temperature, seed=seed,
     )
     return (
-        Result(
+        Generation(
             text=constrained.text, complete=constrained.is_complete,
             tokens=constrained.tokens_generated, reason=constrained.stopped_reason,
             exported_context=constrained.exported_context,
@@ -366,7 +374,7 @@ def generate_pair(
             step_entropies=constrained.step_entropies,
             step_retries=constrained.step_retries,
         ),
-        Result(
+        Generation(
             text=unconstrained.text, complete=unconstrained.is_complete,
             tokens=unconstrained.tokens_generated, reason=unconstrained.stopped_reason,
             exported_context=unconstrained.exported_context,
@@ -410,7 +418,7 @@ def generate_mixed(
     assistant_prefix: str | None = None,
     stop_at_complete: bool = False,
     **kwargs,
-) -> Result:
+) -> Generation:
     """Reason freely, then emit a program the grammar vouches for.
 
     Server-side only. The two phases have to share one runtime for the program

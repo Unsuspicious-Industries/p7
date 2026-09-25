@@ -3,11 +3,11 @@
 import pytest
 
 import proposition7
-from proposition7.api import Result, _resolve_grammar
+from proposition7.api import Generation, _resolve_grammar
 
 
 def test_result_dataclass():
-    result = Result(text="hello", complete=True, tokens=3, reason="complete")
+    result = Generation(text="hello", complete=True, tokens=3, reason="complete")
     assert result.text == "hello" and result.complete and result.thoughts == ""
 
 
@@ -85,7 +85,7 @@ def test_generate_pair_dispatches_both_arms_by_mode(monkeypatch):
 
     def fake_via_runtime(runtime, model_context, **kwargs):
         calls.append(kwargs)
-        return api.Result(text="", complete=False, tokens=0, reason="stub")
+        return api.Generation(text="", complete=False, tokens=0, reason="stub")
 
     monkeypatch.setattr(api, "_via_runtime", fake_via_runtime)
 
